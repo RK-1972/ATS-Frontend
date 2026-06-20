@@ -59,21 +59,23 @@ userRole === "Admin"
   :
 
   [
+  "Dashboard",
+  "Candidates",
 
-    "Dashboard",
-    "Candidates",
-    "Requisitions",
-    "Interviews",
-    "Feedback",
+  ...(userRole !== "Recruiter"
+    ? ["Requisitions"]
+    : []),
 
-    ...(loggedInUser?.secondary_role ===
-      "Interviewer"
+  "Interviews",
+  "Feedback",
 
-      ? ["Interviewer Workspace"]
+  ...(loggedInUser?.secondary_role ===
+    "Interviewer"
 
-      : [])
+    ? ["Interviewer Workspace"]
 
-  ];
+    : [])
+];
   // =========================================
 // Recruiter Dashboard
 // =========================================
