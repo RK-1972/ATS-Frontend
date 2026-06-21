@@ -33,31 +33,30 @@ function LoginPage() {
   };
 
 
-  // =========================================
-  // Login
-  // =========================================
+ // =========================================
+// Login
+// =========================================
 
-  const handleLogin = async () => {
+const handleLogin = async () => {
 
-    try {
+  try {
 
-      const response = await API.post(
+    const response = await API.post(
 
-        "/login",
+      "/login",
 
-        {
+      {
 
-          email_id: formData.email_id,
-          password: formData.password
+        email_id: formData.email_id,
+        password: formData.password
 
-        }
+      }
 
-      );
+    );
 
-
-      // =====================================
-      // Store Token
-      // =====================================
+    // =====================================
+    // Store Token
+    // =====================================
 
       localStorage.setItem(
 
@@ -127,7 +126,71 @@ else {
     }
 
   };
+// =========================================
+// Forgot Password
+// =========================================
 
+const handleForgotPassword =
+  async () => {
+
+    if (!formData.email_id) {
+
+      alert(
+        "Please enter your email address first."
+      );
+
+      return;
+
+    }
+
+    const confirmed =
+      window.confirm(
+
+        "A password reset link will be sent to your registered email.\n\nDo you want to proceed?"
+
+      );
+
+    if (!confirmed) {
+
+      return;
+
+    }
+
+    try {
+
+      const response =
+        await API.post(
+
+          "/forgot-password",
+
+          {
+
+            email_id:
+              formData.email_id
+
+          }
+
+        );
+
+      alert(
+        response.data.message
+      );
+
+    }
+
+    catch (error) {
+
+      alert(
+
+        error?.response?.data?.message ||
+
+        "Unable to process request."
+
+      );
+
+    }
+
+  };
 
   return (
 
@@ -192,18 +255,31 @@ else {
     marginBottom: "15px"
   }}
 >
-  <a
-    href="/forgot-password"
-    style={{
-      color: "#2563eb",
-      textDecoration: "none",
-      fontSize: "14px",
-      fontWeight: "500",
-      cursor: "pointer"
-    }}
-  >
-    Forgot Password?
-  </a>
+  <span
+
+  onClick={
+    handleForgotPassword
+  }
+
+  style={{
+
+    color: "#2563eb",
+
+    textDecoration: "none",
+
+    fontSize: "14px",
+
+    fontWeight: "500",
+
+    cursor: "pointer"
+
+  }}
+
+>
+
+  Forgot Password?
+
+</span>
 </div>
         <button
 

@@ -20,6 +20,7 @@ import InterviewSchedulePage from "./pages/InterviewSchedulePage";
 import InterviewerHome from "./pages/InterviewerHome";
 import InterviewFeedbackPage from "./pages/InterviewFeedbackPage";
 import ViewFeedback from "./pages/ViewFeedback";
+import ResetPassword from "./pages/ResetPassword";
 
 
 function App() {
@@ -189,6 +190,12 @@ function App() {
       }
 
     />
+
+      <Route
+  path="/reset-password/:token"
+  element={<ResetPassword />}
+/>
+
         {/* =====================================
             Default Redirect
         ===================================== */}
