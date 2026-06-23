@@ -4,6 +4,8 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import axios from "axios";
 
+import Header from "../components/Header";
+
 export default function ViewFeedback() {
 
   const navigate = useNavigate();
@@ -119,27 +121,41 @@ export default function ViewFeedback() {
 
   if (!header) {
 
-    return (
+  return (
+
+    <div>
+
+      <Header
+        userName={localStorage.getItem("full_name")}
+        roleName={localStorage.getItem("role_name")}
+      />
 
       <div style={{ padding: "40px" }}>
-
         Loading...
-
       </div>
 
-    );
+    </div>
 
-  }
+  );
+
+}
 
   return (
 
-  <div
-    style={{
-      padding: "30px",
-      background: "#f3f4f6",
-      minHeight: "100vh"
-    }}
-  >
+  <div>
+
+    <Header
+      userName={localStorage.getItem("full_name")}
+      roleName={localStorage.getItem("role_name")}
+    />
+
+    <div
+      style={{
+        padding: "30px",
+        background: "#f3f4f6",
+        minHeight: "100vh"
+      }}
+    >
 
     <button
       onClick={() => navigate(-1)}
@@ -176,7 +192,7 @@ export default function ViewFeedback() {
     letterSpacing: "-0.5px"
   }}
 >
-  Interview Feedback
+  Interview Assessment Report
 </h1>
 
         <div
@@ -380,31 +396,34 @@ export default function ViewFeedback() {
             >
 
               <th
-                style={{
-                  textAlign: "left",
-                  padding: "12px"
-                }}
-              >
-                Skill
-              </th>
+  style={{
+    textAlign: "left",
+    padding: "12px",
+    width: "20%"
+  }}
+>
+  Skill
+</th>
 
-              <th
-                style={{
-                  textAlign: "left",
-                  padding: "12px"
-                }}
-              >
-                Rating
-              </th>
+<th
+  style={{
+    textAlign: "left",
+    padding: "12px",
+    width: "25%"
+  }}
+>
+  Rating
+</th>
 
-              <th
-                style={{
-                  textAlign: "left",
-                  padding: "12px"
-                }}
-              >
-                Comments
-              </th>
+<th
+  style={{
+    textAlign: "left",
+    padding: "12px",
+    width: "55%"
+  }}
+>
+  Comments
+</th>
 
             </tr>
 
@@ -506,7 +525,7 @@ export default function ViewFeedback() {
     </div>
 
   </div>
-
+</div>
 );
 }
 
@@ -516,8 +535,8 @@ const styles = {
   background: "#f8fafc",
   border: "1px solid #e5e7eb",
   borderRadius: "12px",
-  padding: "18px",
-  minHeight: "85px"
+  padding: "12px",
+  minHeight: "40px"
 },
 
   label: {

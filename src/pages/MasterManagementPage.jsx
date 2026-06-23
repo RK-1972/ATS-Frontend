@@ -2,6 +2,11 @@ import { useEffect, useState } from "react";
 import API from "../api/axios";
 
 function MasterManagementPage() {
+    useEffect(() => {
+
+    window.scrollTo(0, 0);
+
+  }, []);
 
   const [activeTab, setActiveTab] =
     useState("Clients");

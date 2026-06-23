@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import API from "../api/axios";
+import Header from "../components/Header";
 
 function RequisitionPage() {
 
@@ -558,13 +559,17 @@ const handleChange = (e) => {
 };
   return (
 
+  <div>
+
+    <Header
+      userName={localStorage.getItem("full_name")}
+      roleName={localStorage.getItem("role_name")}
+    />
+
     <div style={styles.page}>
 
-
-      {/* HEADER */}
-
       <div style={styles.header}>
-        Requisition Management
+        Talent Demand Request
       </div>
 
 
@@ -1261,9 +1266,11 @@ const handleChange = (e) => {
     </div>
 
   </div>
+  
 
 )}
 
+</div>
 </div>
 
 );
@@ -1278,7 +1285,7 @@ const styles = {
 
   page: {
 
-    padding: "30px",
+    padding: "20px 30px 30px 30px",
 
     background: "#f4f6f9",
 
@@ -1290,15 +1297,12 @@ const styles = {
 
   header: {
 
-    fontSize: "30px",
+  fontSize: "22px",
+  fontWeight: "600",
+  marginBottom: "20px",
+  color: "#1f2937"
 
-    fontWeight: "600",
-
-    marginBottom: "30px",
-
-    color: "#1f2937"
-
-  },
+},
 
   formContainer: {
 

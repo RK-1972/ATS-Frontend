@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { FaEye, FaEyeSlash, FaCheckCircle } from "react-icons/fa";
 import API from "../api/axios";
+import Header from "../components/Header";
 
 function ResetPassword() {
 
@@ -221,97 +222,61 @@ function ResetPassword() {
       : "100%";
 
   // =========================================
-  // Success Screen
-  // =========================================
+// Success Screen
+// =========================================
 
-  if (successMessage) {
-
-    return (
-
-      <div style={styles.page}>
-
-        <div style={styles.header}>
-
-          <div>
-
-            <div style={styles.logo}>
-              IGS
-            </div>
-
-            <div style={styles.tagline}>
-              ENGINEERING QUALITY
-            </div>
-
-          </div>
-
-          <div style={styles.headerTitle}>
-            ATS PLATFORM
-          </div>
-
-        </div>
-
-        <div style={styles.content}>
-
-          <div style={styles.successCard}>
-
-            <FaCheckCircle
-              size={70}
-              color="#16a34a"
-            />
-
-            <div style={styles.successTitle}>
-
-              Password Updated Successfully
-
-            </div>
-
-            <div style={styles.successText}>
-
-              Redirecting to Login...
-
-            </div>
-
-          </div>
-
-        </div>
-
-      </div>
-
-    );
-
-  }
-
-  // =========================================
-  // Main Screen
-  // =========================================
+if (successMessage) {
 
   return (
 
     <div style={styles.page}>
 
-      {/* HEADER */}
+      <Header />
 
-      <div style={styles.header}>
+      <div style={styles.content}>
 
-        <div>
+        <div style={styles.successCard}>
 
-          <div style={styles.logo}>
-            IGS
+          <FaCheckCircle
+            size={70}
+            color="#16a34a"
+          />
+
+          <div style={styles.successTitle}>
+
+            Password Updated Successfully
+
           </div>
 
-          <div style={styles.tagline}>
-            ENGINEERING QUALITY
+          <div style={styles.successText}>
+
+            Redirecting to Login...
+
           </div>
 
-        </div>
-
-        <div style={styles.headerTitle}>
-          ATS PLATFORM
         </div>
 
       </div>
 
-      {/* CONTENT */}
+    </div>
+
+  );
+
+}
+
+// =========================================
+// Main Screen
+// =========================================
+
+return (
+
+  <div style={styles.page}>
+
+    <Header />
+
+    {/* CONTENT */}
+
+    <div style={styles.content}>
 
       <div style={styles.content}>
 
@@ -324,7 +289,7 @@ function ResetPassword() {
           <div style={styles.subtitle}>
 
             Create a strong password
-            for your ATS account
+            for your OPTALYNX account
 
           </div>
 
@@ -553,6 +518,8 @@ function ResetPassword() {
       </div>
 
     </div>
+  
+  </div>
 
   );
 

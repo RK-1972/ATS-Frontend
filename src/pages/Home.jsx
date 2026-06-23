@@ -44,15 +44,14 @@ userRole === "Admin"
   [
 
     "Dashboard",
-    "Candidates",
-    "Requisitions",
-    "Interviews",
-    "Feedback",
-    "Offers",
+    "Talent Management",
+    "Requisition Management",
+    "Interview Management",
+    "Offer Management",
     "Reports & Analytics",
     "Master Management",
     "User Management",
-    "Interview Panel"
+    "Interview Panel Management"
 
   ]
 
@@ -60,14 +59,14 @@ userRole === "Admin"
 
   [
   "Dashboard",
-  "Candidates",
+  "Talent Management",
 
   ...(userRole !== "Recruiter"
-    ? ["Requisitions"]
+    ? ["Requisition Management"]
     : []),
 
-  "Interviews",
-  "Feedback",
+  "Interview Management",
+  "Feedback Management",
 
   ...(loggedInUser?.secondary_role ===
     "Interviewer"
@@ -169,9 +168,34 @@ useEffect(() => {
         </div>
 
 
-        <div style={styles.title}>
-          ATS PLATFORM
-        </div>
+        <div
+  style={{
+    width: "420px",
+    textAlign: "center"
+  }}
+>
+
+  <div
+    style={{
+      ...styles.title,
+      marginBottom: "4px"
+    }}
+  >
+    OPTALYNX
+  </div>
+
+  <div
+    style={{
+      color: "#dbeafe",
+      fontSize: "14px",
+      fontWeight: "400",
+      letterSpacing: "0.5px"
+    }}
+  >
+    Linking Talent with Opportunity
+  </div>
+
+</div>
 
 
         {/* USER + LOGOUT */}
@@ -255,7 +279,7 @@ useEffect(() => {
 
                 onClick={() => {
 
-                  if (item === "Candidates") {
+                  if (item === "Talent Management") {
 
                     navigate("/candidates");
 
@@ -273,7 +297,7 @@ useEffect(() => {
 
                   else if (
 
-                    item === "Requisitions"
+                    item === "Requisition Management"
 
                   ) {
 
@@ -302,7 +326,7 @@ useEffect(() => {
 
                     else if (
 
-  item === "Interview Panel"
+  item === "Interview Panel Management"
 
 ) {
 
@@ -312,7 +336,7 @@ useEffect(() => {
 
 else if (
 
-  item === "Interviews"
+  item === "Interview Management"
 
 ) {
 
@@ -352,7 +376,7 @@ else if (
 
 
           <div style={styles.pageTitle}>
-            Recruitment Dashboard
+            Recruiter Command Center
           </div>
 
 
@@ -490,7 +514,7 @@ else if (
 <div style={styles.dashboardPanel}>
 
   <div style={styles.panelHeader}>
-    ATS Workspace
+    Recruiter Workspace
   </div>
 
   <div style={styles.panelBody}>
@@ -508,7 +532,7 @@ else if (
 
       <div
         style={{
-          fontSize: "20px",
+          fontSize: "18px",
           fontWeight: "600",
           marginBottom: "16px",
           color: "#111827"
@@ -861,7 +885,7 @@ const styles = {
 
   pageTitle: {
 
-    fontSize: "28px",
+    fontSize: "22px",
 
     fontWeight: "600",
 
@@ -969,7 +993,7 @@ metricValue: {
 
     fontWeight: "600",
 
-    fontSize: "18px"
+    fontSize: "20px"
 
   },
 

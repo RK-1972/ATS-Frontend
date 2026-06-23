@@ -2,9 +2,14 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../api/axios";
 import Select from "react-select";
+import Header from "../components/Header";
 
 function InterviewSchedulePage() {
-  
+  useEffect(() => {
+
+    window.scrollTo(0, 0);
+
+  }, []);
   const navigate = useNavigate();
 
   const [candidates, setCandidates] =
@@ -19,6 +24,10 @@ function InterviewSchedulePage() {
   const [schedules, setSchedules] =
     useState([]);
 
+  const [searchText, setSearchText] =
+  useState("");
+
+  
   const [formData, setFormData] =
     useState({
 
@@ -119,8 +128,10 @@ const fetchSchedules = async () => {
       response.data.data
     );
 
+  
   }
 
+  
   catch (error) {
 
     console.log(error);
@@ -129,7 +140,53 @@ const fetchSchedules = async () => {
 
 };
 
+const searchValue =
+  searchText.toLowerCase();
 
+const filteredSchedules =
+  schedules.filter((s) =>
+
+    (s.req_code || "")
+      .toLowerCase()
+      .includes(searchValue)
+
+    ||
+
+    (s.job_title || "")
+      .toLowerCase()
+      .includes(searchValue)
+
+    ||
+
+    (s.candidate_code || "")
+      .toLowerCase()
+      .includes(searchValue)
+
+    ||
+
+    (s.candidate_name || "")
+      .toLowerCase()
+      .includes(searchValue)
+
+    ||
+
+    (s.interviewer_name || "")
+      .toLowerCase()
+      .includes(searchValue)
+
+    ||
+
+    (s.round_type || "")
+      .toLowerCase()
+      .includes(searchValue)
+
+    ||
+
+    (s.interview_date || "")
+      .toLowerCase()
+      .includes(searchValue)
+
+  );
 useEffect(() => {
 
   fetchRequisitions();
@@ -274,34 +331,32 @@ console.log("Requisitions:", requisitions);
 console.log("Options:", requisitionOptions);
   return (
 
-<div
-  style={{
-    padding: "30px",
-    backgroundColor: "#f4f6f9",
-    minHeight: "100vh"
-  }}
->
+<div>
 
-  <h1
-    style={{
-      marginBottom: "25px",
-      color: "#1e293b"
-    }}
-  >
-    Interview Schedule Management
-  </h1>
+  <Header
+    userName={localStorage.getItem("full_name")}
+    roleName={localStorage.getItem("role_name")}
+  />
 
   <div
     style={{
-      background: "#fff",
-      padding: "30px",
-      borderRadius: "15px",
-      boxShadow:
-        "0 2px 10px rgba(0,0,0,0.08)",
-      marginBottom: "30px"
+      padding: "20px 30px 30px 30px",
+      backgroundColor: "#f4f6f9"
+      
     }}
   >
-
+  <h1
+  style={{
+    marginBottom: "20px",
+    color: "#1e293b",
+    fontSize: "26px",
+    fontWeight: "600",
+    fontFamily: "Segoe UI, sans-serif"
+  }}
+>
+  Interview Schedule
+</h1>
+  
     <div
       style={{
         display: "grid",
@@ -468,10 +523,11 @@ console.log("Options:", requisitionOptions);
           "12px 25px",
         borderRadius: "8px",
         cursor: "pointer",
-        fontWeight: "600"
+        fontWeight: "600",
+        fontFamily: "Segoe UI, sans-serif"
       }}
     >
-      Schedule Interview
+      Schedule
     </button>
 
   </div>
@@ -482,7 +538,8 @@ console.log("Options:", requisitionOptions);
       padding: "30px",
       borderRadius: "15px",
       boxShadow:
-        "0 2px 10px rgba(0,0,0,0.08)"
+        "0 2px 10px rgba(0,0,0,0.08)",
+      fontFamily: "Segoe UI, sans-serif"
     }}
   >
 
@@ -493,7 +550,31 @@ console.log("Options:", requisitionOptions);
     >
       Scheduled Interviews
     </h2>
+<input
 
+  type="text"
+
+  placeholder="Search requisition, position, candidate, interviewer..."
+
+  value={searchText}
+
+  onChange={(e) =>
+    setSearchText(
+      e.target.value
+    )
+  }
+
+  style={{
+    width: "100%",
+    padding: "12px",
+    marginBottom: "20px",
+    border: "1px solid #d1d5db",
+    borderRadius: "8px",
+    fontSize: "14px",
+    fontFamily: "Segoe UI, sans-serif"
+  }}
+
+/>
     <div
       style={{
         overflowX: "auto"
@@ -562,13 +643,9 @@ console.log("Options:", requisitionOptions);
 
         <tbody>
 
-  {schedules.map((s) => (
+  {filteredSchedules.map((s) => (
 
-    <tr
-      key={
-        s.schedule_id
-      }
-    >
+    <tr key={s.schedule_id}>
 
       <td
   style={styles.td}

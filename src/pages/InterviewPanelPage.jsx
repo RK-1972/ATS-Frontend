@@ -1,9 +1,14 @@
 import { useEffect, useState } from "react";
 import API from "../api/axios";
 import Select from "react-select";
-
+import Header from "../components/Header";
 function InterviewPanelPage() {
 
+  useEffect(() => {
+
+    window.scrollTo(0, 0);
+
+  }, []);
 const [interviewers, setInterviewers] = useState([]);
 
 const [formData, setFormData] = useState({
@@ -361,12 +366,27 @@ setIsEditMode(false);
 
 return (
 
-<div style={styles.page}>
+<div>
+
+  <Header
+    userName={localStorage.getItem("full_name")}
+    roleName={localStorage.getItem("role_name")}
+  />
+
+  <div
+    style={{
+      padding: "20px 30px 30px 30px",
+      backgroundColor: "#f4f6f9",
+      minHeight: "100vh",
+      fontFamily: "Segoe UI, sans-serif"
+
+    }}
+  >
 
 {/* HEADER */}
 
   <div style={styles.header}>
-    Interview Panel Master
+    Interview Panel Registration
   </div>
 
 {/* =====================================
@@ -660,6 +680,8 @@ TABLE
     </table>
 
   </div>
+
+</div>
 
 </div>
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import API from "../api/axios";
 import { useNavigate } from "react-router-dom";
 
@@ -6,12 +6,24 @@ function LoginPage() {
 
   const navigate = useNavigate();
 
-  const [formData, setFormData] = useState({
+ const [formData, setFormData] = useState({
+
+  email_id: "",
+  password: ""
+
+});
+
+useEffect(() => {
+
+  setFormData({
 
     email_id: "",
     password: ""
 
   });
+
+}, []);
+  
 
   const [errorMessage, setErrorMessage] =
     useState("");
@@ -194,93 +206,163 @@ const handleForgotPassword =
 
   return (
 
-    <div style={styles.page}>
+  <div
+    style={{
+      minHeight: "100vh",
+      background: "#f4f6f9",
+      fontFamily: "Segoe UI"
+    }}
+  >
+
+    {/* Header */}
+
+    <div
+      style={{
+        background: "#1f3b63",
+        height: "110px",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        padding: "0 50px",
+        color: "white"
+      }}
+    >
+
+      <div>
+
+        <div
+          style={{
+            fontSize: "48px",
+            fontWeight: "700",
+            lineHeight: "45px"
+          }}
+        >
+          IGS
+        </div>
+
+        <div
+          style={{
+            color: "#f59e0b",
+            fontSize: "14px"
+          }}
+        >
+          ENGINEERING QUALITY
+        </div>
+
+      </div>
+
+      <div
+  style={{
+    textAlign: "right"
+  }}
+>
+
+  <div
+    style={{
+      fontSize: "34px",
+      fontWeight: "700",
+      letterSpacing: "2px"
+    }}
+  >
+    OPTALYNX
+  </div>
+
+  <div
+    style={{
+      fontSize: "13px",
+      marginTop: "5px",
+      color: "#dbeafe"
+    }}
+  >
+   Linking Talent with Opportunity
+  </div>
+
+</div>
+    </div>
+
+    {/* Login Card */}
+
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        paddingTop: "80px"
+      }}
+    >
 
       <div style={styles.loginBox}>
 
         <div style={styles.title}>
-          ATS Login
-        </div>
+  Access Your Workspace
+</div>
+
+<div
+  style={{
+    textAlign: "center",
+    color: "#6b7280",
+    fontSize: "14px",
+    marginTop: "-10px",
+    marginBottom: "10px"
+  }}
+>
+  Sign in to continue to OPTALYNX
+</div>
 
         <input
+        type="text"
+        name="email_id"
+        placeholder="Email"
+        value={formData.email_id}
+        onChange={handleChange}
+        autoComplete="off"
+        style={styles.input}
+      />
 
-          type="text"
-
-          name="email_id"
-
-          placeholder="Email"
-
-          value={formData.email_id}
-
-          onChange={handleChange}
-
-          style={styles.input}
-
-        />
-
-        <input
-
-          type="password"
-
-          name="password"
-
-          placeholder="Password"
-
-          value={formData.password}
-
-          onChange={handleChange}
-
-          style={styles.input}
-
-        />
-
+              <input
+        type="password"
+        name="password"
+        placeholder="Password"
+        value={formData.password}
+        onChange={handleChange}
+        autoComplete="new-password"
+        style={styles.input}
+      />
 
         {
-
           errorMessage && (
-
             <div style={styles.error}>
-
               {errorMessage}
-
             </div>
-
           )
-
         }
-            <div
-  style={{
-    textAlign: "right",
-    marginTop: "10px",
-    marginBottom: "15px"
-  }}
->
-  <span
 
-  onClick={
-    handleForgotPassword
-  }
+        <div
+          style={{
+            textAlign: "right",
+            marginTop: "10px",
+            marginBottom: "15px"
+          }}
+        >
+          <span
 
-  style={{
+            onClick={handleForgotPassword}
 
-    color: "#2563eb",
+            style={{
 
-    textDecoration: "none",
+              color: "#2563eb",
+              fontSize: "14px",
+              fontWeight: "500",
+              cursor: "pointer"
 
-    fontSize: "14px",
+            }}
 
-    fontWeight: "500",
+          >
 
-    cursor: "pointer"
+            Forgot Password?
 
-  }}
+          </span>
+        </div>
 
->
-
-  Forgot Password?
-
-</span>
-</div>
         <button
 
           style={styles.button}
@@ -297,7 +379,9 @@ const handleForgotPassword =
 
     </div>
 
-  );
+  </div>
+
+);
 
 }
 
@@ -306,52 +390,53 @@ const styles = {
 
   page: {
 
-    height: "100vh",
+  minHeight: "calc(100vh - 120px)",
 
-    display: "flex",
+  display: "flex",
 
-    justifyContent: "center",
+  justifyContent: "center",
 
-    alignItems: "center",
+  alignItems: "flex-start",
 
-    background: "#f4f6f9",
+  paddingTop: "60px",
 
-    fontFamily: "Segoe UI"
+  background: "#f4f6f9",
 
-  },
+  fontFamily: "Segoe UI"
+
+},
 
   loginBox: {
 
-    width: "400px",
+  width: "520px",
 
-    background: "white",
+  background: "#ffffff",
 
-    padding: "40px",
+  padding: "40px",
 
-    borderRadius: "12px",
+  borderRadius: "20px",
 
-    boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
+  boxShadow: "0 4px 15px rgba(0,0,0,0.08)",
 
-    display: "flex",
+  display: "flex",
 
-    flexDirection: "column",
+  flexDirection: "column",
 
-    gap: "20px"
+  gap: "12px"
 
-  },
+},
 
   title: {
 
-    fontSize: "30px",
+  fontSize: "24px",
 
-    fontWeight: "600",
+  fontWeight: "600",
 
-    textAlign: "center",
+  textAlign: "center",
 
-    color: "#1f2937"
+  color: "#1f2937"
 
-  },
-
+},
   input: {
 
     padding: "14px",

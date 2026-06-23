@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import API from "../api/axios";
 import Select from "react-select";
+import Header from "../components/Header";
 function CandidatePage() {
 
   const candidateStatuses = [
@@ -820,18 +821,25 @@ const handleEdit = async (candidate) => {
 
   return (
 
+  <div>
+
+    <Header
+      userName={localStorage.getItem("full_name")}
+      roleName={localStorage.getItem("role_name")}
+    />
+
     <div style={styles.page}>
 
       <h2
-  style={{
-    marginBottom: "12px",
-    color: "#1f2937",
-    fontSize: "20px",
-    fontWeight: "600"
-  }}
->
-  Candidate Registration
-</h2>
+        style={{
+          marginBottom: "12px",
+          color: "#1f2937",
+          fontSize: "20px",
+          fontWeight: "600"
+        }}
+      >
+        Talent Registration
+      </h2>
       <div style={styles.formContainer}>
 
         <div style={styles.row}>
@@ -1419,6 +1427,7 @@ PIPELINE DASHBOARD
 
     </div>
 
+    </div>
     </div>
 
   );
