@@ -1,3 +1,4 @@
+import Header from "../components/Header";
 import { useEffect, useState } from "react";
 import API from "../api/axios";
 
@@ -333,13 +334,21 @@ function MasterManagementPage() {
 
     <div style={styles.page}>
 
-
+     <Header />
       {/* HEADER */}
 
-      <div style={styles.header}>
+      <div
+    style={{
+      padding: "30px"
+    }}
+  >
+
+    {/* HEADER */}
+
+    <div style={styles.header}>
         Master Management
       </div>
-
+      </div>
 
       {/* TABS */}
 
@@ -921,15 +930,13 @@ const styles = {
 
   page: {
 
-    padding: "30px",
+  background: "#f4f6f9",
 
-    background: "#f4f6f9",
+  minHeight: "100vh",
 
-    minHeight: "100vh",
+  fontFamily: "Segoe UI"
 
-    fontFamily: "Segoe UI"
-
-  },
+},
 
   header: {
 

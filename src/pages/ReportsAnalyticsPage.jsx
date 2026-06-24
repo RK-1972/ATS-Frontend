@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import API from "../api/axios";
+import Header from "../components/Header";
 
 import {
   FaUserPlus,
@@ -139,11 +140,18 @@ function ReportsAnalyticsPage() {
 
   return (
 
+  <div
+    style={{
+      background: "#f3f4f6",
+      minHeight: "100vh"
+    }}
+  >
+
+    <Header />
+
     <div
       style={{
-        padding: "24px",
-        background: "#f3f4f6",
-        minHeight: "100vh"
+        padding: "24px"
       }}
     >
 
@@ -351,6 +359,8 @@ function ReportsAnalyticsPage() {
 
     </div>
 
+ </div>
+ 
   );
 
 }

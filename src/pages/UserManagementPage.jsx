@@ -1,3 +1,4 @@
+import Header from "../components/Header";
 import { useEffect, useState } from "react";
 import API from "../api/axios";
 
@@ -191,13 +192,21 @@ function UserManagementPage() {
 
     <div style={styles.page}>
 
+    <Header />
+
+    <div
+      style={{
+        padding: "30px"
+      }}
+    >
 
       {/* HEADER */}
 
       <div style={styles.header}>
         User Management
       </div>
-
+      </div>
+     
 
       {/* =====================================
           CREATE USER FORM
@@ -420,15 +429,13 @@ const styles = {
 
   page: {
 
-    padding: "30px",
+  background: "#f4f6f9",
 
-    background: "#f4f6f9",
+  minHeight: "100vh",
 
-    minHeight: "100vh",
+  fontFamily: "Segoe UI"
 
-    fontFamily: "Segoe UI"
-
-  },
+},
 
   header: {
 

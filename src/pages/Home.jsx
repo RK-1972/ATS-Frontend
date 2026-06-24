@@ -1,3 +1,4 @@
+import Header from "../components/Header";
 import {
 
   FaBriefcase,
@@ -146,121 +147,58 @@ useEffect(() => {
 
 }, []);
 
-  return (
+return (
 
-    <div style={styles.app}>
+  <div style={styles.app}>
 
+    <Header />
 
-      {/* HEADER */}
-      <div style={styles.header}>
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "flex-end",
+        alignItems: "center",
+        padding: "10px 30px",
+        background: "#f4f6f9"
+      }}
+    >
 
+      {/* USER + LOGOUT */}
 
-        <div>
+      <div style={styles.userSection}>
 
-          <div style={styles.logo}>
-            IGS
+        <div style={styles.userInfo}>
+
+          <div style={styles.userName}>
+            {loggedInUser?.full_name || "User"}
           </div>
 
-          <div style={styles.tagline}>
-            ENGINEERING QUALITY
+          <div style={styles.roleName}>
+            {userRole || "Recruiter"}
           </div>
 
         </div>
 
+        <button
+          style={styles.logoutButton}
+          onClick={() => {
 
-        <div
-  style={{
-    width: "420px",
-    textAlign: "center"
-  }}
->
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+            window.location.href = "/login";
 
-  <div
-    style={{
-      ...styles.title,
-      marginBottom: "4px"
-    }}
-  >
-    OPTALYNX
-  </div>
-
-  <div
-    style={{
-      color: "#dbeafe",
-      fontSize: "14px",
-      fontWeight: "400",
-      letterSpacing: "0.5px"
-    }}
-  >
-    Linking Talent with Opportunity
-  </div>
-
-</div>
-
-
-        {/* USER + LOGOUT */}
-
-        <div style={styles.userSection}>
-
-
-          <div style={styles.userInfo}>
-
-
-            <div style={styles.userName}>
-
-              {
-
-                loggedInUser?.full_name ||
-
-                "User"
-
-              }
-
-            </div>
-
-
-            <div style={styles.roleName}>
-
-              {
-
-                userRole ||
-
-                "Recruiter"
-
-              }
-
-            </div>
-
-          </div>
-
-
-          <button
-
-            style={styles.logoutButton}
-
-            onClick={() => {
-
-              localStorage.removeItem("token");
-
-              localStorage.removeItem("user");
-
-              window.location.href = "/login";
-
-            }}
-
-          >
-
-            Logout
-
-          </button>
-
-        </div>
+          }}
+        >
+          Logout
+        </button>
 
       </div>
 
+    </div>
 
-      {/* BODY */}
-      <div style={styles.body}>
+    {/* BODY */}
+
+    <div style={styles.body}>
 
 
         {/* SIDEBAR */}
@@ -790,7 +728,7 @@ const styles = {
 
   userName: {
 
-    color: "white",
+    color: "#1f3b63",
 
     fontWeight: "600",
 
@@ -802,7 +740,7 @@ const styles = {
 
     fontSize: "12px",
 
-    color: "#d1d5db"
+    color: "#64748b"
 
   },
 
