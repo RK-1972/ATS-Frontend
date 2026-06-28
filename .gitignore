@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Recovery artifacts (not part of baseline)
+_recovered_pre_wave2/
+_recovery_extract/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

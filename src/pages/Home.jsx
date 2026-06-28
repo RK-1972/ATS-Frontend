@@ -12,10 +12,13 @@ import {
 } from "react-icons/fa";
 
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
-import API from "../api/axios";
+import { useState, useMemo } from "react";
 
-function Home() {
+import { Navigate } from "react-router-dom";
+import useEnterpriseStore from "@/store/enterpriseStore";
+import { isHomeMenuItemVisible } from "@/enterprise/moduleVisibility";
+
+function AdminHomeLegacy() {
 
   const navigate = useNavigate();
 
@@ -36,6 +39,8 @@ function Home() {
   // Dynamic Menu Based On Role
   // =========================================
 
+  const platformConfig = useEnterpriseStore((state) => state.platformConfig);
+
   const menuItems =
 
 userRole === "Admin"
@@ -51,8 +56,13 @@ userRole === "Admin"
     "Offer Management",
     "Reports & Analytics",
     "Master Management",
+    "Enterprise Master Data",
     "User Management",
-    "Interview Panel Management"
+    "Interview Panel Management",
+    "Platform Configuration",
+    "Business Rules",
+    "Hiring Control Tower",
+    "Workforce Planning"
 
   ]
 
@@ -76,76 +86,13 @@ userRole === "Admin"
 
     : [])
 ];
-  // =========================================
-// Recruiter Dashboard
-// =========================================
 
-const fetchRecruiterDashboard =
-  async () => {
-
-    try {
-
-      const response =
-        await API.get(
-          "/recruiter-dashboard"
-        );
-
-      setDashboardData(
-        response.data.data
-      );
-
-    }
-
-    catch (error) {
-
-      console.log(error);
-
-    }
-
-  };
-
-  // =========================================
-// Fetch My Requisitions
-// =========================================
-
-const fetchMyRequisitions =
-  async () => {
-
-    try {
-
-      const response =
-        await API.get(
-          "/my-requisitions"
-        );
-
-      setMyRequisitions(
-        response.data.data
-      );
-
-    }
-
-    catch (error) {
-
-      console.log(error);
-
-    }
-
-};
-
-useEffect(() => {
-
-  if (
-
-    userRole === "Recruiter"
-
-  ) {
-
-    fetchRecruiterDashboard();
-    fetchMyRequisitions();
-
-  }
-
-}, []);
+  const visibleMenuItems = useMemo(
+    () => menuItems.filter((item) =>
+      isHomeMenuItemVisible(item, userRole, platformConfig)
+    ),
+    [menuItems, userRole, platformConfig]
+  );
 
 return (
 
@@ -207,7 +154,7 @@ return (
 
           {
 
-            menuItems.map((item) => (
+            visibleMenuItems.map((item) => (
 
               <button
 
@@ -264,6 +211,16 @@ return (
 
                     else if (
 
+                  item === "Enterprise Master Data"
+
+                ) {
+
+                  navigate("/master-data");
+
+                    }
+
+                    else if (
+
   item === "Interview Panel Management"
 
 ) {
@@ -290,6 +247,46 @@ else if (
 ) {
 
   navigate("/interviewer");
+
+}
+
+else if (
+
+  item === "Platform Configuration"
+
+) {
+
+  navigate("/platform-configuration");
+
+}
+
+else if (
+
+  item === "Business Rules"
+
+) {
+
+  navigate("/business-rules");
+
+}
+
+else if (
+
+  item === "Hiring Control Tower"
+
+) {
+
+  navigate("/hiring-control-tower");
+
+}
+
+else if (
+
+  item === "Workforce Planning"
+
+) {
+
+  navigate("/workforce-planning");
 
 }
 
@@ -972,4 +969,21 @@ td: {
 }
 
 };
+
+function Home() {
+
+  const loggedInUser =
+    JSON.parse(localStorage.getItem("user"));
+
+  const userRole =
+    loggedInUser?.role_name;
+
+  if (userRole === "Recruiter") {
+    return <Navigate to="/recruiter" replace />;
+  }
+
+  return <AdminHomeLegacy />;
+
+}
+
 export default Home;

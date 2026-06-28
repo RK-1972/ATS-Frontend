@@ -129,6 +129,17 @@ else if (
 
 }
 
+else if (
+
+  user.role_name === "Recruiter"
+
+) {
+
+  setIsLoading(false);
+  navigate("/recruiter");
+
+}
+
 else {
 
       setIsLoading(false);
