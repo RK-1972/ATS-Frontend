@@ -6,13 +6,19 @@ function emptyDashboard() {
     requisitions: [],
     recruiterAssignments: [],
     pipeline: [],
+    activePipeline: [],
+    offerCandidates: [],
     interviews: [],
     tasks: [],
+    filter: null,
     summary: {
       openRequisitions: 0,
       activeCandidates: 0,
       pendingTasks: 0,
-      interviewsToday: 0
+      interviewsInRange: 0,
+      pendingFeedbackInRange: 0,
+      offersInRange: 0,
+      pipelineStageCounts: {}
     },
     taskSummary: { pending: 0, escalated: 0, overdue: 0 },
     interviewSummary: { scheduled: 0, completed: 0, pendingFeedback: 0 }
@@ -21,8 +27,13 @@ function emptyDashboard() {
 
 const recruitmentClient = {
 
-  getMyDashboard() {
-    return httpGet(`${ENDPOINTS.recruitment}/my-dashboard`, () => emptyDashboard());
+  getMyDashboard({ fromDate, toDate } = {}) {
+    const params = new URLSearchParams();
+    if (fromDate) params.set("fromDate", fromDate);
+    if (toDate) params.set("toDate", toDate);
+    const query = params.toString();
+    const url = `${ENDPOINTS.recruitment}/my-dashboard${query ? `?${query}` : ""}`;
+    return httpGet(url, () => emptyDashboard());
   },
 
   getAll() {

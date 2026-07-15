@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import {
   AppBar,
@@ -9,13 +10,17 @@ import {
   Chip,
   IconButton,
   Tooltip,
-  Divider
+  Divider,
+  Badge,
+  Menu,
+  MenuItem
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 
 import NotificationsNoneOutlinedIcon from "@mui/icons-material/NotificationsNoneOutlined";
 import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
 
+import candidateRepository from "@/repositories/candidateRepository";
 import BrandLogo from "./BrandLogo";
 
 function AppHeader({
@@ -28,6 +33,50 @@ function AppHeader({
 
   const theme = useTheme();
   const { brand, layout } = theme.tokens;
+  const navigate = useNavigate();
+
+  const [pendingCount, setPendingCount] = useState(0);
+  const [menuAnchor, setMenuAnchor] = useState(null);
+
+  const loadPendingOwnershipCount = () => {
+    candidateRepository
+      .getMyOwnershipRequests()
+      .then((requests) => setPendingCount(requests.length))
+      .catch(() => setPendingCount(0));
+  };
+
+  useEffect(() => {
+    loadPendingOwnershipCount();
+
+    const handleWindowFocus = () => {
+      loadPendingOwnershipCount();
+    };
+
+    const handleOwnershipUpdated = () => {
+      loadPendingOwnershipCount();
+    };
+
+    window.addEventListener("focus", handleWindowFocus);
+    window.addEventListener("ownershipRequestsUpdated", handleOwnershipUpdated);
+
+    return () => {
+      window.removeEventListener("focus", handleWindowFocus);
+      window.removeEventListener("ownershipRequestsUpdated", handleOwnershipUpdated);
+    };
+  }, []);
+
+  const handleBellClick = (event) => {
+    setMenuAnchor(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setMenuAnchor(null);
+  };
+
+  const handleReviewNow = () => {
+    handleMenuClose();
+    navigate("/recruiter/ownership-requests");
+  };
 
   return (
 
@@ -178,7 +227,7 @@ function AppHeader({
           <Tooltip title="Notifications">
 
             <IconButton
-
+              onClick={handleBellClick}
               sx={{
 
                 color: "#FFFFFF",
@@ -193,11 +242,46 @@ function AppHeader({
 
             >
 
-              <NotificationsNoneOutlinedIcon />
+              <Badge
+                badgeContent={pendingCount}
+                color="error"
+                invisible={pendingCount === 0}
+              >
+                <NotificationsNoneOutlinedIcon />
+              </Badge>
 
             </IconButton>
 
           </Tooltip>
+
+          <Menu
+            anchorEl={menuAnchor}
+            open={Boolean(menuAnchor)}
+            onClose={handleMenuClose}
+            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+            transformOrigin={{ vertical: "top", horizontal: "right" }}
+            PaperProps={{ sx: { minWidth: 220, borderRadius: 2, mt: 0.5 } }}
+          >
+            {pendingCount > 0 ? (
+              <>
+                <Box sx={{ px: 2, py: 1.25 }}>
+                  <Typography variant="subtitle2" fontWeight={700}>
+                    Ownership Requests
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
+                    {pendingCount} Pending Request{pendingCount === 1 ? "" : "s"}
+                  </Typography>
+                </Box>
+                <MenuItem onClick={handleReviewNow} sx={{ fontWeight: 600 }}>
+                  Review Now
+                </MenuItem>
+              </>
+            ) : (
+              <MenuItem disabled sx={{ fontSize: 14 }}>
+                No pending notifications.
+              </MenuItem>
+            )}
+          </Menu>
 
           <Divider
 

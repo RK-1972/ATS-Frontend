@@ -30,6 +30,7 @@ export const MASTER_DATA_DOMAINS = [
       { key: "skills", label: "Skills" },
       { key: "skill_categories", label: "Skill Categories" },
       { key: "interview_types", label: "Interview Types" },
+      { key: "interview_stages", label: "Interview Stages" },
       { key: "interview_modes", label: "Interview Modes" },
       { key: "candidate_sources", label: "Candidate Sources" },
       { key: "vendor_partners", label: "Vendor Partners" },
@@ -117,6 +118,10 @@ export const DEFAULT_USED_BY = {
 export const ENTITY_API_MAP = {
   grades: { table: "md_grades", endpoint: "/api/v1/master/grades" },
   departments: { table: "md_departments", endpoint: "/api/v1/master/departments" },
+  interview_stages: {
+    table: "md_interview_stages",
+    endpoint: "/api/v1/master/interview-stages"
+  },
   business_units: { table: "md_business_units", endpoint: "/api/v1/master/business-units" },
   work_locations: { table: "md_work_locations", endpoint: "/api/v1/master/work-locations" },
   currencies: { table: "md_currencies", endpoint: "/api/v1/master/currencies" }

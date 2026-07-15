@@ -1471,7 +1471,9 @@ const useEnterpriseStore = create((set, get) => ({
         selectedRecordId: null,
         drawerOpen: false,
         drawerTab: "edit",
-        draftRecord: null
+        draftRecord: null,
+        importDialogOpen: false,
+        importPreview: null
       }
     }));
   },
@@ -1522,7 +1524,10 @@ const useEnterpriseStore = create((set, get) => ({
           versionStatus: "Draft",
           usedBy: [],
           lastUpdated: new Date().toISOString(),
-          history: []
+          history: [],
+          ...(entityType === "skills"
+            ? { skillCategoryCode: "", skillCategory: "" }
+            : {})
         }
       }
     }));
@@ -1699,6 +1704,18 @@ const useEnterpriseStore = create((set, get) => ({
 
     const entityType = get().masterDataUi.selectedEntityType;
 
+    if (!rows?.length) {
+      set({
+        masterDataUi: {
+          ...get().masterDataUi,
+          importPreview: null,
+          toastMessage:
+            "No valid import rows found. Paste CSV with a header row and at least one Code,Name row."
+        }
+      });
+      return;
+    }
+
     Promise.resolve(
       masterDataRepository.previewImport(get().masterData, {
         entityType,
@@ -1708,7 +1725,25 @@ const useEnterpriseStore = create((set, get) => ({
       set({
         masterDataUi: {
           ...get().masterDataUi,
-          importPreview: preview
+          importPreview: Array.isArray(preview) ? preview : null,
+          toastMessage: Array.isArray(preview) && preview.length === 0
+            ? "No valid import rows found."
+            : get().masterDataUi.toastMessage
+        }
+      });
+    }).catch((error) => {
+      console.error(
+        "[enterpriseStore] previewMasterImport failed:",
+        error?.response?.data || error.message
+      );
+
+      set({
+        masterDataUi: {
+          ...get().masterDataUi,
+          toastMessage:
+            error?.response?.data?.message
+            || error.message
+            || "Import validation preview failed."
         }
       });
     });
@@ -1757,6 +1792,21 @@ const useEnterpriseStore = create((set, get) => ({
         metadata: { reason, count: result.newRecords.length }
       });
 
+    }).catch((error) => {
+      console.error(
+        "[enterpriseStore] commitMasterImport failed:",
+        error?.response?.data || error.message
+      );
+
+      set({
+        masterDataUi: {
+          ...get().masterDataUi,
+          toastMessage:
+            error?.response?.data?.message
+            || error.message
+            || "Import commit failed."
+        }
+      });
     });
 
   },

@@ -4,6 +4,11 @@ import masterDataClient from "@/api/clients/masterDataClient";
 import masterDataMock from "@/data/mock/masterData.mock";
 import { DEFAULT_USED_BY } from "@/enterprise/masterDataConstants";
 import { cloneData } from "@/utils/cloneData";
+import {
+  SKILLS_ENTITY,
+  previewSkillsImportLocal,
+  resolveSkillCategoryCode
+} from "@/enterprise/skillsMasterDataUtils";
 
 function buildEmptyRecords() {
   return MASTER_DATA_DOMAINS.reduce((records, domain) => {
@@ -12,6 +17,26 @@ function buildEmptyRecords() {
     });
     return records;
   }, {});
+}
+
+function normalizeMasterDataBundle(bundle) {
+  const records = buildEmptyRecords();
+
+  for (const [entityType, rows] of Object.entries(bundle?.records || {})) {
+    if (Array.isArray(rows)) {
+      records[entityType] = rows;
+    }
+  }
+
+  return {
+    ...bundle,
+    domains: MASTER_DATA_DOMAINS,
+    records,
+    meta: {
+      ...bundle?.meta,
+      entity_type_count: Object.keys(records).length
+    }
+  };
 }
 
 function getInitialState() {
@@ -35,7 +60,8 @@ function getInitialState() {
 
 async function getAll(currentData) {
   if (isLiveMode() || !currentData) {
-    return masterDataClient.getAll();
+    const bundle = await masterDataClient.getAll();
+    return normalizeMasterDataBundle(bundle);
   }
 
   return cloneData(currentData);
@@ -80,6 +106,13 @@ function saveRecordLocal(masterData, { draftRecord, selectedEntityType, reason =
       }
     ]
   };
+
+  if (selectedEntityType === SKILLS_ENTITY) {
+    const categoryRecord = (masterData.records.skill_categories || []).find(
+      (item) => item.code === savedRecord.skillCategoryCode
+    );
+    savedRecord.skillCategory = categoryRecord?.name || savedRecord.skillCategory || "";
+  }
 
   const nextMasterData = {
     ...masterData,
@@ -138,13 +171,17 @@ async function saveRecord(masterData, params) {
       : DEFAULT_USED_BY[selectedEntityType] || []
   };
 
+  if (selectedEntityType === SKILLS_ENTITY) {
+    payload.skillCategoryCode = draftRecord.skillCategoryCode;
+  }
+
   if (isNew) {
     await masterDataClient.create(selectedEntityType, payload);
   } else {
     await masterDataClient.update(selectedEntityType, draftRecord.id, payload);
   }
 
-  const refreshed = await masterDataClient.getAll();
+  const refreshed = normalizeMasterDataBundle(await masterDataClient.getAll());
   const savedRecord = refreshed.records[selectedEntityType]?.find(
     (item) => item.id === draftRecord.id || item.code === draftRecord.code
   );
@@ -215,7 +252,7 @@ async function publishRecord(masterData, params) {
   const { entityType, recordId, reason = "" } = params;
 
   await masterDataClient.publish(entityType, recordId, { reason });
-  const refreshed = await masterDataClient.getAll();
+  const refreshed = normalizeMasterDataBundle(await masterDataClient.getAll());
   const record = refreshed.records[entityType]?.find((item) => item.id === recordId);
 
   return {
@@ -271,7 +308,7 @@ async function archiveRecord(masterData, params) {
   const { entityType, recordId, reason = "" } = params;
 
   await masterDataClient.archive(entityType, recordId, { reason });
-  const refreshed = await masterDataClient.getAll();
+  const refreshed = normalizeMasterDataBundle(await masterDataClient.getAll());
 
   return {
     masterData: refreshed,
@@ -335,7 +372,7 @@ async function rollbackRecord(masterData, params) {
     reason
   });
 
-  const refreshed = await masterDataClient.getAll();
+  const refreshed = normalizeMasterDataBundle(await masterDataClient.getAll());
 
   return {
     masterData: refreshed,
@@ -349,10 +386,9 @@ async function rollbackRecord(masterData, params) {
 
 }
 
-async function previewImport(masterData, { entityType, rows }) {
-
-  if (isLiveMode()) {
-    return masterDataClient.previewImport(entityType, rows);
+function previewImportLocal(masterData, entityType, rows) {
+  if (entityType === SKILLS_ENTITY) {
+    return previewSkillsImportLocal(masterData, rows);
   }
 
   const existingCodes = new Set(
@@ -364,8 +400,30 @@ async function previewImport(masterData, { entityType, rows }) {
     code: row.code,
     name: row.name,
     description: row.description || "",
-    status: existingCodes.has(row.code.toLowerCase()) ? "Duplicate" : "Valid"
+    status: existingCodes.has(String(row.code || "").toLowerCase()) ? "Duplicate" : "Valid"
   }));
+}
+
+async function previewImport(masterData, { entityType, rows }) {
+
+  if (!isLiveMode()) {
+    return previewImportLocal(masterData, entityType, rows);
+  }
+
+  try {
+    const preview = await masterDataClient.previewImport(entityType, rows);
+
+    if (Array.isArray(preview)) {
+      return preview;
+    }
+  } catch (error) {
+    console.error(
+      "[masterDataRepository] previewImport live API failed, using local preview:",
+      error?.response?.data?.message || error.message
+    );
+  }
+
+  return previewImportLocal(masterData, entityType, rows);
 
 }
 
@@ -374,27 +432,45 @@ function commitImportLocal(masterData, { entityType, rows, reason = "" }) {
   const existing = masterData.records[entityType] || [];
   const existingCodes = new Set(existing.map((item) => item.code.toLowerCase()));
 
-  const newRecords = rows
-    .filter((row) => !existingCodes.has(row.code.toLowerCase()))
-    .map((row) => ({
-      id: `md-${entityType}-${row.code.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
-      entityType,
-      code: row.code,
-      name: row.name,
-      description: row.description || "",
-      status: "Active",
-      version: "1.0",
-      versionStatus: "Draft",
-      usedBy: [],
-      lastUpdated: new Date().toISOString(),
-      history: [{
+  let importRows = rows;
+
+  if (entityType === SKILLS_ENTITY) {
+    const preview = previewSkillsImportLocal(masterData, rows);
+    importRows = rows.filter((_, index) => preview[index]?.status === "Valid");
+  } else {
+    importRows = rows.filter((row) => !existingCodes.has(row.code.toLowerCase()));
+  }
+
+  const newRecords = importRows.map((row) => {
+      const skillCategoryCode = entityType === SKILLS_ENTITY
+        ? resolveSkillCategoryCode(masterData, row.skillCategory || row.skillCategoryCode)
+        : null;
+      const categoryRecord = entityType === SKILLS_ENTITY
+        ? (masterData.records.skill_categories || []).find((item) => item.code === skillCategoryCode)
+        : null;
+
+      return {
+        id: `md-${entityType}-${row.code.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+        entityType,
+        code: row.code,
+        name: row.name,
+        description: row.description || "",
+        skillCategoryCode,
+        skillCategory: categoryRecord?.name || row.skillCategory || "",
+        status: "Active",
         version: "1.0",
-        status: "Draft",
-        date: new Date().toISOString(),
-        user: "Current User",
-        reason: reason || "Imported from file"
-      }]
-    }));
+        versionStatus: "Draft",
+        usedBy: [],
+        lastUpdated: new Date().toISOString(),
+        history: [{
+          version: "1.0",
+          status: "Draft",
+          date: new Date().toISOString(),
+          user: "Current User",
+          reason: reason || "Imported from file"
+        }]
+      };
+    });
 
   if (!newRecords.length) {
     return { masterData, newRecords, imported: false };
@@ -422,18 +498,52 @@ async function commitImport(masterData, { entityType, rows, reason = "" }) {
     return commitImportLocal(masterData, { entityType, rows, reason });
   }
 
-  const result = await masterDataClient.commitImport(entityType, rows, reason);
+  const preview = await previewImport(masterData, { entityType, rows });
+  const validRows = rows.filter((_, index) => preview[index]?.status === "Valid");
 
-  if (!result.imported) {
+  if (!validRows.length) {
     return { masterData, newRecords: [], imported: false };
   }
 
+  try {
+    const result = await masterDataClient.commitImport(entityType, validRows, reason);
+
+    if (Number(result?.imported) > 0) {
+      return {
+        masterData: normalizeMasterDataBundle(
+          result.masterData || await masterDataClient.getAll()
+        ),
+        newRecords: result.records || [],
+        imported: true,
+        entityType,
+        toastMessage: `${result.imported} record(s) imported.`
+      };
+    }
+  } catch (error) {
+    console.error(
+      "[masterDataRepository] commitImport bulk API failed, trying row-by-row create:",
+      error?.response?.data?.message || error.message
+    );
+  }
+
+  const created = [];
+
+  for (const row of validRows) {
+    const record = await masterDataClient.create(entityType, {
+      code: row.code,
+      name: row.name,
+      description: row.description || "",
+      reason: reason || "Imported from file"
+    });
+    created.push(record);
+  }
+
   return {
-    masterData: result.masterData || await masterDataClient.getAll(),
-    newRecords: result.records || [],
+    masterData: normalizeMasterDataBundle(await masterDataClient.getAll()),
+    newRecords: created,
     imported: true,
     entityType,
-    toastMessage: `${result.imported} record(s) imported.`
+    toastMessage: `${created.length} record(s) imported.`
   };
 
 }

@@ -18,6 +18,8 @@ function createRecord({
   code,
   name,
   description,
+  skillCategoryCode = null,
+  skillCategory = "",
   status = "Active",
   version = "1.0",
   versionStatus = "Published",
@@ -35,6 +37,8 @@ function createRecord({
     code,
     name,
     description,
+    skillCategoryCode,
+    skillCategory,
     status,
     version,
     versionStatus,
@@ -111,9 +115,9 @@ const SEED_TEMPLATES = {
     ["WC-NBILL", "Non-Billable", "Internal / overhead workforce"]
   ],
   skills: [
-    ["SK-JAVA", "Java", "Core Java development", DEFAULT_USED_BY.skills],
-    ["SK-REACT", "React", "Frontend React framework", DEFAULT_USED_BY.skills],
-    ["SK-AWS", "AWS", "Amazon Web Services cloud", DEFAULT_USED_BY.skills]
+    ["SK-JAVA", "SC-TECH", "Java", "Core Java development", DEFAULT_USED_BY.skills],
+    ["SK-REACT", "SC-TECH", "React", "Frontend React framework", DEFAULT_USED_BY.skills],
+    ["SK-AWS", "SC-TECH", "AWS", "Amazon Web Services cloud", DEFAULT_USED_BY.skills]
   ],
   skill_categories: [
     ["SC-TECH", "Technical", "Technical skill grouping"],
@@ -123,6 +127,13 @@ const SEED_TEMPLATES = {
     ["IT-L1", "L1 Technical", "First-level technical interview"],
     ["IT-L2", "L2 Technical", "Second-level technical interview"],
     ["IT-HM", "Hiring Manager", "HM culture and fit round"]
+  ],
+  interview_stages: [
+    ["L1", "L1", "Level 1 interview stage"],
+    ["L2", "L2", "Level 2 interview stage"],
+    ["L3", "L3", "Level 3 interview stage"],
+    ["L4", "L4", "Level 4 interview stage"],
+    ["FIN", "Final Round", "Final interview stage"]
   ],
   interview_modes: [
     ["IM-FTF", "Face to Face", "In-person interview"],
@@ -218,16 +229,36 @@ function buildRecords() {
   const records = {};
 
   Object.entries(SEED_TEMPLATES).forEach(([entityType, items]) => {
-    records[entityType] = items.map(([code, name, description, usedBy], index) =>
-      createRecord({
+    records[entityType] = items.map((item, index) => {
+      if (entityType === "skills") {
+        const [code, skillCategoryCode, name, description, usedBy] = item;
+        const categoryRecord = SEED_TEMPLATES.skill_categories.find(
+          ([categoryCode]) => categoryCode === skillCategoryCode
+        );
+
+        return createRecord({
+          entityType,
+          code,
+          name,
+          description,
+          skillCategoryCode,
+          skillCategory: categoryRecord?.[1] || skillCategoryCode,
+          usedBy: usedBy || ["Platform Configuration"],
+          daysAgo: 3 + index
+        });
+      }
+
+      const [code, name, description, usedBy] = item;
+
+      return createRecord({
         entityType,
         code,
         name,
         description,
         usedBy: usedBy || ["Platform Configuration"],
         daysAgo: 3 + index
-      })
-    );
+      });
+    });
   });
 
   return records;

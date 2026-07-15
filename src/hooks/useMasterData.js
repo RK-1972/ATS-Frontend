@@ -192,23 +192,38 @@ function useMasterData() {
       .map((line) => line.trim())
       .filter(Boolean);
 
-    if (lines.length < 2) {
-      return [];
+    if (lines.length >= 2) {
+      const parsed = lines.slice(1).map((line) => {
+
+        const parts = line.split(",").map((part) => part.trim().replace(/^"|"$/g, ""));
+
+        return {
+          code: parts[0] || "",
+          name: parts[1] || "",
+          description: parts[2] || ""
+        };
+
+      }).filter((row) => row.code && row.name);
+
+      if (parsed.length) {
+        return parsed;
+      }
     }
 
-    return lines.slice(1).map((line) => {
+    if (ui.importPreview?.length) {
+      return ui.importPreview
+        .filter((row) => row.status === "Valid")
+        .map((row) => ({
+          code: row.code,
+          name: row.name,
+          description: row.description || ""
+        }))
+        .filter((row) => row.code && row.name);
+    }
 
-      const parts = line.split(",").map((part) => part.trim().replace(/^"|"$/g, ""));
+    return [];
 
-      return {
-        code: parts[0] || "",
-        name: parts[1] || "",
-        description: parts[2] || ""
-      };
-
-    }).filter((row) => row.code && row.name);
-
-  }, []);
+  }, [ui.importPreview]);
 
   return {
     masterData,

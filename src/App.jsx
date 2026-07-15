@@ -108,11 +108,34 @@ const MasterDataPage = lazy(
 const RecruiterWorkspaceLayout = lazy(
   () => import("./components/workspaces/RecruiterWorkspaceLayout")
 );
+const RecruiterHomePage = lazy(
+  () => import("./pages/recruiter-home/RecruiterHomePage")
+);
 const RecruiterWorkspacePage = lazy(
   () => import("./pages/workspaces/recruiter/RecruiterWorkspacePage")
 );
+const OwnershipInboxPage = lazy(
+  () => import("./pages/ownership-inbox/OwnershipInboxPage")
+);
 const WorkspacePickerPage = lazy(
   () => import("./pages/workspaces/WorkspacePickerPage")
+);
+
+const CandidateWorkspaceLayout = lazy(
+  () => import("./components/candidate-workspace/CandidateWorkspaceLayout")
+);
+const CandidateWorkspaceListPage = lazy(
+  () => import("./pages/candidate-workspace/CandidateWorkspaceListPage")
+);
+const CandidateWorkspacePage = lazy(
+  () => import("./pages/candidate-workspace/CandidateWorkspacePage")
+);
+
+const CandidateIntakeLayout = lazy(
+  () => import("./components/candidate-intake/CandidateIntakeLayout")
+);
+const CandidateIntakePage = lazy(
+  () => import("./pages/recruitment/CandidateIntakePage")
 );
 
 function RouteLoader() {
@@ -195,20 +218,61 @@ function App() {
 
 
         <Route
-
-          path="/candidates"
-
+          path="/candidates/classic"
           element={
-
             <ProtectedRoute>
-
               <CandidatePage />
-
             </ProtectedRoute>
-
           }
-
         />
+
+        <Route
+          path="/candidate-intake"
+          element={
+            <ProtectedRoute>
+              <LazyRoute>
+                <CandidateIntakeLayout />
+              </LazyRoute>
+            </ProtectedRoute>
+          }
+        >
+          <Route
+            index
+            element={
+              <LazyRoute>
+                <CandidateIntakePage />
+              </LazyRoute>
+            }
+          />
+        </Route>
+
+        <Route
+          path="/candidates"
+          element={
+            <ProtectedRoute>
+              <LazyRoute>
+                <CandidateWorkspaceLayout />
+              </LazyRoute>
+            </ProtectedRoute>
+          }
+        >
+          <Route
+            index
+            element={
+              <LazyRoute>
+                <CandidateWorkspaceListPage />
+              </LazyRoute>
+            }
+          />
+          <Route
+            path=":candidateId"
+            element={
+              <LazyRoute>
+                <CandidateWorkspacePage />
+              </LazyRoute>
+            }
+          />
+        </Route>
 
 
         {/* =====================================
@@ -352,7 +416,23 @@ function App() {
     index
     element={
       <LazyRoute>
+        <RecruiterHomePage />
+      </LazyRoute>
+    }
+  />
+  <Route
+    path="workspace"
+    element={
+      <LazyRoute>
         <RecruiterWorkspacePage />
+      </LazyRoute>
+    }
+  />
+  <Route
+    path="ownership-requests"
+    element={
+      <LazyRoute>
+        <OwnershipInboxPage />
       </LazyRoute>
     }
   />
