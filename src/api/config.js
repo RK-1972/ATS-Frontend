@@ -1,7 +1,31 @@
-export const API_MODE = import.meta.env.VITE_API_MODE || "mock";
+const LOCAL_API_BASE_URL = "http://localhost:5000";
+const PRODUCTION_API_BASE_URL = "https://optalynx-api.onrender.com";
 
-export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || "";
+
+function isLocalApiUrl(url) {
+  return (
+    url.startsWith("http://localhost") ||
+    url.startsWith("http://127.0.0.1")
+  );
+}
+
+function resolveApiBaseUrl() {
+  if (import.meta.env.PROD) {
+    if (configuredApiBaseUrl && !isLocalApiUrl(configuredApiBaseUrl)) {
+      return configuredApiBaseUrl;
+    }
+
+    return PRODUCTION_API_BASE_URL;
+  }
+
+  return configuredApiBaseUrl || LOCAL_API_BASE_URL;
+}
+
+export const API_MODE =
+  import.meta.env.VITE_API_MODE || (import.meta.env.PROD ? "live" : "mock");
+
+export const API_BASE_URL = resolveApiBaseUrl();
 
 export const API_VERSION = "v1";
 

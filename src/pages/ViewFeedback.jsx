@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 import { useNavigate, useParams } from "react-router-dom";
 
-import axios from "axios";
+import API from "../api/axios";
 
 import Header from "../components/Header";
 
@@ -26,26 +26,8 @@ export default function ViewFeedback() {
 
     try {
 
-      const token =
-        localStorage.getItem("token");
-
       const response =
-        await axios.get(
-
-          `http://localhost:5000/feedback/${scheduleId}`,
-
-          {
-
-            headers: {
-
-              Authorization:
-                `Bearer ${token}`
-
-            }
-
-          }
-
-        );
+        await API.get(`/feedback/${scheduleId}`);
 
       if (
         response.data.feedbackExists
