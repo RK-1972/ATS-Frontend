@@ -231,7 +231,7 @@ if (successMessage) {
 
     <div style={styles.page}>
 
-      <Header />
+      <Header showUserActions={false} />
 
       <div style={styles.content}>
 
@@ -272,7 +272,7 @@ return (
 
   <div style={styles.page}>
 
-    <Header />
+    <Header showUserActions={false} />
 
     {/* CONTENT */}
 

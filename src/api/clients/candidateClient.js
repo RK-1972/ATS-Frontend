@@ -62,6 +62,11 @@ releaseCandidateMapping(candidateId) {
     .put(`/release-candidate-mapping/${candidateId}`)
     .then((response) => response.data);
 },
+returnCandidateToTalentPool(candidateId) {
+  return API
+    .put(`/return-candidate-to-talent-pool/${candidateId}`)
+    .then((response) => response.data);
+},
 getCandidateSources() {
   return API
     .get("/candidate-sources")
@@ -88,9 +93,35 @@ parseCandidateIntakeResume(intakeId) {
     .then((response) => response.data);
 },
   updateCandidate(candidateId, formData) {
-    return API.put(`/candidate/${candidateId}`, formData, {
-      headers: { "Content-Type": "multipart/form-data" }
-    }).then((response) => response.data);
+    // Do not set Content-Type manually — axios must include the multipart boundary.
+    return API.put(`/candidate/${candidateId}`, formData).then(
+      (response) => response.data
+    );
+  },
+
+  listEducation(candidateId) {
+    return API.get(`/candidate/${candidateId}/education`).then(
+      (response) => response.data
+    );
+  },
+
+  createEducation(candidateId, payload) {
+    return API.post(`/candidate/${candidateId}/education`, payload).then(
+      (response) => response.data
+    );
+  },
+
+  updateEducation(candidateId, educationId, payload) {
+    return API.put(
+      `/candidate/${candidateId}/education/${educationId}`,
+      payload
+    ).then((response) => response.data);
+  },
+
+  deleteEducation(candidateId, educationId) {
+    return API.delete(
+      `/candidate/${candidateId}/education/${educationId}`
+    ).then((response) => response.data);
   }
 };
 

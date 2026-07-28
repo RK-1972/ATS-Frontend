@@ -28,6 +28,42 @@ const workforcePlanningClient = {
     );
   },
 
+  createBudgetRequest(payload) {
+    return httpPost(
+      `${ENDPOINTS.workforce}/budget-requests`,
+      payload,
+      () => ({
+        workforce: cloneData(workforcePlanningMock),
+        request: cloneData(payload),
+        toastMessage: "Budget request saved as draft."
+      })
+    );
+  },
+
+  submitBudgetRequest(id) {
+    return httpPost(
+      `${ENDPOINTS.workforce}/budget-requests/${id}/submit`,
+      {},
+      () => ({
+        workforce: cloneData(workforcePlanningMock),
+        request: { id, status: "Pending Level-1 Approval" },
+        toastMessage: `Budget request ${id} submitted for Level-1 approval.`
+      })
+    );
+  },
+
+  getBudgetActionContext(id) {
+    return httpGet(
+      `${ENDPOINTS.workforce}/budget-requests/${id}/action-context`,
+      () => ({
+        request_id: id,
+        can_act: true,
+        can_resubmit: false,
+        is_read_only: true
+      })
+    );
+  },
+
   approveBudgetRequest(id, comment = "") {
     return httpPost(
       `${ENDPOINTS.workforce}/budget-requests/${id}/approve`,
@@ -50,17 +86,6 @@ const workforcePlanningClient = {
     );
   },
 
-  sendBackBudgetRequest(id, comment = "") {
-    return httpPost(
-      `${ENDPOINTS.workforce}/budget-requests/${id}/send-back`,
-      { comment },
-      () => ({
-        workforce: cloneData(workforcePlanningMock),
-        toastMessage: "Budget request sent back to hiring manager."
-      })
-    );
-  },
-
   requestClarification(id, comments = "") {
     return httpPost(
       `${ENDPOINTS.workforce}/budget-requests/${id}/request-clarification`,
@@ -78,9 +103,13 @@ const workforcePlanningClient = {
       { comments },
       () => ({
         workforce: cloneData(workforcePlanningMock),
-        toastMessage: "Clarification submitted."
+        toastMessage: "Clarification submitted. Workflow resumed."
       })
     );
+  },
+
+  sendBackBudgetRequest(id, comment = "") {
+    return this.requestClarification(id, comment);
   },
 
   createRequisition(positionId) {

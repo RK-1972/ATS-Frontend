@@ -16,10 +16,126 @@ function CandidateOwnershipCard({
   isOwner = false,
   pendingRequest = false,
   mapping = {},
+  candidateContainer = "",
+  ownerEmployeeCode = null,
   onRequestOwnership,
-  onMapRequisition
+  onMapRequisition,
+  onReturnToTalentPool
 }) {
   const isAssigned = Boolean(mapping?.req_id);
+  const container = String(candidateContainer || "").trim().toUpperCase();
+  const hasOwner = Boolean(
+    ownerEmployeeCode !== null &&
+      ownerEmployeeCode !== undefined &&
+      String(ownerEmployeeCode).trim() !== ""
+  );
+
+  const isTalentPoolShared =
+    container === "TALENT_POOL" && !hasOwner;
+
+  const canRequestOwnership =
+    container === "PIPELINE" &&
+    hasOwner &&
+    !isOwner &&
+    !pendingRequest;
+
+  const canReturnToTalentPool =
+    container === "PIPELINE" &&
+    isOwner &&
+    !isAssigned;
+
+  const displayOwnerName = isTalentPoolShared
+    ? "None"
+    : ownerDisplayName || "—";
+
+  const mapRequisitionButton = (
+    <Button
+      variant="contained"
+      disabled={isAssigned}
+      onClick={onMapRequisition}
+      sx={{
+        borderRadius: 2,
+        textTransform: "none",
+        fontWeight: 600,
+        height: 40,
+        minHeight: 40,
+        py: 0,
+        px: 2
+      }}
+    >
+      {isAssigned ? "Already Assigned" : "Map to Requisition"}
+    </Button>
+  );
+
+  const returnToTalentPoolButton = (
+    <Button
+      variant="outlined"
+      color="primary"
+      onClick={onReturnToTalentPool}
+      sx={{
+        borderRadius: 2,
+        textTransform: "none",
+        fontWeight: 600,
+        height: 40,
+        minHeight: 40,
+        py: 0,
+        px: 2
+      }}
+    >
+      Return to Talent Pool
+    </Button>
+  );
+
+  let primaryAction = mapRequisitionButton;
+
+  if (isTalentPoolShared) {
+    primaryAction = mapRequisitionButton;
+  } else if (canReturnToTalentPool) {
+    primaryAction = (
+      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+        {mapRequisitionButton}
+        {returnToTalentPoolButton}
+      </Stack>
+    );
+  } else if (isOwner) {
+    primaryAction = mapRequisitionButton;
+  } else if (pendingRequest) {
+    primaryAction = (
+      <Button
+        variant="contained"
+        disabled
+        sx={{
+          borderRadius: 2,
+          textTransform: "none",
+          fontWeight: 600,
+          height: 40,
+          minHeight: 40,
+          py: 0,
+          px: 2
+        }}
+      >
+        Ownership Request Submitted
+      </Button>
+    );
+  } else if (canRequestOwnership) {
+    primaryAction = (
+      <Button
+        variant="contained"
+        onClick={onRequestOwnership}
+        sx={{
+          borderRadius: 2,
+          textTransform: "none",
+          fontWeight: 600,
+          height: 40,
+          minHeight: 40,
+          py: 0,
+          px: 2
+        }}
+      >
+        Request Ownership
+      </Button>
+    );
+  }
 
   return (
     <Card
@@ -45,95 +161,69 @@ function CandidateOwnershipCard({
               Current Owner
             </Typography>
             <Typography variant="body1" fontWeight={700}>
-              {ownerDisplayName}
+              {displayOwnerName}
             </Typography>
-            <Chip
-              size="small"
-              color={
-                isOwner
-                  ? "success"
-                  : pendingRequest
-                    ? "warning"
-                    : "info"
-              }
-              label={
-                isOwner
-                  ? "You are the Owner"
-                  : pendingRequest
-                    ? "Ownership Transfer Pending"
-                    : "Owned by Recruiter"
-              }
-              sx={{ alignSelf: "flex-start", fontWeight: 600, height: 22, mt: 0.25 }}
-            />
+
+            {isTalentPoolShared ? (
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mt: 0.25 }}
+              >
+                Shared Enterprise Candidate
+              </Typography>
+            ) : null}
+
+            {isOwner && !isTalentPoolShared ? (
+              <Chip
+                size="small"
+                color="success"
+                label="You are the Owner"
+                sx={{ alignSelf: "flex-start", fontWeight: 600, height: 22, mt: 0.25 }}
+              />
+            ) : null}
+
+            {pendingRequest && !isTalentPoolShared && !isOwner ? (
+              <Chip
+                size="small"
+                color="warning"
+                label="Ownership Transfer Pending"
+                sx={{ alignSelf: "flex-start", fontWeight: 600, height: 22, mt: 0.25 }}
+              />
+            ) : null}
           </Stack>
 
-          <Divider sx={{ my: 0.25 }} />
+          {!isTalentPoolShared ? (
+            <>
+              <Divider sx={{ my: 0.25 }} />
 
-          <Stack spacing={0.25}>
-            <Typography variant="caption" color="text.secondary" fontWeight={600}>
-              Talent Pool Status
-            </Typography>
-            <Chip
-              size="small"
-              color="success"
-              label="Available"
-              sx={{ alignSelf: "flex-start", fontWeight: 600, height: 22, mt: 0.25 }}
-            />
-          </Stack>
+              <Stack spacing={0.25}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  fontWeight={600}
+                >
+                  Talent Pool Status
+                </Typography>
+                <Chip
+                  size="small"
+                  color="success"
+                  label="Available"
+                  sx={{
+                    alignSelf: "flex-start",
+                    fontWeight: 600,
+                    height: 22,
+                    mt: 0.25
+                  }}
+                />
+              </Stack>
+            </>
+          ) : null}
         </Stack>
       </CardContent>
 
       <CardActions sx={{ px: 2, pb: 1.5, pt: 0, justifyContent: "flex-end" }}>
-        {isOwner ? (
-          <Button
-            variant="contained"
-            disabled={isAssigned}
-            onClick={onMapRequisition}
-            sx={{
-              borderRadius: 2,
-              textTransform: "none",
-              fontWeight: 600,
-              height: 40,
-              minHeight: 40,
-              py: 0,
-              px: 2
-            }}
-          >
-            {isAssigned ? "Already Assigned" : "Map to Requisition"}
-          </Button>
-        ) : pendingRequest ? (
-          <Button
-            variant="contained"
-            disabled
-            sx={{
-              borderRadius: 2,
-              textTransform: "none",
-              fontWeight: 600,
-              height: 40,
-              minHeight: 40,
-              py: 0,
-              px: 2
-            }}
-          >
-            Ownership Request Submitted
-          </Button>
-        ) : (
-          <Button
-            variant="contained"
-            onClick={onRequestOwnership}
-            sx={{
-              borderRadius: 2,
-              textTransform: "none",
-              fontWeight: 600,
-              height: 40,
-              minHeight: 40,
-              py: 0,
-              px: 2
-            }}
-          >
-            Request Ownership
-          </Button>
-        )}
+        {primaryAction}
       </CardActions>
     </Card>
   );

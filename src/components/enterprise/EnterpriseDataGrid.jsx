@@ -26,7 +26,6 @@ function EnterpriseDataGrid({
         disableRowSelectionOnClick={!checkboxSelection}
         onRowClick={onRowClick}
         getRowId={getRowId}
-        density="compact"
         rowHeight={36}
         columnHeaderHeight={36}
         hideFooterSelectedRowCount

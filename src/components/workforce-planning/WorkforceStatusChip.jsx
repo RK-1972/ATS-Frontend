@@ -1,10 +1,12 @@
 import { Chip } from "@mui/material";
 
 const STATUS_MAP = {
+  Draft: "default",
   Approved: "success",
   Active: "success",
-  "Pending TA Lead": "warning",
-  "Pending Finance": "info",
+  "Pending Level-1 Approval": "warning",
+  "Pending Level-2 Approval": "warning",
+  "Clarification Requested": "warning",
   "Sent Back": "warning",
   Rejected: "error",
   "Fully Utilized": "default",
@@ -14,12 +16,10 @@ const STATUS_MAP = {
 };
 
 function WorkforceStatusChip({ status, size = "small" }) {
-
   const color = STATUS_MAP[status] || "default";
   const compact = size === "small";
 
   return (
-
     <Chip
       label={status}
       size="small"
@@ -32,9 +32,7 @@ function WorkforceStatusChip({ status, size = "small" }) {
         "& .MuiChip-label": { px: compact ? 0.75 : 1 }
       }}
     />
-
   );
-
 }
 
 export default WorkforceStatusChip;

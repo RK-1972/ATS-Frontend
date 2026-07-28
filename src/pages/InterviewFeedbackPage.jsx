@@ -1,12 +1,27 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import API from "../api/axios";
+import AppHeader from "../components/layout/AppHeader";
+import { clearAuthStorage } from "../utils/sessionAuth";
 
 function InterviewFeedbackPage() {
 
   const navigate = useNavigate();
 
   const { scheduleId } = useParams();
+
+  const loggedInUser = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem("user") || "null");
+    } catch (_error) {
+      return null;
+    }
+  }, []);
+
+  const handleLogout = () => {
+    clearAuthStorage();
+    navigate("/login");
+  };
 
   const [loading, setLoading] =
     useState(true);
@@ -232,29 +247,11 @@ function InterviewFeedbackPage() {
 
     <div style={styles.app}>
 
-      {/* HEADER */}
-
-      <div style={styles.header}>
-
-        <div>
-
-          <div style={styles.logo}>
-            IGS
-          </div>
-
-          <div style={styles.tagline}>
-            ENGINEERING QUALITY
-          </div>
-
-        </div>
-
-        <div style={styles.title}>
-          ATS PLATFORM
-        </div>
-
-        <div />
-
-      </div>
+      <AppHeader
+        loggedInUser={loggedInUser}
+        userRole={loggedInUser?.role_name}
+        onLogout={handleLogout}
+      />
 
       {/* CONTENT */}
 
@@ -648,32 +645,6 @@ const styles = {
     background: "#f4f6f9",
     minHeight: "100vh",
     fontFamily: "Segoe UI, sans-serif"
-  },
-
-  header: {
-    background: "#1f3b63",
-    color: "#ffffff",
-    padding: "20px 45px",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center"
-  },
-
-  logo: {
-    fontSize: "32px",
-    fontWeight: "700"
-  },
-
-  tagline: {
-    fontSize: "11px",
-    color: "#f59e0b",
-    marginTop: "2px"
-  },
-
-  title: {
-    fontSize: "26px",
-    fontWeight: "600",
-    letterSpacing: "1px"
   },
 
   container: {

@@ -1,6 +1,7 @@
 import axios from "axios";
 
 import { API_BASE_URL } from "./config";
+import { clearAuthStorage, getStoredToken, isTokenExpired } from "../utils/sessionAuth";
 
 const API = axios.create({
 
@@ -17,14 +18,16 @@ API.interceptors.request.use(
 
   (config) => {
 
-    const token =
-      localStorage.getItem("token");
+    const token = getStoredToken();
 
     if (token) {
-
-      config.headers.Authorization =
-        `Bearer ${token}`;
-
+      // Do not send an already-expired JWT; clear session eagerly
+      // so route gates redirect without waiting for a 401.
+      if (isTokenExpired(token)) {
+        clearAuthStorage();
+      } else {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
 
     return config;

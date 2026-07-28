@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Box, Typography } from "@mui/material";
+import { Box, Button, Typography } from "@mui/material";
 import { MdSwapHoriz } from "react-icons/md";
 import { LoadingState } from "@/components/enterprise";
 import RecruiterCockpitHeader from "@/components/recruiter-home/RecruiterCockpitHeader";
@@ -203,6 +203,16 @@ function RecruiterHomePage() {
         onApply={handleApply}
         onReset={handleReset}
       />
+
+      {/* TEMP: SPA navigation probe — remove after verification */}
+      <Button
+        size="small"
+        variant="outlined"
+        onClick={() => navigate("/candidate-intake")}
+        sx={{ alignSelf: "flex-start", mb: 1, textTransform: "none" }}
+      >
+        Open Candidate Intake
+      </Button>
 
       <CockpitSummaryCards
         totalCandidates={model.totalCandidates}

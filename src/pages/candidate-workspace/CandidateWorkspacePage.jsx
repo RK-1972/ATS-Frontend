@@ -38,11 +38,14 @@ function CandidateWorkspacePage() {
   const navigate = useNavigate();
   const workspace = useOutletContext();
   const [openSkillDialog, setOpenSkillDialog] = useState(false);
+  const [openExperienceDialog, setOpenExperienceDialog] = useState(false);
   const [assignmentOpen, setAssignmentOpen] =
   useState(false);
   const [ownershipDialogOpen, setOwnershipDialogOpen] = useState(false);
   const [releaseDialogOpen, setReleaseDialogOpen] = useState(false);
   const [releaseLoading, setReleaseLoading] = useState(false);
+  const [returnPoolDialogOpen, setReturnPoolDialogOpen] = useState(false);
+  const [returnPoolLoading, setReturnPoolLoading] = useState(false);
   const {
     candidate,
     mapping,
@@ -122,13 +125,35 @@ function CandidateWorkspacePage() {
       }
 
       if (actionKey === "schedule-interview") {
-        navigate("/interview-schedule");
+        const reqId = activeAssignmentMapping?.req_id;
+        const mapId = activeAssignmentMapping?.map_id;
+
+        if (!reqId || !mapId) {
+          showToast(
+            "Map the candidate to a requisition before scheduling an interview.",
+            "warning"
+          );
+          return;
+        }
+
+        navigate("/interview-schedule", {
+          state: {
+            req_id: Number(reqId),
+            map_id: Number(mapId)
+          }
+        });
         return;
       }
 
       if (actionKey === "add-skill") {
         setActiveTab("skills");
         setOpenSkillDialog(true);
+        return;
+      }
+
+      if (actionKey === "add-experience") {
+        setActiveTab("experience");
+        setOpenExperienceDialog(true);
         return;
       }
 
@@ -149,7 +174,6 @@ function CandidateWorkspacePage() {
 
 if (
 [
-"add-experience",
 "add-education",
 "upload-document"
 ].includes(actionKey)
@@ -160,7 +184,15 @@ if (
 
       showToast(`${actionKey.replace(/-/g, " ")} action triggered.`, "info");
     },
-    [candidate.resume_path, navigate, setActiveTab, showToast, triggerResumeUpload]
+    [
+      activeAssignmentMapping?.req_id,
+      activeAssignmentMapping?.map_id,
+      candidate.resume_path,
+      navigate,
+      setActiveTab,
+      showToast,
+      triggerResumeUpload
+    ]
   );
 
   const handleToolbarOverflow = useCallback(
@@ -186,6 +218,10 @@ if (
     setReleaseDialogOpen(false);
   };
 
+  const handleCloseReturnPoolDialog = () => {
+    setReturnPoolDialogOpen(false);
+  };
+
   const handleConfirmRelease = async () => {
     if (!candidate?.candidate_id) {
       return;
@@ -207,6 +243,30 @@ if (
       );
     } finally {
       setReleaseLoading(false);
+    }
+  };
+
+  const handleConfirmReturnToTalentPool = async () => {
+    if (!candidate?.candidate_id) {
+      return;
+    }
+
+    setReturnPoolLoading(true);
+
+    try {
+      await candidateRepository.returnCandidateToTalentPool(candidate.candidate_id);
+
+      setReturnPoolDialogOpen(false);
+
+      await workspace.loadCandidates();
+      await workspace.loadProfile(candidate.candidate_id);
+    } catch (returnError) {
+      showToast(
+        returnError.message || "Failed to return candidate to Talent Pool.",
+        "error"
+      );
+    } finally {
+      setReturnPoolLoading(false);
     }
   };
 
@@ -253,8 +313,7 @@ if (
       case "education":
         return (
           <CandidateEducationPanel
-            education={profile.children.education}
-            masterData={masterData}
+            candidateId={candidate.candidate_id}
           />
         );
       case "experience":
@@ -262,6 +321,8 @@ if (
           <CandidateExperiencePanel
             candidate={candidate}
             experience={profile.children.experience}
+            forceOpenDialog={openExperienceDialog}
+            onDialogClose={() => setOpenExperienceDialog(false)}
           />
         );
       case "documents":
@@ -340,8 +401,11 @@ if (
             isOwner={isOwner}
             pendingRequest={pendingRequest}
             mapping={activeAssignmentMapping}
+            candidateContainer={candidate?.candidate_container}
+            ownerEmployeeCode={candidate?.owner_employee_code}
             onRequestOwnership={() => setOwnershipDialogOpen(true)}
             onMapRequisition={() => handleWorkspaceAction("map-requisition")}
+            onReturnToTalentPool={() => setReturnPoolDialogOpen(true)}
           />
           <CandidateAssignmentCard
             candidate={candidate}
@@ -440,6 +504,15 @@ if (
         loading={releaseLoading}
         onConfirm={handleConfirmRelease}
         onClose={handleCloseReleaseDialog}
+      />
+      <EnterpriseConfirmationDialog
+        open={returnPoolDialogOpen}
+        title="Return to Talent Pool"
+        message="Return this candidate to the Enterprise Talent Pool? Ownership will be released and the candidate will be available for other recruiters."
+        confirmLabel="Return to Talent Pool"
+        loading={returnPoolLoading}
+        onConfirm={handleConfirmReturnToTalentPool}
+        onClose={handleCloseReturnPoolDialog}
       />
         <CandidateWorkspaceFab onAction={handleWorkspaceAction} />
       </Box>

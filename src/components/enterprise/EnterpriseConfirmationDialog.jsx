@@ -15,7 +15,8 @@ function EnterpriseConfirmationDialog({
   confirmColor = "primary",
   loading = false,
   onConfirm,
-  onClose
+  onClose,
+  children
 }) {
   return (
     <Dialog
@@ -37,6 +38,7 @@ function EnterpriseConfirmationDialog({
         <Typography variant="body2" color="text.secondary">
           {message}
         </Typography>
+        {children}
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 2, pt: 0, gap: 1 }}>

@@ -13,6 +13,13 @@ import {
 
 import { getPublishedRecords } from "@/enterprise/masterDataHelpers";
 
+const PROFICIENCY_OPTIONS = [
+  "Beginner",
+  "Intermediate",
+  "Advanced",
+  "Expert"
+];
+
 const emptyForm = {
   skill_code: "",
   years: "",
@@ -112,6 +119,7 @@ function CandidateAddSkillDialog({
           </Grid>
           <Grid item xs={12}>
             <TextField
+              select
               fullWidth
               size="small"
               label="Proficiency"
@@ -122,20 +130,41 @@ function CandidateAddSkillDialog({
                   proficiency_code: event.target.value
                 }))
               }
-              placeholder="Expert, Advanced, Intermediate"
-            />
+            >
+              <MenuItem value="">
+                <em>Select proficiency</em>
+              </MenuItem>
+              {PROFICIENCY_OPTIONS.map((option) => (
+                <MenuItem key={option} value={option}>
+                  {option}
+                </MenuItem>
+              ))}
+            </TextField>
           </Grid>
           <Grid item xs={12}>
             <TextField
               fullWidth
               size="small"
-              label="Last Used"
+              label="Last Updated"
               type="date"
-              InputLabelProps={{ shrink: true }}
               value={form.last_used_on}
               onChange={(event) =>
                 setForm((prev) => ({ ...prev, last_used_on: event.target.value }))
               }
+              slotProps={{
+                inputLabel: { shrink: true }
+              }}
+              sx={{
+                "& .MuiInputBase-root": {
+                  minHeight: 40
+                },
+                "& input[type='date']": {
+                  minWidth: 0,
+                  width: "100%",
+                  py: 1,
+                  boxSizing: "border-box"
+                }
+              }}
             />
           </Grid>
         </Grid>

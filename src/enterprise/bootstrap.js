@@ -1,4 +1,5 @@
 import { isLiveMode } from "@/api/config";
+import { isSessionValid } from "@/utils/sessionAuth";
 import masterDataRepository from "@/repositories/masterDataRepository";
 import platformConfigRepository from "@/repositories/platformConfigRepository";
 import businessRulesRepository from "@/repositories/businessRulesRepository";
@@ -21,13 +22,12 @@ export async function bootstrapEnterpriseData() {
     return;
   }
 
-  const token = typeof localStorage !== "undefined"
-    ? localStorage.getItem("token")
-    : null;
+  // Only load authenticated workspace when JWT is present and not expired.
+  const hasValidSession = isSessionValid();
 
   let workspaceBundle = null;
 
-  if (token) {
+  if (hasValidSession) {
     try {
       workspaceBundle = await recruitmentRepository.getRecruiterWorkspaceBundle();
       console.info("[bootstrap] Recruiter workspace loaded", {

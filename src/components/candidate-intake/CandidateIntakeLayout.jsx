@@ -11,12 +11,19 @@ function CandidateIntakeLayout() {
     []
   );
 
-  const isRecruiter = user?.role_name === "Recruiter";
+  let enterpriseWorkspace = {};
+
+  try {
+    enterpriseWorkspace =
+      JSON.parse(localStorage.getItem("workspace") || "{}") || {};
+  } catch (_error) {
+    enterpriseWorkspace = {};
+  }
 
   return (
     <WorkspaceLayout
       navRail={
-        isRecruiter ? (
+        enterpriseWorkspace.showRecruitmentWorkspace ? (
           <RecruiterNavRail loggedInUser={user} />
         ) : (
           <AdminNavRail />

@@ -14,7 +14,11 @@ import UITestPage from "./pages/UITestPage";
 import CandidatePage from "./pages/CandidatePage";
 import LoginPage from "./pages/LoginPage";
 import RequisitionPage from "./pages/RequisitionPage";
+import MyDraftsPage from "./pages/talent-demand/MyDraftsPage";
+import MyApprovalsPage from "./pages/approvals/MyApprovalsPage";
 import UserManagementPage from "./pages/UserManagementPage";
+import EmployeeWorkAssignmentPage from "./pages/EmployeeWorkAssignmentPage";
+import WorkAssignmentMasterPage from "./pages/WorkAssignmentMasterPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import MasterManagementPage from "./pages/MasterManagementPage";
 import ReportsAnalyticsPage from "./pages/ReportsAnalyticsPage";
@@ -86,6 +90,9 @@ const RuleDesignerPage = lazy(
 );
 const ApprovalMatrixPage = lazy(
   () => import("./pages/business-rules/ApprovalMatrixPage")
+);
+const ApprovalPoliciesPage = lazy(
+  () => import("./pages/business-rules/ApprovalPoliciesPage")
 );
 const RuleSimulatorPage = lazy(
   () => import("./pages/business-rules/RuleSimulatorPage")
@@ -295,6 +302,22 @@ function App() {
 
         />
         <Route
+          path="/employee-work-assignments"
+          element={
+            <ProtectedRoute>
+              <EmployeeWorkAssignmentPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/work-assignments"
+          element={
+            <ProtectedRoute>
+              <WorkAssignmentMasterPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
 
         path="/masters"
 
@@ -309,6 +332,38 @@ function App() {
           }
 
         />
+        <Route
+
+          path="/requisitions/my-drafts"
+
+          element={
+
+            <ProtectedRoute>
+
+              <MyDraftsPage />
+
+            </ProtectedRoute>
+
+          }
+
+        />
+
+        <Route
+
+          path="/my-approvals"
+
+          element={
+
+            <ProtectedRoute>
+
+              <MyApprovalsPage />
+
+            </ProtectedRoute>
+
+          }
+
+        />
+
         <Route
 
           path="/requisitions"
@@ -657,6 +712,15 @@ function App() {
     element={
       <LazyRoute>
         <ApprovalMatrixPage />
+      </LazyRoute>
+    }
+  />
+
+  <Route
+    path="approval-policies"
+    element={
+      <LazyRoute>
+        <ApprovalPoliciesPage />
       </LazyRoute>
     }
   />

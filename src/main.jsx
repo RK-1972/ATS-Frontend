@@ -8,6 +8,18 @@ import theme from "./theme/theme";
 import { createRoot } from "react-dom/client";
 import App from "./App.jsx";
 import bootstrapEnterpriseData from "./enterprise/bootstrap";
+import { enforceSession } from "./utils/sessionAuth";
+import useEnterpriseStore from "./store/enterpriseStore";
+
+// Startup session gate — clear expired JWT before any bootstrap API work
+// and before protected routes can paint previous-session UI.
+const startupSession = enforceSession();
+if (
+  !startupSession.ok &&
+  (startupSession.reason === "expired" || startupSession.reason === "invalid")
+) {
+  useEnterpriseStore.getState().resetEnterpriseSession();
+}
 
 bootstrapEnterpriseData();
 

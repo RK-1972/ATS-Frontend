@@ -46,10 +46,12 @@ function useCandidateWorkspace() {
   const [skills, setSkills] = useState([]);
   const [localNotes, setLocalNotes] = useState({});
   const [localEducation, setLocalEducation] = useState([]);
-  const [localExperience, setLocalExperience] = useState([]);
   const [ownership, setOwnership] = useState(null);
   const [ownerDisplayName, setOwnerDisplayName] = useState("");
   const resumeInputRef = useRef(null);
+  const candidateIdRef = useRef(candidateId);
+  candidateIdRef.current = candidateId;
+
   const skillNameByCode = useMemo(() => {
     const map = new Map();
     getPublishedRecords(masterData, "skills").forEach((record) => {
@@ -63,34 +65,36 @@ function useCandidateWorkspace() {
     setError("");
 
     try {
-      const rows =
-  await candidateRepository.listCandidates(
-    workspaceView,
-    isRecruiter
-  );
+      const rows = await candidateRepository.listCandidates(
+        workspaceView,
+        isRecruiter
+      );
       setCandidates(rows);
 
-    if (rows.length > 0) {
+      const currentId = candidateIdRef.current;
 
-  const currentExists =
-    rows.some(
-      c => String(c.candidate_id) === String(candidateId)
-    );
+      // Empty list: show index Empty State; do not pick another candidate.
+      if (rows.length === 0) {
+        if (currentId) {
+          navigate("/candidates");
+        }
+        return;
+      }
 
-  if (!currentExists) {
+      const currentExists = rows.some(
+        (row) => String(row.candidate_id) === String(currentId)
+      );
 
-    navigate(`/candidates/${rows[0].candidate_id}`);
-
-  }
-
-}
-
+      // Keep selection if it belongs to this list; otherwise open the first.
+      if (!currentExists) {
+        navigate(`/candidates/${rows[0].candidate_id}`);
+      }
     } catch (loadError) {
       setError(loadError.message || "Failed to load candidates");
     } finally {
       setIsLoadingList(false);
     }
-  }, [workspaceView, isRecruiter]);
+  }, [workspaceView, isRecruiter, navigate]);
 
   const loadProfile = useCallback(async (id) => {
     if (!id) {
@@ -103,30 +107,32 @@ function useCandidateWorkspace() {
     setError("");
 
     try {
-      const [
-      nextProfile,
-      ownershipData
-    ] = await Promise.all([
+      const [nextProfile, ownershipData, experienceRecords] =
+        await Promise.all([
+          candidateRepository.loadCandidateProfile(id),
+          candidateRepository.getCandidateOwnership(id),
+          candidateRepository.listExperience(id)
+        ]);
 
-      candidateRepository.loadCandidateProfile(id),
-
-      candidateRepository.getCandidateOwnership(id)
-
-    ]);
-      setProfile(nextProfile);
+      setProfile({
+        ...nextProfile,
+        children: {
+          ...nextProfile.children,
+          experience: experienceRecords
+        }
+      });
 
       setOwnership(ownershipData);
 
       setOwnerDisplayName(
         ownershipData?.owner_display_name || ""
       );
-      
+
       setSkills(
         parseSkillsFromCandidate(nextProfile.master || {}, skillNameByCode)
       );
       setLocalNotes({});
       setLocalEducation([]);
-      setLocalExperience([]);
     } catch (loadError) {
       setError(loadError.message || "Failed to load candidate profile");
       setProfile(candidateRepository.getInitialProfile());
@@ -506,8 +512,6 @@ const mapCandidateToRequisition = useCallback(
     setLocalNotes,
     localEducation,
     setLocalEducation,
-    localExperience,
-    setLocalExperience,
     ownerDisplayName,
     isOwner,
     pendingRequest,

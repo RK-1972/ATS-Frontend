@@ -104,7 +104,7 @@ function CandidateSkillsPanel({
               Skills Profile
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Material chips with proficiency and tenure
+              Manage candidate skills, experience and proficiency
             </Typography>
           </Box>
           <Button

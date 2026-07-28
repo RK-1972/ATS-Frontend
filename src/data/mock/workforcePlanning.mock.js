@@ -45,7 +45,7 @@ const workforcePlanningMock = {
         id: "EX-001",
         position: "Principal Architect",
         variance_pct: 12,
-        status: "Pending Finance"
+        status: "Pending Level-2 Approval"
       },
       {
         id: "EX-002",
@@ -65,7 +65,7 @@ const workforcePlanningMock = {
       headcount: 2,
       proposed_budget: 2400000,
       justification: "Cloud migration programme requires dedicated DevOps capacity for Q3 delivery milestones.",
-      status: "Pending TA Lead",
+      status: "Pending Level-1 Approval",
       submitted_by: "Rajesh Kumar",
       submitted_on: "2026-06-22",
       priority: "High"
@@ -78,7 +78,7 @@ const workforcePlanningMock = {
       headcount: 3,
       proposed_budget: 2700000,
       justification: "Expand automation coverage for client delivery — current team at 140% utilization.",
-      status: "Pending Finance",
+      status: "Pending Level-2 Approval",
       submitted_by: "Priya Sharma",
       submitted_on: "2026-06-18",
       priority: "Medium"
@@ -133,10 +133,10 @@ const workforcePlanningMock = {
       headcount: 2,
       proposed_budget: 2400000,
       justification: "Cloud migration programme requires dedicated DevOps capacity for Q3 delivery milestones.",
-      status: "Pending TA Lead",
+      status: "Pending Level-1 Approval",
       submitted_by: "Rajesh Kumar",
       submitted_on: "2026-06-22",
-      current_approver: "TA Lead",
+      current_approver: "Level-1 Approver",
       timeline: [
         {
           step: "Submitted",
@@ -155,10 +155,10 @@ const workforcePlanningMock = {
       headcount: 3,
       proposed_budget: 2700000,
       justification: "Expand automation coverage for client delivery.",
-      status: "Pending Finance",
+      status: "Pending Level-2 Approval",
       submitted_by: "Priya Sharma",
       submitted_on: "2026-06-18",
-      current_approver: "Finance",
+      current_approver: "Level-2 Approver",
       timeline: [
         {
           step: "Submitted",
@@ -167,16 +167,16 @@ const workforcePlanningMock = {
           comment: null
         },
         {
-          step: "Approved by TA Lead",
+          step: "Level-1 Approved",
           actor: "Sanjay Mehta",
           date: "2026-06-20T14:15:00",
-          comment: "Aligned with QA roadmap. Proceed to Finance."
+          comment: "Aligned with QA roadmap. Proceed to Level-2."
         }
       ],
       history: [
         {
           action: "Approved",
-          actor: "Sanjay Mehta (TA Lead)",
+          actor: "Sanjay Mehta (Level-1 Approver)",
           date: "2026-06-20T14:15:00",
           comment: "Aligned with QA roadmap."
         }
@@ -211,7 +211,7 @@ const workforcePlanningMock = {
       history: [
         {
           action: "Sent Back",
-          actor: "Sanjay Mehta (TA Lead)",
+          actor: "Sanjay Mehta (Level-1 Approver)",
           date: "2026-06-08T16:30:00",
           comment: "Reduce headcount to 2 or provide Acme SOW reference."
         }
@@ -283,7 +283,7 @@ const workforcePlanningMock = {
       offered_ctc: 5040000,
       variance_amount: 540000,
       variance_pct: 12,
-      workflow_status: "Pending Finance",
+      workflow_status: "Pending Level-2 Approval",
       approver: "CFO Office",
       comments: "Critical hire for enterprise architecture transformation.",
       req_code: "REQ-1088"
@@ -312,7 +312,7 @@ const workforcePlanningMock = {
       variance_amount: 160000,
       variance_pct: 10,
       workflow_status: "Rejected",
-      approver: "Finance",
+      approver: "Level-2 Approver",
       comments: "Variance exceeds 8% threshold without client pass-through agreement.",
       req_code: "REQ-1012"
     }

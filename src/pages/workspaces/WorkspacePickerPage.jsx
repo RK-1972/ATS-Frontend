@@ -8,28 +8,57 @@ import {
 import { useNavigate } from "react-router-dom";
 import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
 import WorkOutlineOutlinedIcon from "@mui/icons-material/WorkOutlineOutlined";
+import FactCheckOutlinedIcon from "@mui/icons-material/FactCheckOutlined";
+import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import WorkspaceLayout from "@/components/enterprise/WorkspaceLayout";
 
 function WorkspacePickerPage() {
   const navigate = useNavigate();
   const loggedInUser = JSON.parse(localStorage.getItem("user") || "null");
 
+  let workspaceFlags = {};
+
+  try {
+    workspaceFlags =
+      JSON.parse(localStorage.getItem("workspace") || "{}") || {};
+  } catch (_error) {
+    workspaceFlags = {};
+  }
+
   const workspaces = [
     {
       id: "recruiter",
-      title: "Recruiter Workspace",
+      flag: "showRecruitmentWorkspace",
+      title: "Recruitment Workspace",
       description: "What work requires my attention today?",
       path: "/recruiter",
       icon: DashboardOutlinedIcon
     },
     {
       id: "interviewer",
-      title: "Interviewer Workspace",
+      flag: "showInterviewWorkspace",
+      title: "Interview Workspace",
       description: "What interviews must I conduct today?",
       path: "/interviewer",
       icon: WorkOutlineOutlinedIcon
+    },
+    {
+      id: "approvals",
+      flag: "showApprovalWorkspace",
+      title: "My Approvals",
+      description: "What approvals require my decision today?",
+      path: "/my-approvals",
+      icon: FactCheckOutlinedIcon
+    },
+    {
+      id: "request",
+      flag: "showRequestWorkspace",
+      title: "Requisitions / Request Workspace",
+      description: "What requisitions do I need to raise or track?",
+      path: "/workforce-planning/catalogue",
+      icon: DescriptionOutlinedIcon
     }
-  ];
+  ].filter((workspace) => Boolean(workspaceFlags[workspace.flag]));
 
   return (
     <WorkspaceLayout>
@@ -38,7 +67,7 @@ function WorkspacePickerPage() {
           Choose Workspace
         </Typography>
         <Typography color="text.secondary" mb={3} fontSize={14}>
-          Welcome, {loggedInUser?.name || "User"}. Select where you want to work.
+          Welcome, {loggedInUser?.full_name || loggedInUser?.name || "User"}. Select where you want to work.
         </Typography>
 
         <Stack spacing={2}>

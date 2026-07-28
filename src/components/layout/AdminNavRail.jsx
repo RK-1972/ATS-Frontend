@@ -17,6 +17,8 @@ import StorageOutlinedIcon from "@mui/icons-material/StorageOutlined";
 import DatasetOutlinedIcon from "@mui/icons-material/DatasetOutlined";
 import BarChartOutlinedIcon from "@mui/icons-material/BarChartOutlined";
 import WorkOutlineOutlinedIcon from "@mui/icons-material/WorkOutlineOutlined";
+import AssignmentIndOutlinedIcon from "@mui/icons-material/AssignmentIndOutlined";
+import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
 
 import useEnterpriseStore from "@/store/enterpriseStore";
 import { isNavPathVisible } from "@/enterprise/moduleVisibility";
@@ -26,6 +28,57 @@ const ADMIN_NAV_ITEMS = [
     label: "Dashboard",
     path: "/",
     icon: DashboardOutlinedIcon
+  },
+  {
+    type: "section",
+    label: "Security"
+  },
+  {
+    label: "User Management",
+    path: "/users",
+    icon: PeopleAltOutlinedIcon
+  },
+  {
+    type: "section",
+    label: "Master Data"
+  },
+  {
+    label: "Master Management",
+    path: "/masters",
+    icon: StorageOutlinedIcon
+  },
+  {
+    label: "Enterprise Master Data",
+    path: "/master-data",
+    icon: DatasetOutlinedIcon
+  },
+  {
+    label: "Work Assignments",
+    path: "/work-assignments",
+    icon: AssignmentOutlinedIcon
+  },
+  {
+    type: "section",
+    label: "Workforce"
+  },
+  {
+    label: "Workforce Planning",
+    path: "/workforce-planning",
+    icon: GroupsOutlinedIcon
+  },
+  {
+    label: "Talent Management",
+    path: "/candidates",
+    icon: WorkOutlineOutlinedIcon
+  },
+  {
+    label: "Employee Work Assignments",
+    path: "/employee-work-assignments",
+    icon: AssignmentIndOutlinedIcon
+  },
+  {
+    type: "section",
+    label: "Configuration"
   },
   {
     label: "Platform Configuration",
@@ -43,29 +96,8 @@ const ADMIN_NAV_ITEMS = [
     icon: ViewTimelineOutlinedIcon
   },
   {
-    label: "Workforce Planning",
-    path: "/workforce-planning",
-    icon: GroupsOutlinedIcon
-  },
-  {
-    label: "Talent Management",
-    path: "/candidates",
-    icon: WorkOutlineOutlinedIcon
-  },
-  {
-    label: "User Management",
-    path: "/users",
-    icon: PeopleAltOutlinedIcon
-  },
-  {
-    label: "Master Management",
-    path: "/masters",
-    icon: StorageOutlinedIcon
-  },
-  {
-    label: "Enterprise Master Data",
-    path: "/master-data",
-    icon: DatasetOutlinedIcon
+    type: "section",
+    label: "Audit"
   },
   {
     label: "Reports & Analytics",
@@ -83,9 +115,13 @@ function AdminNavRail() {
   const loggedInUser = JSON.parse(localStorage.getItem("user") || "null");
   const userRole = loggedInUser?.role_name || "Admin";
 
-  const visibleItems = ADMIN_NAV_ITEMS.filter((item) =>
-    isNavPathVisible(item.path, userRole, platformConfig)
-  );
+  const visibleItems = ADMIN_NAV_ITEMS.filter((item) => {
+    if (item.type === "section") {
+      return true;
+    }
+
+    return isNavPathVisible(item.path, userRole, platformConfig);
+  });
 
   const handleNavigate = (path) => {
 
@@ -126,6 +162,43 @@ function AdminNavRail() {
     >
 
       {visibleItems.map((item, index) => {
+
+        if (item.type === "section") {
+          return (
+            <Box
+              key={`section-${item.label}`}
+              sx={{
+                width: "100%",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 0.5,
+                my: 0.5
+              }}
+            >
+              <Divider flexItem sx={{ width: 48, mx: "auto" }} />
+              <Tooltip title={item.label} placement="right">
+                <Box
+                  aria-label={item.label}
+                  sx={{
+                    px: 0.5,
+                    typography: "caption",
+                    color: "text.secondary",
+                    fontWeight: 700,
+                    fontSize: 9,
+                    letterSpacing: 0.4,
+                    textTransform: "uppercase",
+                    textAlign: "center",
+                    lineHeight: 1.2,
+                    maxWidth: 72
+                  }}
+                >
+                  {item.label}
+                </Box>
+              </Tooltip>
+            </Box>
+          );
+        }
 
         const Icon = item.icon;
         const active = isActive(item.path);

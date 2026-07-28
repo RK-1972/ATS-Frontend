@@ -82,6 +82,117 @@ async function getById(id, currentData) {
   return workforcePlanningClient.getById(id, currentData);
 }
 
+function createBudgetRequestDraftLocal(workforce, payload) {
+  const year = new Date().getFullYear();
+  const pattern = new RegExp(`^BR-${year}-(\\d+)$`);
+  let max = 1000;
+
+  [...workforce.budget_requests, ...workforce.approval_queue].forEach((item) => {
+    const match = String(item.id || "").match(pattern);
+    if (match) {
+      max = Math.max(max, Number(match[1]));
+    }
+  });
+
+  const savedRequest = {
+    ...payload,
+    id: payload.id || `BR-${year}-${String(max + 1).padStart(4, "0")}`,
+    status: "Draft",
+    submitted_by: null,
+    submitted_on: null
+  };
+
+  const exists = workforce.budget_requests.some((item) => item.id === savedRequest.id);
+
+  return {
+    workforce: {
+      ...workforce,
+      budget_requests: exists
+        ? workforce.budget_requests.map((item) =>
+            item.id === savedRequest.id ? savedRequest : item
+          )
+        : [savedRequest, ...workforce.budget_requests]
+    },
+    request: savedRequest,
+    toastMessage: `Budget request ${savedRequest.id} saved as draft.`
+  };
+}
+
+async function createBudgetRequestDraft(workforce, payload) {
+  if (!isLiveMode()) {
+    return createBudgetRequestDraftLocal(workforce, payload);
+  }
+
+  const result = await workforcePlanningClient.createBudgetRequest(payload);
+  return {
+    workforce: result.workforce,
+    request: result.request,
+    toastMessage: result.toastMessage
+  };
+}
+
+function submitBudgetRequestLocal(workforce, requestId) {
+  const existing = workforce.budget_requests.find((item) => item.id === requestId);
+
+  if (!existing || existing.status !== "Draft") {
+    return null;
+  }
+
+  const submittedOn = new Date().toISOString().slice(0, 10);
+  const queueItem = {
+    ...existing,
+    status: "Pending Level-1 Approval",
+    submitted_by: existing.submitted_by || "Current User",
+    submitted_on: submittedOn,
+    current_approver: "Level-1 Approver",
+    timeline: [
+      ...(existing.timeline || []),
+      {
+        step: "Submitted",
+        actor: existing.submitted_by || "Current User",
+        date: new Date().toISOString(),
+        comment: null
+      }
+    ],
+    history: existing.history || []
+  };
+
+  return {
+    workforce: {
+      ...workforce,
+      budget_requests: workforce.budget_requests.map((item) =>
+        item.id === requestId
+          ? {
+              ...item,
+              status: "Pending Level-1 Approval",
+              submitted_by: queueItem.submitted_by,
+              submitted_on: submittedOn
+            }
+          : item
+      ),
+      approval_queue: [
+        queueItem,
+        ...workforce.approval_queue.filter((item) => item.id !== requestId)
+      ]
+    },
+    request: queueItem,
+    toastMessage: `Budget request ${requestId} submitted for Level-1 approval.`
+  };
+}
+
+async function submitBudgetRequest(workforce, requestId) {
+  if (!isLiveMode()) {
+    return submitBudgetRequestLocal(workforce, requestId);
+  }
+
+  const result = await workforcePlanningClient.submitBudgetRequest(requestId);
+  return {
+    workforce: result.workforce,
+    request: result.request,
+    toastMessage: result.toastMessage
+  };
+}
+
 function approveBudgetRequestLocal(workforce, hiringProcess, id, comment) {
   const request = workforce.approval_queue.find((req) => req.id === id);
 
@@ -299,6 +410,35 @@ async function sendBackBudgetRequest(workforce, id, comment) {
   };
 }
 
+async function requestBudgetClarification(workforce, id, comments) {
+  if (!isLiveMode()) {
+    return sendBackBudgetRequestLocal(workforce, id, comments);
+  }
+
+  const result = await workforcePlanningClient.requestClarification(id, comments);
+  return {
+    workforce: result.workforce,
+    request: result.request,
+    toastMessage: result.toastMessage
+  };
+}
+
+async function submitBudgetClarification(workforce, id, comments) {
+  if (!isLiveMode()) {
+    return {
+      workforce,
+      toastMessage: "Clarification submitted. Workflow resumed."
+    };
+  }
+
+  const result = await workforcePlanningClient.submitClarification(id, comments);
+  return {
+    workforce: result.workforce,
+    request: result.request,
+    toastMessage: result.toastMessage
+  };
+}
+
 function createRequisitionLocal(workforce, hiringProcess, positionId) {
   const position = workforce.approved_positions.find((item) => item.id === positionId);
 
@@ -368,9 +508,13 @@ const workforcePlanningRepository = {
   getDefaultSelectedRequestId,
   getAll,
   getById,
+  createBudgetRequestDraft,
+  submitBudgetRequest,
   approveBudgetRequest,
   rejectBudgetRequest,
   sendBackBudgetRequest,
+  requestBudgetClarification,
+  submitBudgetClarification,
   createRequisition
 };
 

@@ -1,4 +1,5 @@
-import { useOutletContext } from "react-router-dom";
+import { useEffect } from "react";
+import { useLocation, useOutletContext } from "react-router-dom";
 
 import { Grid, Stack, Typography, Chip } from "@mui/material";
 
@@ -7,6 +8,7 @@ import BudgetRequestCard from "../../components/workforce-planning/BudgetRequest
 import ApprovalWorkspacePanel from "../../components/workforce-planning/ApprovalWorkspacePanel";
 
 function BudgetApprovalWorkspacePage() {
+  const location = useLocation();
 
   const {
     data,
@@ -15,8 +17,21 @@ function BudgetApprovalWorkspacePage() {
     selectedRequest,
     approveRequest,
     rejectRequest,
-    sendBackRequest
+    clarifyRequest,
+    resubmitClarification
   } = useOutletContext();
+
+  useEffect(() => {
+    const budgetRequestId = location.state?.budgetRequestId;
+    if (!budgetRequestId) {
+      return;
+    }
+
+    const exists = data.approval_queue.some((item) => item.id === budgetRequestId);
+    if (exists) {
+      setSelectedRequestId(budgetRequestId);
+    }
+  }, [location.state, data.approval_queue, setSelectedRequestId]);
 
   const pendingCount = data.approval_queue.filter(
     (r) =>
@@ -77,7 +92,8 @@ function BudgetApprovalWorkspacePage() {
             request={selectedRequest}
             onApprove={approveRequest}
             onReject={rejectRequest}
-            onSendBack={sendBackRequest}
+            onClarify={clarifyRequest}
+            onResubmit={resubmitClarification}
           />
 
         </Grid>

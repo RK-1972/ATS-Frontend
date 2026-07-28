@@ -1,4 +1,4 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 
 import { Box, IconButton } from "@mui/material";
 import MenuOutlinedIcon from "@mui/icons-material/MenuOutlined";
@@ -11,10 +11,10 @@ import CandidateNewDialog from "@/components/candidate-workspace/CandidateNewDia
 import useCandidateWorkspace from "@/hooks/useCandidateWorkspace";
 
 function CandidateWorkspaceLayout() {
+  const navigate = useNavigate();
   const workspace = useCandidateWorkspace();
   const {
     user,
-    isRecruiter,
     toast,
     setToast,
     newDialogOpen,
@@ -27,11 +27,20 @@ function CandidateWorkspaceLayout() {
     handleResumeSelected
   } = workspace;
 
+  let enterpriseWorkspace = {};
+
+  try {
+    enterpriseWorkspace =
+      JSON.parse(localStorage.getItem("workspace") || "{}") || {};
+  } catch (_error) {
+    enterpriseWorkspace = {};
+  }
+
   return (
     <WorkspaceLayout
       maxWidth={1680}
       navRail={
-        isRecruiter ? (
+        enterpriseWorkspace.showRecruitmentWorkspace ? (
           <RecruiterNavRail loggedInUser={user} />
         ) : (
           <AdminNavRail />
@@ -52,7 +61,7 @@ function CandidateWorkspaceLayout() {
           onStatusFilterChange={workspace.setStatusFilter}
 
           onSelect={workspace.selectCandidate}
-          onNewCandidate={() => setNewDialogOpen(true)}
+          onNewCandidate={() => navigate("/candidate-intake")}
 
           isLoading={workspace.isLoadingList}
           mobileOpen={mobileSidebarOpen}

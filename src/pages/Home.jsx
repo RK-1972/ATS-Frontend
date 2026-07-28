@@ -62,7 +62,8 @@ userRole === "Admin"
     "Platform Configuration",
     "Business Rules",
     "Hiring Control Tower",
-    "Workforce Planning"
+    "Workforce Planning",
+    "My Approvals"
 
   ]
 
@@ -78,6 +79,7 @@ userRole === "Admin"
 
   "Interview Management",
   "Feedback Management",
+  "My Approvals",
 
   ...(loggedInUser?.secondary_role ===
     "Interviewer"
@@ -99,49 +101,6 @@ return (
   <div style={styles.app}>
 
     <Header />
-
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "flex-end",
-        alignItems: "center",
-        padding: "10px 30px",
-        background: "#f4f6f9"
-      }}
-    >
-
-      {/* USER + LOGOUT */}
-
-      <div style={styles.userSection}>
-
-        <div style={styles.userInfo}>
-
-          <div style={styles.userName}>
-            {loggedInUser?.full_name || "User"}
-          </div>
-
-          <div style={styles.roleName}>
-            {userRole || "Recruiter"}
-          </div>
-
-        </div>
-
-        <button
-          style={styles.logoutButton}
-          onClick={() => {
-
-            localStorage.removeItem("token");
-            localStorage.removeItem("user");
-            window.location.href = "/login";
-
-          }}
-        >
-          Logout
-        </button>
-
-      </div>
-
-    </div>
 
     {/* BODY */}
 
@@ -287,6 +246,16 @@ else if (
 ) {
 
   navigate("/workforce-planning");
+
+}
+
+else if (
+
+  item === "My Approvals"
+
+) {
+
+  navigate("/my-approvals");
 
 }
 

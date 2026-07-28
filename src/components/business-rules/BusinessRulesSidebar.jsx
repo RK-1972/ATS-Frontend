@@ -14,6 +14,7 @@ import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
 import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
 import DesignServicesOutlinedIcon from "@mui/icons-material/DesignServicesOutlined";
 import GridViewOutlinedIcon from "@mui/icons-material/GridViewOutlined";
+import AccountTreeOutlinedIcon from "@mui/icons-material/AccountTreeOutlined";
 import PlayCircleOutlineOutlinedIcon from "@mui/icons-material/PlayCircleOutlineOutlined";
 import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
 
@@ -38,9 +39,15 @@ const BUSINESS_RULES_SECTIONS = [
   },
   {
     key: "approval-matrix",
-    label: "Approval Matrix",
+    label: "Approval Routes",
     path: "/business-rules/approval-matrix",
     icon: GridViewOutlinedIcon
+  },
+  {
+    key: "approval-policies",
+    label: "Approval Policies",
+    path: "/business-rules/approval-policies",
+    icon: AccountTreeOutlinedIcon
   },
   {
     key: "simulator",

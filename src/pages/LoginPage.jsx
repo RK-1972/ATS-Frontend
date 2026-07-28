@@ -3,6 +3,7 @@ from "../components/OptalynxLoader";
 import { useState, useEffect } from "react";
 import API from "../api/axios";
 import { useNavigate } from "react-router-dom";
+import AppHeader from "../components/layout/AppHeader";
 
 function LoginPage() {
 
@@ -95,56 +96,79 @@ const handleLogin = async () => {
 
       );
 
+      localStorage.setItem(
+        "work_assignments",
+        JSON.stringify(response.data.work_assignments || [])
+      );
+
+      localStorage.setItem(
+        "work_assignment_status",
+        response.data.work_assignment_status || ""
+      );
+
+      localStorage.setItem(
+        "workspace",
+        JSON.stringify(response.data.workspace || {})
+      );
+
 
       const user =
   response.data.user;
 
-if (
+      const workspaceFlags = response.data.workspace || {};
 
-  user.role_name === "Recruiter"
-
-  &&
-
-  user.secondary_role === "Interviewer"
-
-) {
-  setIsLoading(false);
-  navigate("/workspace");
-
-}
-
-else if (
-
-  user.role_name === "Interviewer"
-
-) {
-
-  localStorage.setItem(
-    "activeWorkspace",
-    "Interviewer"
-  );
-  setIsLoading(false);
-  navigate("/interviewer");
-
-}
-
-else if (
-
-  user.role_name === "Recruiter"
-
-) {
-
-  setIsLoading(false);
-  navigate("/recruiter");
-
-}
-
-else {
+      const availableWorkspaces = [
+        {
+          enabled: Boolean(workspaceFlags.showRecruitmentWorkspace),
+          path: "/recruiter"
+        },
+        {
+          enabled: Boolean(workspaceFlags.showInterviewWorkspace),
+          path: "/interviewer"
+        },
+        {
+          enabled: Boolean(workspaceFlags.showApprovalWorkspace),
+          path: "/my-approvals"
+        },
+        {
+          enabled: Boolean(workspaceFlags.showRequestWorkspace),
+          path: "/workforce-planning/catalogue"
+        }
+      ].filter((item) => item.enabled);
 
       setIsLoading(false);
-      navigate("/");
 
-}}
+      // STEP 1 — original Recruiter + Interviewer behaviour (unchanged)
+      if (
+        user.role_name === "Recruiter" &&
+        user.secondary_role === "Interviewer"
+      ) {
+        navigate("/workspace");
+      } else if (availableWorkspaces.length > 1) {
+        // STEP 2 — multiple enterprise workspaces → picker
+        navigate("/workspace");
+      } else if (availableWorkspaces.length === 1) {
+        // STEP 2 — single enterprise workspace → direct landing
+        const destination = availableWorkspaces[0].path;
+
+        if (destination === "/interviewer") {
+          localStorage.setItem("activeWorkspace", "Interviewer");
+        }
+
+        navigate(destination);
+      } else if (user.role_name === "Interviewer") {
+        // STEP 3 — no enterprise flags: original Interviewer fallback
+        localStorage.setItem("activeWorkspace", "Interviewer");
+        navigate("/interviewer");
+      } else if (user.role_name === "Recruiter") {
+        // STEP 3 — original Recruiter-only fallback
+        navigate("/recruiter");
+      } else {
+        // STEP 3 — original Admin / default fallback
+        navigate("/");
+      }
+
+    }
 
     catch (error) {
       setIsLoading(false);
@@ -236,161 +260,8 @@ return (
     fontFamily: "Segoe UI"
   }}
 >
-{/* HEADER — IGS branding removed; OPTALYNX position unchanged */}
-  <div
-    style={{
-      height: "70px",
-      background: "#1f3b63",
-      color: "white",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      padding: "0 30px",
-      boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-      fontFamily: "Segoe UI"
-    }}
-  >
+<AppHeader showUserActions={false} />
 
-    {/* Left side intentionally blank (formerly IGS) */}
-    <div />
-
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "12px",
-        marginLeft: "auto"
-      }}
-    >
-
-      <svg
-        width="50"
-        height="42"
-        viewBox="0 0 50 42"
-      >
-
-        <line
-          x1="21"
-          y1="6"
-          x2="8"
-          y2="21"
-          stroke="#f39c12"
-          strokeWidth="2"
-        />
-
-        <line
-          x1="21"
-          y1="6"
-          x2="34"
-          y2="21"
-          stroke="#f39c12"
-          strokeWidth="2"
-        />
-
-        <line
-          x1="8"
-          y1="21"
-          x2="34"
-          y2="21"
-          stroke="#f39c12"
-          strokeWidth="2"
-        />
-
-        <line
-          x1="21"
-          y1="36"
-          x2="8"
-          y2="21"
-          stroke="#f39c12"
-          strokeWidth="2"
-        />
-
-        <line
-          x1="21"
-          y1="36"
-          x2="34"
-          y2="21"
-          stroke="#f39c12"
-          strokeWidth="2"
-        />
-
-        <line
-          x1="34"
-          y1="21"
-          x2="45"
-          y2="21"
-          stroke="#ffffff"
-          strokeWidth="3"
-        />
-
-        <polygon
-          points="50,21 43,16 43,26"
-          fill="#ffffff"
-        />
-
-        <circle
-          cx="21"
-          cy="6"
-          r="3.5"
-          fill="#f39c12"
-        />
-
-        <circle
-          cx="8"
-          cy="21"
-          r="3.5"
-          fill="#f39c12"
-        />
-
-        <circle
-          cx="34"
-          cy="21"
-          r="3.5"
-          fill="#f39c12"
-        />
-
-        <circle
-          cx="21"
-          cy="36"
-          r="3.5"
-          fill="#f39c12"
-        />
-
-      </svg>
-
-      <div
-        style={{
-          textAlign: "left"
-        }}
-      >
-
-        <div
-          style={{
-            fontSize: "26px",
-            fontWeight: "600",
-            letterSpacing: "2px",
-            fontFamily: "Segoe UI"
-          }}
-        >
-          OPTALYNX
-        </div>
-
-        <div
-          style={{
-            fontSize: "14px",
-            color: "#dbeafe",
-            fontFamily: "Segoe UI"
-          }}
-        >
-          Linking Talent with Opportunity
-        </div>
-
-      </div>
-
-    </div>
-
-  </div>
-  
   {/* BODY */}
 
   <div

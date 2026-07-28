@@ -1,4 +1,5 @@
-import { Outlet, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import {
   Box,
@@ -14,6 +15,7 @@ import useWorkforcePlanning from "../../hooks/useWorkforcePlanning";
 function WorkforcePlanningLayout() {
 
   const navigate = useNavigate();
+  const location = useLocation();
 
   const loggedInUser =
     JSON.parse(localStorage.getItem("user") || "null");
@@ -21,11 +23,22 @@ function WorkforcePlanningLayout() {
   const userRole = loggedInUser?.role_name || "Admin";
 
   const workforceState = useWorkforcePlanning();
+  const refreshWorkforce = workforceState.refreshWorkforce;
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    refreshWorkforce?.().catch(() => {
+      // keep existing UI responsive even if refresh fails
+    });
+  }, [location.pathname, refreshWorkforce]);
 
   const handleLogout = () => {
 
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    localStorage.removeItem("work_assignments");
+    localStorage.removeItem("work_assignment_status");
+    localStorage.removeItem("workspace");
     navigate("/login");
 
   };

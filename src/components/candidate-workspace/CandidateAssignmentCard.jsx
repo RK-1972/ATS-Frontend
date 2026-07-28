@@ -27,7 +27,11 @@ function CandidateAssignmentCard({
   onRelease
 }) {
   const isAssigned = Boolean(mapping?.req_id);
-  const isTalentPool = !isAssigned;
+  const container = String(candidate.candidate_container || "")
+    .trim()
+    .toUpperCase();
+  const isEnterpriseTalentPool = container === "TALENT_POOL";
+  const isPipelineCandidate = container === "PIPELINE";
 
   const loggedInUser = useMemo(
     () => JSON.parse(localStorage.getItem("user") || "null"),
@@ -41,9 +45,24 @@ function CandidateAssignmentCard({
     (mapping?.recruiter_id === employeeCode || isOwner)
   );
 
-  const canAssignRequisition = isInMyPipeline || isOwner;
-  const ownershipRestricted =
-    isTalentPool && !canAssignRequisition;
+  const canAssignRequisition =
+    isEnterpriseTalentPool || isInMyPipeline || isOwner;
+  const ownershipRestricted = !isAssigned && !canAssignRequisition;
+
+  const statusChipLabel = (() => {
+    if (isAssigned) {
+      return "Assigned";
+    }
+    if (isPipelineCandidate) {
+      return "Pipeline Candidate";
+    }
+    if (isEnterpriseTalentPool) {
+      return "Enterprise Talent Pool";
+    }
+    return "Not Assigned";
+  })();
+
+  const statusChipColor = isAssigned ? "success" : "warning";
 
   const actionButton = isAssigned ? (
     <Button
@@ -106,12 +125,8 @@ function CandidateAssignmentCard({
 
         <Chip
           size="small"
-          color={isAssigned ? "success" : "warning"}
-          label={
-            isAssigned
-              ? "Assigned"
-              : "Talent Pool"
-          }
+          color={statusChipColor}
+          label={statusChipLabel}
         />
       </Stack>
 

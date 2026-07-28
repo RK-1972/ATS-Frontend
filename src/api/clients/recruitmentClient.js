@@ -115,6 +115,30 @@ const recruitmentClient = {
     );
   },
 
+  updateRequisition(code, payload) {
+    return httpPut(
+      `${ENDPOINTS.recruitment}/requisitions/${code}`,
+      payload,
+      () => ({
+        success: true,
+        message: "Requisition updated.",
+        data: { requisition_code: code, ...payload }
+      })
+    );
+  },
+
+  submitRequisition(code, payload = {}) {
+    return httpPost(
+      `${ENDPOINTS.recruitment}/requisitions/${code}/submit`,
+      payload,
+      () => ({
+        success: true,
+        message: `Requisition ${code} submitted.`,
+        data: { requisition_code: code }
+      })
+    );
+  },
+
   createFromApprovedPosition(approvedPositionId, payload = {}) {
     return httpPost(
       `${ENDPOINTS.recruitment}/requisitions`,

@@ -378,6 +378,39 @@ async function createRequisitionFromForm(formData) {
   return recruitmentClient.createRequisitionFromForm(formData);
 }
 
+async function getRequisition(code) {
+  if (!isLiveMode()) {
+    return null;
+  }
+
+  const response = await recruitmentClient.getRequisition(code);
+  return response?.data ?? null;
+}
+
+async function updateRequisition(code, payload) {
+  if (!isLiveMode()) {
+    return {
+      success: true,
+      message: "Requisition updated.",
+      data: { requisition_code: code, ...payload }
+    };
+  }
+
+  return recruitmentClient.updateRequisition(code, payload);
+}
+
+async function submitRequisition(code, payload = {}) {
+  if (!isLiveMode()) {
+    return {
+      success: true,
+      message: `Requisition ${code} submitted.`,
+      data: { requisition_code: code }
+    };
+  }
+
+  return recruitmentClient.submitRequisition(code, payload);
+}
+
 async function assignRecruiterToRequisition(reqId, recruiterCode) {
   if (!isLiveMode()) {
     return { toastMessage: "Recruiter assigned successfully." };
@@ -429,6 +462,12 @@ const recruitmentRepository = {
   listFormHiringManagers,
 
   createRequisitionFromForm,
+
+  getRequisition,
+
+  updateRequisition,
+
+  submitRequisition,
 
   assignRecruiterToRequisition,
 

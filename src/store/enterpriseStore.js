@@ -145,6 +145,95 @@ const useEnterpriseStore = create((set, get) => ({
     initialLoadComplete: false
   },
 
+  /**
+   * Clear in-memory enterprise state after session expiry / logout gate.
+   * Storage clearing is owned by sessionAuth.clearAuthStorage().
+   */
+  resetEnterpriseSession() {
+    const workforce = workforcePlanningRepository.getInitialState();
+    set({
+      platformConfig: platformConfigRepository.getInitialState(),
+      platformConfigBaseline: structuredClone(platformConfigRepository.getInitialState()),
+      platformConfigDirty: false,
+      businessRules: businessRulesRepository.getInitialState(),
+      businessRulesBaseline: structuredClone(businessRulesRepository.getInitialState()),
+      businessRulesDirty: false,
+      workflows: workflowsRepository.getInitialState(),
+      workflowsBaseline: structuredClone(workflowsRepository.getInitialState()),
+      workflowsDirty: false,
+      workforce,
+      workforceBaseline: structuredClone(workforce),
+      workforceDirty: false,
+      recruitment: recruitmentRepository.getInitialState(),
+      taskInbox: taskRepository.getInitialState(),
+      interviews: interviewRepository.getInitialState(),
+      offers: offerRepository.getInitialState(),
+      hiringProcess: hiringControlTowerRepository.getInitialState(),
+      auditEvents: auditRepository.getInitialState(),
+      masterData: masterDataRepository.getInitialState(),
+      workforceUi: {
+        selectedRequestId: workforcePlanningRepository.getDefaultSelectedRequestId(workforce),
+        toastMessage: ""
+      },
+      hiringTowerUi: {
+        selectedStageKey: "finance_approval",
+        showClarificationForm: false,
+        clarificationDraft: {
+          comment: "",
+          document: "",
+          mention: "",
+          priority: "Normal",
+          due_date: ""
+        },
+        toastMessage: ""
+      },
+      businessRulesUi: {
+        draftRule: null,
+        simulationInput: businessRulesRepository.getSimulatorDefaults(),
+        simulationResult: null
+      },
+      masterDataUi: {
+        selectedDomainKey: "workforce",
+        selectedEntityType: "grades",
+        selectedRecordId: null,
+        drawerOpen: false,
+        drawerTab: "edit",
+        searchQuery: "",
+        statusFilter: "all",
+        importDialogOpen: false,
+        importPreview: null,
+        draftRecord: null,
+        toastMessage: ""
+      },
+      recruiterUi: {
+        selectedRequisitionCode: null,
+        selectedCandidateMapId: null,
+        inspectorOpen: false,
+        searchQuery: "",
+        activeTab: "requisitions",
+        toastMessage: "",
+        toastSeverity: "success",
+        initialLoadComplete: false
+      },
+      requisitionManagement: {
+        requisitions: [],
+        assignedRecruiters: [],
+        formOptions: {
+          clients: [],
+          projects: [],
+          hiringManagers: [],
+          recruiters: []
+        }
+      },
+      requisitionManagementUi: {
+        selectedReqId: null,
+        selectedRecruiter: "",
+        showAssignModal: false,
+        initialLoadComplete: false
+      }
+    });
+  },
+
   setRequisitionManagementUi(updater) {
     set((state) => ({
       requisitionManagementUi: typeof updater === "function"
@@ -317,6 +406,45 @@ const useEnterpriseStore = create((set, get) => ({
             toastSeverity: "error"
           }
         });
+      });
+  },
+
+  refreshWorkforce() {
+    if (!isLiveMode()) {
+      console.warn("[enterpriseStore] refreshWorkforce skipped — mock mode");
+      return Promise.resolve(null);
+    }
+
+    return workforcePlanningRepository.getAll()
+      .then((result) => {
+        const workforce = result?.config || result;
+        const baseline = result?.baseline || workforce;
+        const currentSelectedId = get().workforceUi.selectedRequestId;
+        const selectedExists = [
+          ...(workforce?.approval_queue || []),
+          ...(workforce?.budget_requests || [])
+        ].some((item) => item.id === currentSelectedId);
+
+        set({
+          workforce,
+          workforceBaseline: structuredClone(baseline),
+          workforceDirty: false,
+          workforceUi: {
+            ...get().workforceUi,
+            selectedRequestId: selectedExists
+              ? currentSelectedId
+              : workforcePlanningRepository.getDefaultSelectedRequestId(workforce)
+          }
+        });
+
+        return workforce;
+      })
+      .catch((error) => {
+        console.error(
+          "[enterpriseStore] refreshWorkforce failed:",
+          error?.response?.data || error.message
+        );
+        throw error;
       });
   },
 
@@ -717,11 +845,65 @@ const useEnterpriseStore = create((set, get) => ({
     }));
   },
 
-  approveBudgetRequest(id, comment) {
+  saveBudgetRequestDraft(payload) {
 
+    return Promise.resolve(
+      workforcePlanningRepository.createBudgetRequestDraft(
+        get().workforce,
+        payload
+      )
+    ).then((result) => {
+
+      if (!result) {
+        return null;
+      }
+
+      set({
+        workforce: result.workforce,
+        workforceUi: {
+          ...get().workforceUi,
+          toastMessage: result.toastMessage
+        }
+      });
+
+      return result;
+
+    });
+
+  },
+
+  submitBudgetRequest(requestId) {
+
+    return Promise.resolve(
+      workforcePlanningRepository.submitBudgetRequest(
+        get().workforce,
+        requestId
+      )
+    ).then((result) => {
+
+      if (!result) {
+        return null;
+      }
+
+      set({
+        workforce: result.workforce,
+        workforceUi: {
+          ...get().workforceUi,
+          selectedRequestId: result.request?.id || requestId,
+          toastMessage: result.toastMessage
+        }
+      });
+
+      return result;
+
+    });
+
+  },
+
+  approveBudgetRequest(id, comment) {
     const correlationId = createCorrelationId();
 
-    Promise.resolve(
+    return Promise.resolve(
       workforcePlanningRepository.approveBudgetRequest(
         get().workforce,
         get().hiringProcess,
@@ -729,14 +911,13 @@ const useEnterpriseStore = create((set, get) => ({
         comment
       )
     ).then((result) => {
-
       if (!result) {
-        return;
+        return null;
       }
 
       set({
         workforce: result.workforce,
-        hiringProcess: result.hiringProcess,
+        hiringProcess: result.hiringProcess || get().hiringProcess,
         workforceUi: {
           ...get().workforceUi,
           toastMessage: result.toastMessage
@@ -747,11 +928,11 @@ const useEnterpriseStore = create((set, get) => ({
         module: "Workforce Planning",
         entity: "Budget Request",
         entityId: id,
-        action: `Budget approved for ${result.request.position}`,
-        previousValue: result.request.status,
-        newValue: "Approved",
+        action: `Budget approved for ${result.request?.position || id}`,
+        previousValue: result.request?.status,
+        newValue: result.request?.status || "Approved",
         correlationId,
-        metadata: { comment, stageKey: "position_budget_approval" }
+        metadata: { comment }
       });
 
       if (result.approvedPosition) {
@@ -759,28 +940,25 @@ const useEnterpriseStore = create((set, get) => ({
           module: "Workforce Planning",
           entity: "Approved Position",
           entityId: result.approvedPosition.id,
-          action: `Position ${result.request.position} added to catalogue`,
-          correlationId,
-          metadata: { stageKey: "approved_position" }
+          action: `Position ${result.request?.position || id} added to catalogue`,
+          correlationId
         });
       }
 
+      return result;
     });
-
   },
 
   rejectBudgetRequest(id, comment) {
-
-    Promise.resolve(
+    return Promise.resolve(
       workforcePlanningRepository.rejectBudgetRequest(
         get().workforce,
         id,
         comment
       )
     ).then((result) => {
-
       if (!result) {
-        return;
+        return null;
       }
 
       set({
@@ -798,25 +976,23 @@ const useEnterpriseStore = create((set, get) => ({
         action: `Budget rejected for ${result.request?.position || id}`,
         previousValue: result.request?.status,
         newValue: "Rejected",
-        metadata: { comment, stageKey: "position_budget_approval" }
+        metadata: { comment }
       });
 
+      return result;
     });
-
   },
 
-  sendBackBudgetRequest(id, comment) {
-
-    Promise.resolve(
-      workforcePlanningRepository.sendBackBudgetRequest(
+  requestBudgetClarification(id, comment) {
+    return Promise.resolve(
+      workforcePlanningRepository.requestBudgetClarification(
         get().workforce,
         id,
         comment
       )
     ).then((result) => {
-
       if (!result) {
-        return;
+        return null;
       }
 
       set({
@@ -827,21 +1003,41 @@ const useEnterpriseStore = create((set, get) => ({
         }
       });
 
-      publishAudit(set, get, ENTERPRISE_EVENTS.BUDGET_SENT_BACK, {
-        module: "Workforce Planning",
-        entity: "Budget Request",
-        entityId: id,
-        action: `Budget sent back for ${result.request?.position || id}`,
-        metadata: { comment, stageKey: "position_budget_approval" }
+      return result;
+    });
+  },
+
+  submitBudgetClarification(id, comment) {
+    return Promise.resolve(
+      workforcePlanningRepository.submitBudgetClarification(
+        get().workforce,
+        id,
+        comment
+      )
+    ).then((result) => {
+      if (!result) {
+        return null;
+      }
+
+      set({
+        workforce: result.workforce,
+        workforceUi: {
+          ...get().workforceUi,
+          toastMessage: result.toastMessage
+        }
       });
 
+      return result;
     });
+  },
 
+  sendBackBudgetRequest(id, comment) {
+    return get().requestBudgetClarification(id, comment);
   },
 
   createRequisition(positionId) {
 
-    Promise.resolve(
+    return Promise.resolve(
       workforcePlanningRepository.createRequisition(
         get().workforce,
         get().hiringProcess,
@@ -850,7 +1046,7 @@ const useEnterpriseStore = create((set, get) => ({
     ).then((result) => {
 
       if (!result) {
-        return;
+        return null;
       }
 
       set({
@@ -873,6 +1069,8 @@ const useEnterpriseStore = create((set, get) => ({
       Promise.resolve(recruitmentRepository.getAll()).then((recruitment) => {
         set({ recruitment });
       });
+
+      return result;
 
     });
 

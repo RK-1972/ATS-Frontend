@@ -34,6 +34,9 @@ function PlatformConfigLayout() {
 
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    localStorage.removeItem("work_assignments");
+    localStorage.removeItem("work_assignment_status");
+    localStorage.removeItem("workspace");
     navigate("/login");
 
   };

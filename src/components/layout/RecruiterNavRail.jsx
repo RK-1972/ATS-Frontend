@@ -45,11 +45,19 @@ function RecruiterNavRail({ loggedInUser }) {
   const location = useLocation();
   const theme = useTheme();
 
+  let workspace = {};
+
+  try {
+    workspace = JSON.parse(localStorage.getItem("workspace") || "{}") || {};
+  } catch (_error) {
+    workspace = {};
+  }
+
   const navItems = [
 
     ...RECRUITER_NAV_ITEMS,
 
-    ...(loggedInUser?.secondary_role === "Interviewer"
+    ...(workspace.showInterviewWorkspace
       ? [{
           label: "Interviewer Workspace",
           path: "/interviewer",
