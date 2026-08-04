@@ -6,16 +6,47 @@ import {
   MdRateReview,
   MdCardGiftcard
 } from "react-icons/md";
+import EnterpriseSurface from "@/components/enterprise/EnterpriseSurface";
+import EnterpriseModuleIcon from "@/components/enterprise/EnterpriseModuleIcon";
 import { DESIGN, PANEL_SHELL } from "./recruiterHomeTokens";
 
 const CARDS = [
-  { key: "candidates", label: "Active Candidates", icon: MdGroups, color: DESIGN.blue, bg: DESIGN.blueBg },
-  { key: "requisitions", label: "Open Requisitions", icon: MdWorkOutline, color: DESIGN.purple, bg: DESIGN.purpleBg },
-  { key: "interviews", label: "Interviews Today", icon: MdEvent, color: "#0E9384", bg: "#ECFDF3" },
-  { key: "feedback", label: "Pending Feedback", icon: MdRateReview, color: DESIGN.orange, bg: DESIGN.orangeBg },
-  { key: "offers", label: "Offer Stage", icon: MdCardGiftcard, color: DESIGN.green, bg: DESIGN.greenBg }
+  {
+    key: "candidates",
+    label: "Active Candidates",
+    icon: MdGroups,
+    module: "candidates"
+  },
+  {
+    key: "requisitions",
+    label: "Open Requisitions",
+    icon: MdWorkOutline,
+    module: "requisitions"
+  },
+  {
+    key: "interviews",
+    label: "Interviews Today",
+    icon: MdEvent,
+    module: "interviews"
+  },
+  {
+    key: "feedback",
+    label: "Pending Feedback",
+    icon: MdRateReview,
+    module: "approvals"
+  },
+  {
+    key: "offers",
+    label: "Offer Stage",
+    icon: MdCardGiftcard,
+    module: "team"
+  }
 ];
 
+/**
+ * Cockpit summary KPI cards — public contract unchanged.
+ * Icons inherit Enterprise Module Icon standard (dense size for KPI strip).
+ */
 function CockpitSummaryCards({
   totalCandidates = 0,
   openRequisitions = 0,
@@ -41,12 +72,24 @@ function CockpitSummaryCards({
         flexShrink: 0
       }}
     >
-      {CARDS.map(({ key, label, icon: Icon, color, bg }) => (
-        <Box key={key} sx={{ ...PANEL_SHELL, px: 1.5, py: 1.25 }}>
+      {CARDS.map(({ key, label, icon: Icon, module }) => (
+        <EnterpriseSurface
+          key={key}
+          elevation={0}
+          padding={false}
+          sx={{
+            ...PANEL_SHELL,
+            px: 1.5,
+            py: 1.25,
+            transition: "none"
+          }}
+        >
           <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
-            <Box sx={{ width: 36, height: 36, borderRadius: "50%", bgcolor: bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <Icon size={18} color={color} />
-            </Box>
+            <EnterpriseModuleIcon
+              icon={Icon}
+              module={module}
+              density="sm"
+            />
             <Box sx={{ minWidth: 0 }}>
               <Typography sx={{ fontSize: 11, fontWeight: 600, color: DESIGN.textSecondary, textTransform: "uppercase", letterSpacing: "0.02em" }}>
                 {label}
@@ -59,7 +102,7 @@ function CockpitSummaryCards({
               </Typography>
             </Box>
           </Box>
-        </Box>
+        </EnterpriseSurface>
       ))}
     </Box>
   );

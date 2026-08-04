@@ -1,4 +1,5 @@
 import Header from "../components/Header";
+import AdminNavRail from "../components/layout/AdminNavRail";
 import { useEffect, useState } from "react";
 import API from "../api/axios";
 
@@ -335,6 +336,11 @@ function MasterManagementPage() {
     <div style={styles.page}>
 
      <Header />
+
+      <div style={{ display: "flex" }}>
+        <AdminNavRail />
+        <div style={{ flex: 1, minWidth: 0 }}>
+
       {/* HEADER */}
 
       <div
@@ -914,6 +920,9 @@ function MasterManagementPage() {
         )
 
       }
+
+        </div>
+      </div>
 
     </div>
 

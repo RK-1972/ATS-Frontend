@@ -15,6 +15,7 @@ import AssignmentTurnedInOutlinedIcon from "@mui/icons-material/AssignmentTurned
 import WorkOutlineOutlinedIcon from "@mui/icons-material/WorkOutlineOutlined";
 import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
 import AddTaskOutlinedIcon from "@mui/icons-material/AddTaskOutlined";
+import EnterpriseModuleIcon from "@/components/enterprise/EnterpriseModuleIcon";
 
 const OWNERSHIP_TOOLTIP =
   "Request ownership before assigning this candidate.";
@@ -116,7 +117,13 @@ function CandidateAssignmentCard({
         mb={2}
       >
         <Stack direction="row" spacing={1} alignItems="center">
-          <AssignmentTurnedInOutlinedIcon color="primary" />
+          <EnterpriseModuleIcon
+            icon={AssignmentTurnedInOutlinedIcon}
+            module="approvals"
+            density="sm"
+            size={28}
+            iconSize={16}
+          />
 
           <Typography variant="h6" fontWeight={600}>
             Assignment
@@ -136,9 +143,12 @@ function CandidateAssignmentCard({
 
         <Stack direction="row" spacing={1.5} alignItems="center">
 
-          <WorkOutlineOutlinedIcon
-            color="action"
-            fontSize="small"
+          <EnterpriseModuleIcon
+            icon={WorkOutlineOutlinedIcon}
+            module="requisitions"
+            density="sm"
+            size={28}
+            iconSize={16}
           />
 
           <Box>
@@ -160,9 +170,12 @@ function CandidateAssignmentCard({
 
         <Stack direction="row" spacing={1.5} alignItems="center">
 
-          <PersonOutlineOutlinedIcon
-            color="action"
-            fontSize="small"
+          <EnterpriseModuleIcon
+            icon={PersonOutlineOutlinedIcon}
+            module="recruitment"
+            density="sm"
+            size={28}
+            iconSize={16}
           />
 
           <Box>

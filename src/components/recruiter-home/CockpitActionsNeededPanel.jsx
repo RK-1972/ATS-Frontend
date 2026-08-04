@@ -1,5 +1,6 @@
 import { Box, Typography, Link, Chip } from "@mui/material";
 import { MdWarningAmber } from "react-icons/md";
+import EnterpriseModuleIcon from "@/components/enterprise/EnterpriseModuleIcon";
 import { DESIGN, PANEL_HEADER, PANEL_SHELL, ROW_INTERACTIVE } from "./recruiterHomeTokens";
 import { getAttentionItemMeta } from "./recruiterHomeUiHelpers";
 
@@ -28,7 +29,13 @@ function CockpitActionsNeededPanel({ items = [], selectedId, onSelect, criticalC
     <Box sx={{ ...PANEL_SHELL, display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
       <Box sx={{ ...PANEL_HEADER, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
-          <MdWarningAmber size={18} color={DESIGN.red} />
+          <EnterpriseModuleIcon
+            icon={MdWarningAmber}
+            module="reports"
+            density="sm"
+            size={24}
+            iconSize={14}
+          />
           <Typography sx={{ fontSize: 11, fontWeight: 700, color: DESIGN.textSecondary, letterSpacing: "0.04em" }}>
             ACTIONS NEEDED
           </Typography>
@@ -70,9 +77,13 @@ function CockpitActionsNeededPanel({ items = [], selectedId, onSelect, criticalC
                 alignItems: "flex-start"
               }}
             >
-              <Box sx={{ width: 32, height: 32, borderRadius: 1.5, bgcolor: meta.iconBg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <Icon size={16} color={meta.iconColor} />
-              </Box>
+              <EnterpriseModuleIcon
+                icon={Icon}
+                module={meta.module}
+                density="sm"
+                size={32}
+                iconSize={16}
+              />
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography sx={{ fontSize: 13, fontWeight: 600, color: DESIGN.textPrimary, lineHeight: 1.3 }}>
                   {item.displayType || meta.displayType}

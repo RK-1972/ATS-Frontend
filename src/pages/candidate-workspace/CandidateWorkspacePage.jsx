@@ -1,18 +1,20 @@
 import CandidateAssignmentDialog
 from "@/components/candidate-workspace/CandidateAssignmentDialog";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 
-import { Box, Stack, Tab, Tabs, Typography } from "@mui/material";
+import { Box, Stack, Tab, Typography } from "@mui/material";
 
 import {
   ErrorState,
   LoadingState,
   StatusChip,
-  WorkspaceHeader
+  WorkspaceHeader,
+  EnterpriseTabs
 } from "@/components/enterprise";
 import { WORKSPACE_TABS } from "@/enterprise/candidateWorkspaceUtils";
+import { useCopilotContext } from "@/components/copilot/CopilotContext";
 
 import CandidateHeroCard from "@/components/candidate-workspace/CandidateHeroCard";
 import CandidateAiInsightsPanel from "@/components/candidate-workspace/CandidateAiInsightsPanel";
@@ -37,6 +39,7 @@ import candidateRepository from "@/repositories/candidateRepository";
 function CandidateWorkspacePage() {
   const navigate = useNavigate();
   const workspace = useOutletContext();
+  const { setCurrentCandidate } = useCopilotContext();
   const [openSkillDialog, setOpenSkillDialog] = useState(false);
   const [openExperienceDialog, setOpenExperienceDialog] = useState(false);
   const [assignmentOpen, setAssignmentOpen] =
@@ -77,6 +80,33 @@ function CandidateWorkspacePage() {
     pendingRequest,
     requestOwnership
   } = workspace;
+
+  useEffect(() => {
+    if (!candidate?.candidate_id) {
+      return undefined;
+    }
+
+    const mappingRow = mapping || profile?.mapping || {};
+
+    setCurrentCandidate({
+      id: candidate.candidate_id,
+      candidateCode: candidate.candidate_code || "",
+      candidateName: displayName || "",
+      mapId: mappingRow.map_id ?? null,
+      reqId: mappingRow.req_id ?? null
+    });
+
+    return () => {
+      setCurrentCandidate(null);
+    };
+  }, [
+    candidate?.candidate_id,
+    candidate?.candidate_code,
+    displayName,
+    mapping,
+    profile?.mapping,
+    setCurrentCandidate
+  ]);
 
   const activeAssignmentMapping = useMemo(() => {
     const profileMapping = profile?.mapping || mapping || {};
@@ -427,7 +457,7 @@ if (
               bgcolor: "background.default"
             }}
           >
-            <Tabs
+            <EnterpriseTabs
               value={activeTab}
               onChange={(_, value) => setActiveTab(value)}
               variant="scrollable"
@@ -438,7 +468,7 @@ if (
               {WORKSPACE_TABS.map((tab) => (
                 <Tab key={tab.key} value={tab.key} label={tab.label} sx={{ minHeight: 40, py: 1 }} />
               ))}
-            </Tabs>
+            </EnterpriseTabs>
           </Box>
 
           <Box sx={{ minHeight: 280 }}>{tabPanel}</Box>

@@ -1,5 +1,7 @@
 import { Chip } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
+import { motion, useReducedMotion } from "framer-motion";
+import { framerTransition, translateTokenPx } from "../../theme/motion";
 
 const STATUS_MAP = {
   Draft: "draft",
@@ -46,20 +48,42 @@ function StatusChip({ status, size = "small", variant = "filled" }) {
   const color = MUI_COLOR[tokenKey] || "default";
   const compact = size === "small";
   const tokenColors = theme.tokens.statusColors[tokenKey];
+  const reduced = useReducedMotion();
+  const hoverShadow = theme.motion.elevation.shadows.hover;
+  /* Chip lift stays subtler than card hoverY */
+  const hoverMotion = reduced
+    ? undefined
+    : {
+        boxShadow: hoverShadow,
+        y: Math.max(translateTokenPx("hoverY") / 2, -2),
+        transition: framerTransition("hover", "decelerate", false)
+      };
+
+  const chipSx = {
+    height: compact ? 22 : 24,
+    fontSize: theme.tokens.typography.label.fontSize,
+    fontWeight: 600,
+    transition: "none",
+    "& .MuiChip-label": { px: compact ? 0.75 : 1 }
+  };
 
   if (variant === "soft" && tokenColors) {
     return (
       <Chip
+        component={motion.div}
         label={status}
         size="small"
+        whileHover={hoverMotion}
+        transition={framerTransition(
+          "normal",
+          "decelerate",
+          Boolean(reduced)
+        )}
         sx={{
-          height: compact ? 22 : 24,
-          fontSize: theme.tokens.typography.label.fontSize,
-          fontWeight: 600,
+          ...chipSx,
           bgcolor: tokenColors.bg,
           color: tokenColors.text,
-          border: `1px solid ${tokenColors.border}`,
-          "& .MuiChip-label": { px: compact ? 0.75 : 1 }
+          border: `1px solid ${tokenColors.border}`
         }}
       />
     );
@@ -67,16 +91,14 @@ function StatusChip({ status, size = "small", variant = "filled" }) {
 
   return (
     <Chip
+      component={motion.div}
       label={status}
       size="small"
       color={color}
       variant={color === "default" ? "outlined" : "filled"}
-      sx={{
-        height: compact ? 22 : 24,
-        fontSize: theme.tokens.typography.label.fontSize,
-        fontWeight: 600,
-        "& .MuiChip-label": { px: compact ? 0.75 : 1 }
-      }}
+      whileHover={hoverMotion}
+      transition={framerTransition("hover", "decelerate", Boolean(reduced))}
+      sx={chipSx}
     />
   );
 }

@@ -2,6 +2,7 @@ import { Box, Typography, Stack } from "@mui/material";
 import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import { useTheme } from "@mui/material/styles";
 import EnterpriseSurface from "./EnterpriseSurface";
+import EnterpriseModuleIcon from "./EnterpriseModuleIcon";
 
 function AIInsightCard({
   title = "AI Insights",
@@ -18,7 +19,11 @@ function AIInsightCard({
       }}
     >
       <Stack direction="row" alignItems="center" gap={1} mb={1.5}>
-        <AutoAwesomeOutlinedIcon color="primary" sx={{ fontSize: 20 }} />
+        <EnterpriseModuleIcon
+          icon={AutoAwesomeOutlinedIcon}
+          module="team"
+          density="sm"
+        />
         <Typography sx={{ ...typography.sectionTitle, fontSize: 16 }}>
           {title}
         </Typography>

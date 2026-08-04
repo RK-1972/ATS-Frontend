@@ -10,7 +10,7 @@ import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import ChevronRightOutlinedIcon from "@mui/icons-material/ChevronRightOutlined";
 import { useTheme } from "@mui/material/styles";
 
-import { AIInsightCard, EnterpriseSurface, MetricCell } from "@/components/enterprise";
+import { AIInsightCard, EnterpriseSurface, EnterpriseModuleIcon, MetricCell } from "@/components/enterprise";
 
 function PlaceholderInsight({ title, description, chips = [], highlight = false }) {
   const theme = useTheme();
@@ -99,7 +99,13 @@ function CandidateAiInsightsPanel({ open, onToggle, skillChips = [] }) {
     >
       <Stack direction="row" alignItems="center" justifyContent="space-between">
         <Stack direction="row" spacing={0.75} alignItems="center">
-          <AutoAwesomeOutlinedIcon color="primary" fontSize="small" />
+          <EnterpriseModuleIcon
+            icon={AutoAwesomeOutlinedIcon}
+            module="team"
+            density="sm"
+            size={28}
+            iconSize={16}
+          />
           <Typography variant="subtitle2" fontWeight={700}>
             AI Insights
           </Typography>

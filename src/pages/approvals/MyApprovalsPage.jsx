@@ -17,7 +17,9 @@ import OpenInNewOutlinedIcon from "@mui/icons-material/OpenInNewOutlined";
 import RefreshOutlinedIcon from "@mui/icons-material/RefreshOutlined";
 import HighlightOffOutlinedIcon from "@mui/icons-material/HighlightOffOutlined";
 
-import Header from "../../components/Header";
+import WorkspaceLayout from "../../components/enterprise/WorkspaceLayout";
+import AdminNavRail from "../../components/layout/AdminNavRail";
+import RecruiterNavRail from "../../components/layout/RecruiterNavRail";
 import EnterpriseCard from "../../components/enterprise/framework/EnterpriseCard";
 import EnterpriseWorkspaceHeader from "../../components/enterprise/framework/EnterpriseWorkspaceHeader";
 import EnterpriseConfirmationDialog from "../../components/enterprise/EnterpriseConfirmationDialog";
@@ -32,6 +34,22 @@ import {
 } from "../../components/enterprise";
 import MyApprovalsService from "../../services/myApprovalsService";
 import useEnterpriseStore from "../../store/enterpriseStore";
+import { formatCurrency } from "@/utils/formatCurrency";
+
+function resolveEnterpriseNavRail(user) {
+  let workspace = {};
+  try {
+    workspace = JSON.parse(localStorage.getItem("workspace") || "{}") || {};
+  } catch (_error) {
+    workspace = {};
+  }
+
+  if (workspace.showRecruitmentWorkspace || workspace.showInterviewWorkspace) {
+    return <RecruiterNavRail loggedInUser={user} />;
+  }
+
+  return <AdminNavRail />;
+}
 
 function formatDateTime(value) {
   if (!value) return "—";
@@ -95,6 +113,14 @@ function normalizePriority(priority) {
 function MyApprovalsPage() {
   const navigate = useNavigate();
   const refreshWorkforce = useEnterpriseStore((state) => state.refreshWorkforce);
+  const refreshOffers = useEnterpriseStore((state) => state.refreshOffers);
+  const loggedInUser = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem("user") || "null");
+    } catch (_error) {
+      return null;
+    }
+  }, []);
 
   const [rows, setRows] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -222,7 +248,8 @@ function MyApprovalsPage() {
       setInspectorRow(null);
       await Promise.all([
         loadApprovals(),
-        refreshWorkforce?.().catch(() => null)
+        refreshWorkforce?.().catch(() => null),
+        refreshOffers?.().catch(() => null)
       ]);
     } catch (error) {
       setToast({
@@ -254,6 +281,13 @@ function MyApprovalsPage() {
     if (documentType === "BUDGET") {
       navigate("/workforce-planning/approvals", {
         state: { budgetRequestId: row.document_number || null }
+      });
+      return;
+    }
+
+    if (documentType === "OFFER") {
+      navigate("/offers/pending-approvals", {
+        state: { offerId: row.document_number || null }
       });
       return;
     }
@@ -449,18 +483,12 @@ function MyApprovalsPage() {
   const dialogMeta = actionLabels[actionDialog.type] || {};
 
   return (
-    <div>
-      <Header
-        userName={localStorage.getItem("full_name")}
-        roleName={localStorage.getItem("role_name")}
-      />
-
+    <WorkspaceLayout navRail={resolveEnterpriseNavRail(loggedInUser)}>
       <Box
         sx={{
-          px: { xs: 1.5, sm: 2 },
-          py: 1.5,
-          bgcolor: "background.default",
-          minHeight: "100vh"
+          px: { xs: 0, sm: 0 },
+          py: 0,
+          bgcolor: "background.default"
         }}
       >
         <EnterpriseWorkspaceHeader
@@ -538,6 +566,28 @@ function MyApprovalsPage() {
               value={formatDocumentType(inspectorRow)}
             />
             <DetailRow label="Document Number" value={inspectorRow.document_number} />
+            {resolveDocumentTypeKey(inspectorRow) === "OFFER" ? (
+              <>
+                <DetailRow
+                  label="Candidate Name"
+                  value={inspectorRow.candidateName || inspectorRow.candidate_name || "—"}
+                />
+                <DetailRow
+                  label="Client Name"
+                  value={inspectorRow.businessUnit || inspectorRow.business_unit || "—"}
+                />
+                <DetailRow
+                  label="Project Name"
+                  value={inspectorRow.department || "—"}
+                />
+                <DetailRow
+                  label="Offered CTC"
+                  value={formatCurrency(
+                    Number(inspectorRow.offeredCtc ?? inspectorRow.offered_ctc ?? 0)
+                  )}
+                />
+              </>
+            ) : null}
             <DetailRow label="Requestor" value={inspectorRow.requestor} />
             <DetailRow
               label="Current Step"
@@ -670,7 +720,7 @@ function MyApprovalsPage() {
           {toast.message}
         </Alert>
       </Snackbar>
-    </div>
+    </WorkspaceLayout>
   );
 }
 

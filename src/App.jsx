@@ -15,11 +15,14 @@ import CandidatePage from "./pages/CandidatePage";
 import LoginPage from "./pages/LoginPage";
 import RequisitionPage from "./pages/RequisitionPage";
 import MyDraftsPage from "./pages/talent-demand/MyDraftsPage";
+import RecruiterAssignmentWorkspacePage from "./pages/requisitions/RecruiterAssignmentWorkspacePage";
 import MyApprovalsPage from "./pages/approvals/MyApprovalsPage";
 import UserManagementPage from "./pages/UserManagementPage";
 import EmployeeWorkAssignmentPage from "./pages/EmployeeWorkAssignmentPage";
 import WorkAssignmentMasterPage from "./pages/WorkAssignmentMasterPage";
 import ProtectedRoute from "./components/ProtectedRoute";
+import ScrollToTop from "./components/ScrollToTop";
+import { CopilotProvider } from "./components/copilot/CopilotContext";
 import MasterManagementPage from "./pages/MasterManagementPage";
 import ReportsAnalyticsPage from "./pages/ReportsAnalyticsPage";
 import InterviewPanelPage from "./pages/InterviewPanelPage";
@@ -124,8 +127,39 @@ const RecruiterWorkspacePage = lazy(
 const OwnershipInboxPage = lazy(
   () => import("./pages/ownership-inbox/OwnershipInboxPage")
 );
+const MyAssignedRequisitionsPage = lazy(
+  () => import("./pages/recruiter/MyAssignedRequisitionsPage")
+);
+const RecruiterRequisitionDetailsPage = lazy(
+  () => import("./pages/recruiter/RecruiterRequisitionDetailsPage")
+);
 const WorkspacePickerPage = lazy(
   () => import("./pages/workspaces/WorkspacePickerPage")
+);
+
+const OfferWorkspaceLayout = lazy(
+  () => import("./pages/offers/OfferWorkspaceLayout")
+);
+const OfferWorkspaceHomePage = lazy(
+  () => import("./pages/offers/OfferWorkspaceHomePage")
+);
+const RaiseOfferRequestPage = lazy(
+  () => import("./pages/offers/RaiseOfferRequestPage")
+);
+const MyOfferRequestsPage = lazy(
+  () => import("./pages/offers/MyOfferRequestsPage")
+);
+const PendingOfferApprovalsPage = lazy(
+  () => import("./pages/offers/PendingOfferApprovalsPage")
+);
+const ApprovedOffersPage = lazy(
+  () => import("./pages/offers/ApprovedOffersPage")
+);
+const RejectedOffersPage = lazy(
+  () => import("./pages/offers/RejectedOffersPage")
+);
+const WithdrawnOffersPage = lazy(
+  () => import("./pages/offers/WithdrawnOffersPage")
 );
 
 const CandidateWorkspaceLayout = lazy(
@@ -177,6 +211,8 @@ function App() {
   return (
 
     <BrowserRouter>
+      <CopilotProvider>
+      <ScrollToTop />
 
       <Routes>
 
@@ -350,6 +386,22 @@ function App() {
 
         <Route
 
+          path="/requisitions/assign-recruiters"
+
+          element={
+
+            <ProtectedRoute>
+
+              <RecruiterAssignmentWorkspacePage />
+
+            </ProtectedRoute>
+
+          }
+
+        />
+
+        <Route
+
           path="/my-approvals"
 
           element={
@@ -363,6 +415,78 @@ function App() {
           }
 
         />
+
+{/* =====================================
+    Offer Workspace (Enterprise foundation)
+===================================== */}
+
+        <Route
+          path="/offers"
+          element={
+            <ProtectedRoute>
+              <LazyRoute>
+                <OfferWorkspaceLayout />
+              </LazyRoute>
+            </ProtectedRoute>
+          }
+        >
+          <Route
+            index
+            element={
+              <LazyRoute>
+                <OfferWorkspaceHomePage />
+              </LazyRoute>
+            }
+          />
+          <Route
+            path="raise"
+            element={
+              <LazyRoute>
+                <RaiseOfferRequestPage />
+              </LazyRoute>
+            }
+          />
+          <Route
+            path="my-requests"
+            element={
+              <LazyRoute>
+                <MyOfferRequestsPage />
+              </LazyRoute>
+            }
+          />
+          <Route
+            path="pending-approvals"
+            element={
+              <LazyRoute>
+                <PendingOfferApprovalsPage />
+              </LazyRoute>
+            }
+          />
+          <Route
+            path="approved"
+            element={
+              <LazyRoute>
+                <ApprovedOffersPage />
+              </LazyRoute>
+            }
+          />
+          <Route
+            path="rejected"
+            element={
+              <LazyRoute>
+                <RejectedOffersPage />
+              </LazyRoute>
+            }
+          />
+          <Route
+            path="withdrawn"
+            element={
+              <LazyRoute>
+                <WithdrawnOffersPage />
+              </LazyRoute>
+            }
+          />
+        </Route>
 
         <Route
 
@@ -488,6 +612,22 @@ function App() {
     element={
       <LazyRoute>
         <OwnershipInboxPage />
+      </LazyRoute>
+    }
+  />
+  <Route
+    path="my-requisitions"
+    element={
+      <LazyRoute>
+        <MyAssignedRequisitionsPage />
+      </LazyRoute>
+    }
+  />
+  <Route
+    path="my-requisitions/:reqCode"
+    element={
+      <LazyRoute>
+        <RecruiterRequisitionDetailsPage />
       </LazyRoute>
     }
   />
@@ -814,7 +954,7 @@ function App() {
 
 
       </Routes>
-
+      </CopilotProvider>
     </BrowserRouter>
 
   );

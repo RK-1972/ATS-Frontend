@@ -28,6 +28,8 @@ import {
   SearchBar,
   StatusChip
 } from "../components/enterprise";
+import { useCopilotContext } from "../components/copilot/CopilotContext";
+import { useNavigationFilters } from "@/copilot/core/useNavigationFilters";
 
 const denseFieldSx = {
   "& .MuiInputBase-root": {
@@ -38,14 +40,91 @@ const denseFieldSx = {
   }
 };
 
+/**
+ * Optional schedule-form initialization from location.state.
+ * Entry-point agnostic — any caller may supply these keys.
+ * Supported (all optional): interviewer_id, round_type, interview_date, interview_time.
+ * Missing keys leave existing ATS defaults unchanged.
+ */
+function readOptionalScheduleFormInit(locationState) {
+  if (!locationState || typeof locationState !== "object") {
+    return null;
+  }
+
+  const patch = {};
+
+  if (
+    locationState.interviewer_id != null &&
+    locationState.interviewer_id !== ""
+  ) {
+    const id = Number(locationState.interviewer_id);
+    if (!Number.isNaN(id)) {
+      patch.interviewer_id = id;
+    }
+  }
+
+  if (
+    typeof locationState.round_type === "string" &&
+    locationState.round_type.trim() !== ""
+  ) {
+    patch.round_type = locationState.round_type.trim();
+  }
+
+  if (
+    typeof locationState.interview_date === "string" &&
+    locationState.interview_date.trim() !== ""
+  ) {
+    patch.interview_date = locationState.interview_date.trim();
+  }
+
+  if (
+    typeof locationState.interview_time === "string" &&
+    locationState.interview_time.trim() !== ""
+  ) {
+    patch.interview_time = locationState.interview_time.trim();
+  }
+
+  return Object.keys(patch).length > 0 ? patch : null;
+}
+
+/** Stable key for a workspace (req_id + map_id) init payload + navigation identity. */
+function getWorkspaceInitKey(locationState, locationKey) {
+  const reqId = locationState?.req_id;
+  const mapId = locationState?.map_id;
+
+  if (!reqId || !mapId) {
+    return null;
+  }
+
+  return `${locationKey}::req:${reqId}::map:${mapId}`;
+}
+
+/** Stable key for optional form-field init + navigation identity. */
+function getOptionalFormInitKey(patch, locationKey) {
+  if (!patch) {
+    return null;
+  }
+
+  return `${locationKey}::${JSON.stringify(patch)}`;
+}
+
 function InterviewSchedulePage() {
+  const { setCurrentPage } = useCopilotContext();
+
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
+  useEffect(() => {
+    setCurrentPage("Interview Schedule");
+  }, [setCurrentPage]);
+
   const navigate = useNavigate();
   const location = useLocation();
-  const workspacePrefillApplied = useRef(false);
+  const lastWorkspaceInitKey = useRef(null);
+  const detailsPrefillApplied = useRef(false);
+  const detailsPrefillState = useRef(null);
+  const lastOptionalFormInitKey = useRef(null);
 
   const loggedInUser = JSON.parse(localStorage.getItem("user") || "null");
   const userRole = loggedInUser?.role_name;
@@ -65,6 +144,13 @@ function InterviewSchedulePage() {
     interview_date: "",
     interview_time: "",
     remarks: ""
+  });
+
+  // Generic navigation filters (any producer may set location.state.filters).
+  useNavigationFilters((filters) => {
+    if (filters.search != null && filters.search !== "") {
+      setSearchText(String(filters.search));
+    }
   });
 
   const handleLogout = () => {
@@ -145,17 +231,47 @@ function InterviewSchedulePage() {
     fetchSchedules();
   }, []);
 
-  // Prefill from Enterprise Candidate Workspace deep-link (req_id + map_id).
-  // Other entry points have no location.state — behaviour unchanged.
+  // Capture Recruiter Requisition Details navigation state on first load only.
   useEffect(() => {
-    const reqId = location.state?.req_id;
-    const mapId = location.state?.map_id;
+    const requisitionCode = location.state?.requisitionCode;
+    const candidateId = location.state?.candidateId;
+    const candidateName = location.state?.candidateName;
 
-    if (!reqId || !mapId || workspacePrefillApplied.current) {
+    if (
+      requisitionCode == null ||
+      requisitionCode === "" ||
+      candidateId == null ||
+      candidateId === "" ||
+      !String(candidateName || "").trim()
+    ) {
       return;
     }
 
-    workspacePrefillApplied.current = true;
+    detailsPrefillState.current = {
+      requisitionCode,
+      candidateId,
+      candidateName: String(candidateName).trim()
+    };
+  }, []);
+
+  // Prefill from Enterprise Candidate Workspace deep-link (req_id + map_id).
+  // Other entry points have no location.state — behaviour unchanged.
+  // Re-applies only when a new navigation supplies a different init context
+  // (same page instance stays mounted — e.g. second Copilot conversation).
+  useEffect(() => {
+    const reqId = location.state?.req_id;
+    const mapId = location.state?.map_id;
+    const initKey = getWorkspaceInitKey(location.state, location.key);
+
+    if (!reqId || !mapId || !initKey) {
+      return;
+    }
+
+    if (lastWorkspaceInitKey.current === initKey) {
+      return;
+    }
+
+    lastWorkspaceInitKey.current = initKey;
 
     let cancelled = false;
 
@@ -179,7 +295,104 @@ function InterviewSchedulePage() {
     return () => {
       cancelled = true;
     };
-  }, [location.state]);
+  }, [location.state, location.key]);
+
+  // Optional control initialization (interviewer / round / date / time).
+  // Does not replace existing req_id + map_id or details-triple paths.
+  // When no values are supplied, form controls keep ATS defaults.
+  // Re-applies only when a new navigation supplies a different optional context.
+  useEffect(() => {
+    const patch = readOptionalScheduleFormInit(location.state);
+    const initKey = getOptionalFormInitKey(patch, location.key);
+
+    if (!patch || !initKey) {
+      return;
+    }
+
+    if (lastOptionalFormInitKey.current === initKey) {
+      return;
+    }
+
+    lastOptionalFormInitKey.current = initKey;
+
+    setFormData((prev) => ({
+      ...prev,
+      ...patch
+    }));
+  }, [location.state, location.key]);
+
+  // Prefill from Recruiter Requisition Details (requisitionCode + candidateId + candidateName).
+  // Waits for requisitions, then loads candidates via existing page API before selecting.
+  useEffect(() => {
+    const prefill = detailsPrefillState.current;
+
+    if (!prefill || detailsPrefillApplied.current) {
+      return;
+    }
+
+    if (!Array.isArray(requisitions) || requisitions.length === 0) {
+      return;
+    }
+
+    const matchedReq = requisitions.find(
+      (r) =>
+        String(r.req_code || "")
+          .trim()
+          .toUpperCase() ===
+        String(prefill.requisitionCode || "")
+          .trim()
+          .toUpperCase()
+    );
+
+    if (!matchedReq?.req_id) {
+      detailsPrefillApplied.current = true;
+      return;
+    }
+
+    detailsPrefillApplied.current = true;
+
+    let cancelled = false;
+
+    (async () => {
+      setFormData((prev) => ({
+        ...prev,
+        req_id: Number(matchedReq.req_id),
+        map_id: ""
+      }));
+
+      try {
+        const response = await API.get(
+          `/interview-candidates/${matchedReq.req_id}`
+        );
+        if (cancelled) {
+          return;
+        }
+
+        const list = response.data.data || [];
+        setCandidates(list);
+
+        const matchedCandidate = list.find(
+          (c) =>
+            c.candidate_id != null &&
+            String(c.candidate_id) === String(prefill.candidateId)
+        );
+
+        if (matchedCandidate?.map_id != null) {
+          setFormData((prev) => ({
+            ...prev,
+            req_id: Number(matchedReq.req_id),
+            map_id: Number(matchedCandidate.map_id)
+          }));
+        }
+      } catch (error) {
+        console.log(error);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [requisitions]);
 
   const handleChange = (e) => {
     setFormData({

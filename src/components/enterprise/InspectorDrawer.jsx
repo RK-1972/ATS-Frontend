@@ -2,11 +2,11 @@ import {
   Drawer,
   Box,
   IconButton,
-  Typography,
-  Divider
+  Typography
 } from "@mui/material";
 import CloseOutlinedIcon from "@mui/icons-material/CloseOutlined";
 import { useTheme } from "@mui/material/styles";
+import { FramerDrawerTransition } from "../../theme/motionRenderer";
 
 function InspectorDrawer({
   open,
@@ -19,6 +19,7 @@ function InspectorDrawer({
 }) {
   const theme = useTheme();
   const { layout, shadows, typography } = theme.tokens;
+  const { tokens: motionTokens } = theme.motion;
   const drawerWidth = width || layout.inspectorWidth;
 
   return (
@@ -27,6 +28,11 @@ function InspectorDrawer({
       open={open}
       onClose={onClose}
       variant="temporary"
+      slots={{ transition: FramerDrawerTransition }}
+      transitionDuration={{
+        enter: motionTokens.duration.enter,
+        exit: motionTokens.duration.exit
+      }}
       slotProps={{
         paper: {
           sx: {

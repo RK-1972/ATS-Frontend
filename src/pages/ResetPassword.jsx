@@ -167,7 +167,10 @@ function ResetPassword() {
 
         setTimeout(() => {
 
-          navigate("/login");
+          navigate("/login", {
+            replace: true,
+            state: { fromPasswordReset: true }
+          });
 
         }, 3000);
 

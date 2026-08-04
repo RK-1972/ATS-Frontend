@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import Header from "../components/Header";
+import AdminNavRail from "../components/layout/AdminNavRail";
 import API from "../api/axios";
 import {
   Alert,
@@ -237,10 +238,13 @@ function EmployeeWorkAssignmentPage() {
   };
 
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
+    <Box sx={{ minHeight: "100vh", bgcolor: "background.default", display: "flex", flexDirection: "column" }}>
       <Header />
 
-      <Box sx={{ maxWidth: 1400, mx: "auto", px: 2, py: 3 }}>
+      <Box sx={{ display: "flex", flex: 1, minHeight: 0 }}>
+        <AdminNavRail />
+
+      <Box sx={{ flex: 1, minWidth: 0, maxWidth: 1400, mx: "auto", px: 2, py: 3, width: "100%" }}>
         <Typography variant="h5" fontWeight={700} mb={0.5}>
           Employee Work Assignments
         </Typography>
@@ -460,6 +464,7 @@ function EmployeeWorkAssignmentPage() {
             </CardContent>
           </Card>
         </Stack>
+      </Box>
       </Box>
 
       <Snackbar

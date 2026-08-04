@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import Header from "../components/Header";
+import AdminNavRail from "../components/layout/AdminNavRail";
 import API from "../api/axios";
 import {
   Avatar,
@@ -284,11 +285,15 @@ function UserManagementPage() {
     <Box sx={{ minHeight: "100vh", bgcolor: "background.default", display: "flex", flexDirection: "column" }}>
       <Header />
 
+      <Box sx={{ display: "flex", flex: 1, minHeight: 0 }}>
+        <AdminNavRail />
+
       <Box
         sx={{
           flex: 1,
           display: "flex",
           minHeight: 0,
+          minWidth: 0,
           maxWidth: 1680,
           width: "100%",
           mx: "auto",
@@ -546,6 +551,7 @@ function UserManagementPage() {
             </Box>
           </Stack>
         </Box>
+      </Box>
       </Box>
 
       <Dialog

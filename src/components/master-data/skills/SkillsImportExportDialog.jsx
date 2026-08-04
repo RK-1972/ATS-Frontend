@@ -6,7 +6,6 @@ import {
   DialogContent,
   DialogActions,
   Button,
-  Tabs,
   Tab,
   Box,
   Typography,
@@ -21,6 +20,8 @@ import {
   Chip,
   Alert
 } from "@mui/material";
+
+import EnterpriseTabs from "@/components/enterprise/EnterpriseTabs";
 
 function SkillsImportExportDialog({
   open,
@@ -61,14 +62,14 @@ function SkillsImportExportDialog({
       </DialogTitle>
 
       <DialogContent dividers>
-        <Tabs
+        <EnterpriseTabs
           value={tab}
           onChange={(_, value) => setTab(value)}
           sx={{ mb: 2, minHeight: 36 }}
         >
           <Tab label="Import" sx={{ minHeight: 36, py: 0.5 }} />
           <Tab label="Export" sx={{ minHeight: 36, py: 0.5 }} />
-        </Tabs>
+        </EnterpriseTabs>
 
         {tab === 0 ? (
           <Stack spacing={2}>

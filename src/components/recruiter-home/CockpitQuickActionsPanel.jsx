@@ -10,6 +10,7 @@ import {
   MdChevronRight
 } from "react-icons/md";
 import { DESIGN, PANEL_HEADER, PANEL_SHELL, ROW_INTERACTIVE } from "./recruiterHomeTokens";
+import EnterpriseModuleIcon from "@/components/enterprise/EnterpriseModuleIcon";
 
 const ACTIONS = [
   { key: "schedule", label: "Schedule Interview", icon: MdSchedule, route: "/interview-schedule" },
@@ -24,7 +25,13 @@ function CockpitQuickActionsPanel({ onNavigate, onShowInterviewsToday, interview
   return (
     <Box sx={{ ...PANEL_SHELL, display: "flex", flexDirection: "column", height: "100%" }}>
       <Box sx={{ ...PANEL_HEADER, display: "flex", alignItems: "center", gap: 0.75 }}>
-        <MdBolt size={18} color={DESIGN.blue} />
+        <EnterpriseModuleIcon
+          icon={MdBolt}
+          module="notifications"
+          density="sm"
+          size={24}
+          iconSize={14}
+        />
         <Typography sx={{ fontSize: 11, fontWeight: 700, color: DESIGN.textSecondary, letterSpacing: "0.04em" }}>
           QUICK ACTIONS
         </Typography>

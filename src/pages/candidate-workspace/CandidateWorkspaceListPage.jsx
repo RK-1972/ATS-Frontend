@@ -1,12 +1,19 @@
+import { useEffect } from "react";
 import { useOutletContext } from "react-router-dom";
 
 import { Box, Button, Stack } from "@mui/material";
 import OpenInNewOutlinedIcon from "@mui/icons-material/OpenInNewOutlined";
 
 import { EmptyState, WorkspaceHeader } from "@/components/enterprise";
+import { useCopilotContext } from "@/components/copilot/CopilotContext";
 
 function CandidateWorkspaceListPage() {
   const workspace = useOutletContext();
+  const { setCurrentPage } = useCopilotContext();
+
+  useEffect(() => {
+    setCurrentPage("Candidates");
+  }, [setCurrentPage]);
 
   return (
     <Box sx={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>

@@ -1,4 +1,5 @@
 import { Box, Typography, Chip, Link } from "@mui/material";
+import EnterpriseModuleIcon from "@/components/enterprise/EnterpriseModuleIcon";
 import { DESIGN, PANEL_HEADER, PANEL_SHELL, ROW_INTERACTIVE } from "./recruiterHomeTokens";
 import { getAttentionItemMeta, PRIORITY_CHIP } from "./recruiterHomeUiHelpers";
 
@@ -90,20 +91,13 @@ function RecruiterAttentionPanel({
                 }
               }}
             >
-              <Box
-                sx={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: 1,
-                  bgcolor: meta.iconBg,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0
-                }}
-              >
-                <Icon size={15} color={meta.iconColor} />
-              </Box>
+              <EnterpriseModuleIcon
+                icon={Icon}
+                module={meta.module}
+                density="sm"
+                size={28}
+                iconSize={15}
+              />
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography sx={{ fontSize: 13, fontWeight: 600, color: DESIGN.textPrimary, lineHeight: 1.25 }} noWrap>
                   {item.displayType || meta.displayType}

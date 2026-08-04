@@ -22,6 +22,7 @@ import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
 
 import candidateRepository from "@/repositories/candidateRepository";
 import BrandLogo from "./BrandLogo";
+import { OptalynxCopilot } from "../copilot";
 import { clearAuthStorage, getStoredToken } from "@/utils/sessionAuth";
 
 function readStoredUser() {
@@ -213,6 +214,15 @@ function AppHeader({
         >
           {shouldShowUserActions ? (
             <>
+              <OptalynxCopilot
+                iconButtonSx={{
+                  color: "#FFFFFF",
+                  "&:hover": {
+                    backgroundColor: "rgba(255,255,255,.08)"
+                  }
+                }}
+              />
+
               <Tooltip title="Notifications">
                 <IconButton
                   onClick={handleBellClick}

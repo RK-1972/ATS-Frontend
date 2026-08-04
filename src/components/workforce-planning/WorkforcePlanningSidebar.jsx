@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 import {
@@ -19,6 +20,8 @@ import {
   MdRequestQuote,
   MdWarningAmber
 } from "react-icons/md";
+
+import AuthorizationService from "../../services/authorizationService";
 
 const WORKFORCE_SECTIONS = [
   {
@@ -65,6 +68,62 @@ function WorkforcePlanningSidebar() {
 
   const navigate = useNavigate();
   const location = useLocation();
+
+  const [canRaiseBudgetRequest, setCanRaiseBudgetRequest] = useState(false);
+  const [canRaiseRequisition, setCanRaiseRequisition] = useState(false);
+
+  let workspace = {};
+  try {
+    workspace = JSON.parse(localStorage.getItem("workspace") || "{}") || {};
+  } catch (_error) {
+    workspace = {};
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    AuthorizationService.canRaiseBudgetRequest()
+      .then((allowed) => {
+        if (!cancelled) {
+          setCanRaiseBudgetRequest(Boolean(allowed));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCanRaiseBudgetRequest(false);
+        }
+      });
+
+    AuthorizationService.canRaiseRequisition()
+      .then((allowed) => {
+        if (!cancelled) {
+          setCanRaiseRequisition(Boolean(allowed));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCanRaiseRequisition(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const visibleSections = WORKFORCE_SECTIONS.filter((section) => {
+    if (section.key === "requests") {
+      return canRaiseBudgetRequest;
+    }
+
+    if (section.key === "catalogue") {
+      return (
+        canRaiseRequisition || Boolean(workspace.showRequestWorkspace)
+      );
+    }
+
+    return true;
+  });
 
   return (
 
@@ -119,7 +178,7 @@ function WorkforcePlanningSidebar() {
 
       <List sx={{ px: 1, py: 0.5 }}>
 
-        {WORKFORCE_SECTIONS.map((section) => {
+        {visibleSections.map((section) => {
 
           const Icon = section.icon;
 

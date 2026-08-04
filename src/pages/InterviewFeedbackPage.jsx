@@ -1,14 +1,28 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import API from "../api/axios";
-import AppHeader from "../components/layout/AppHeader";
-import { clearAuthStorage } from "../utils/sessionAuth";
+import WorkspaceLayout from "../components/enterprise/WorkspaceLayout";
+import RecruiterNavRail from "../components/layout/RecruiterNavRail";
+
+function normalizeSkillName(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function hasSkillName(value) {
+  return String(value || "").trim().length > 0;
+}
+
+function hasSkillRating(value) {
+  return Number(value) > 0;
+}
 
 function InterviewFeedbackPage() {
 
   const navigate = useNavigate();
 
   const { scheduleId } = useParams();
+
+  const skillInputRefs = useRef([]);
 
   const loggedInUser = useMemo(() => {
     try {
@@ -17,11 +31,6 @@ function InterviewFeedbackPage() {
       return null;
     }
   }, []);
-
-  const handleLogout = () => {
-    clearAuthStorage();
-    navigate("/login");
-  };
 
   const [loading, setLoading] =
     useState(true);
@@ -55,6 +64,12 @@ function InterviewFeedbackPage() {
         comments: ""
       }
     ]);
+
+  const [skillError, setSkillError] =
+    useState("");
+
+  const [submitError, setSubmitError] =
+    useState("");
 
   // =====================================
   // Load Candidate Details
@@ -106,17 +121,58 @@ function InterviewFeedbackPage() {
 
   const addSkillRow = () => {
 
+    const lastIndex = skills.length - 1;
+    const lastRow = skills[lastIndex] || {};
+    const trimmedName = String(lastRow.skill_name || "").trim();
+    const ratingValue = Number(lastRow.rating) || 0;
+
+    if (!trimmedName || ratingValue < 1) {
+      setSkillError(
+        "Enter a skill and select a rating before adding."
+      );
+      return;
+    }
+
+    const isDuplicate = skills.some((row, index) => {
+      if (index === lastIndex) {
+        return false;
+      }
+      return normalizeSkillName(row.skill_name) === normalizeSkillName(trimmedName);
+    });
+
+    if (isDuplicate) {
+      setSkillError(
+        "This skill has already been added."
+      );
+      return;
+    }
+
+    const committed = skills.map((row, index) => {
+      if (index !== lastIndex) {
+        return row;
+      }
+      return {
+        ...row,
+        skill_name: trimmedName
+      };
+    });
+
+    const nextIndex = committed.length;
+
     setSkills([
-
-      ...skills,
-
+      ...committed,
       {
         skill_name: "",
         rating: "",
         comments: ""
       }
-
     ]);
+
+    setSkillError("");
+
+    setTimeout(() => {
+      skillInputRefs.current[nextIndex]?.focus();
+    }, 0);
 
   };
 
@@ -127,7 +183,16 @@ function InterviewFeedbackPage() {
 
     updated.splice(index, 1);
 
+    if (updated.length === 0) {
+      updated.push({
+        skill_name: "",
+        rating: "",
+        comments: ""
+      });
+    }
+
     setSkills(updated);
+    setSkillError("");
 
   };
 
@@ -140,10 +205,41 @@ function InterviewFeedbackPage() {
     const updated =
       [...skills];
 
-    updated[index][field] =
-      value;
+    const current = {
+      ...updated[index],
+      [field]: value
+    };
+
+    if (field === "skill_name" && !String(value || "").trim()) {
+      current.rating = "";
+    }
+
+    updated[index] = current;
 
     setSkills(updated);
+
+    if (skillError) {
+      setSkillError("");
+    }
+
+  };
+
+  const handleStarClick = (index, star) => {
+
+    const row = skills[index];
+
+    if (!hasSkillName(row?.skill_name)) {
+      return;
+    }
+
+    const currentRating = Number(row.rating) || 0;
+    const nextRating = currentRating === star ? 0 : star;
+
+    updateSkill(
+      index,
+      "rating",
+      nextRating === 0 ? "" : nextRating
+    );
 
   };
 
@@ -156,19 +252,28 @@ function InterviewFeedbackPage() {
 
       try {
 
+        const completedSkills = skills.filter(
+          (row) =>
+            hasSkillName(row.skill_name) &&
+            hasSkillRating(row.rating)
+        );
+
         if (
           !areaOfInterview ||
           !overallRating ||
-          !finalOutcome
+          !finalOutcome ||
+          completedSkills.length === 0
         ) {
 
-          alert(
-            "Please complete all mandatory fields"
+          setSubmitError(
+            "Please select Area Of Interview, Overall Rating, Final Outcome, and add at least one skill with a rating."
           );
 
           return;
 
         }
+
+        setSubmitError("");
 
         const payload = {
 
@@ -195,7 +300,10 @@ function InterviewFeedbackPage() {
           final_outcome:
             finalOutcome,
 
-          skills
+          skills: skills.map((row) => ({
+            ...row,
+            skill_name: String(row.skill_name || "").trim()
+          }))
 
         };
 
@@ -239,19 +347,15 @@ function InterviewFeedbackPage() {
 
   if (loading) {
 
-    return <div>Loading...</div>;
+    return <div style={styles.loading}>Loading...</div>;
 
   }
 
   return (
 
-    <div style={styles.app}>
-
-      <AppHeader
-        loggedInUser={loggedInUser}
-        userRole={loggedInUser?.role_name}
-        onLogout={handleLogout}
-      />
+    <WorkspaceLayout
+      navRail={<RecruiterNavRail loggedInUser={loggedInUser} />}
+    >
 
       {/* CONTENT */}
 
@@ -328,27 +432,27 @@ function InterviewFeedbackPage() {
 
         <div style={styles.panel}>
 
+          <div style={styles.panelHeader}>
+            Evaluation
+          </div>
+
           <div style={styles.formRow}>
 
-            <div>
+            <div style={styles.fieldBlock}>
 
-              <label
-                  style={{
-                    marginRight: "15px",
-                    fontWeight: "500"
-                  }}
-                >
+              <label style={styles.formLabel}>
                   Area Of Interview
                 </label>
               
               <select
                 style={styles.select}
                 value={areaOfInterview}
-                onChange={(e) =>
-                  setAreaOfInterview(
-                    e.target.value
-                  )
-                }
+                onChange={(e) => {
+                  setAreaOfInterview(e.target.value);
+                  if (submitError) {
+                    setSubmitError("");
+                  }
+                }}
               >
                 <option value="">
                   Select
@@ -374,25 +478,21 @@ function InterviewFeedbackPage() {
 
             </div>
 
-            <div>
+            <div style={styles.fieldBlock}>
 
-              <label
-                style={{
-                  marginRight: "15px",
-                  fontWeight: "500"
-                }}
-              >
+              <label style={styles.formLabel}>
                 Overall Rating
               </label>
 
               <select
                 style={styles.select}
                 value={overallRating}
-                onChange={(e) =>
-                  setOverallRating(
-                    e.target.value
-                  )
-                }
+                onChange={(e) => {
+                  setOverallRating(e.target.value);
+                  if (submitError) {
+                    setSubmitError("");
+                  }
+                }}
               >
                 <option value="">
                   Select
@@ -422,27 +522,28 @@ function InterviewFeedbackPage() {
 
           {/* Skills */}
 
-          <h3>
+          <h3 style={styles.sectionTitle}>
             Skill Assessment
           </h3>
 
 <div>
 
-  {skills.map((row, index) => (
+  {skills.map((row, index) => {
+
+    const skillEnabled = hasSkillName(row.skill_name);
+    const ratingValue = Number(row.rating) || 0;
+
+    return (
 
     <div
       key={index}
-      style={{
-        display: "grid",
-        gridTemplateColumns:
-          "2fr 1fr 2fr 60px",
-        gap: "15px",
-        marginBottom: "15px",
-        alignItems: "center"
-      }}
+      style={styles.skillRow}
     >
 
       <input
+        ref={(el) => {
+          skillInputRefs.current[index] = el;
+        }}
         style={styles.input}
         placeholder="Skill"
         value={row.skill_name}
@@ -456,31 +557,30 @@ function InterviewFeedbackPage() {
       />
 
       <div
-  style={{
-    display: "flex",
-    gap: "5px",
-    fontSize: "28px",
-    cursor: "pointer"
-  }}
->
+        style={{
+          ...styles.starRow,
+          cursor: skillEnabled ? "pointer" : "not-allowed",
+          opacity: skillEnabled ? 1 : 0.55
+        }}
+        aria-disabled={!skillEnabled}
+      >
 
   {[1, 2, 3, 4, 5].map((star) => (
 
     <span
       key={star}
       onClick={() =>
-        updateSkill(
-          index,
-          "rating",
-          star
-        )
+        handleStarClick(index, star)
       }
       style={{
         color:
-          row.rating >= star
-            ? "#f59e0b"
-            : "#d1d5db",
-        transition: "0.2s"
+          ratingValue >= star
+            ? "#f39c12"
+            : "#cfd8e3",
+        transition: "0.2s",
+        cursor: skillEnabled ? "pointer" : "not-allowed",
+        pointerEvents: skillEnabled ? "auto" : "none",
+        userSelect: "none"
       }}
     >
       ★
@@ -503,16 +603,7 @@ function InterviewFeedbackPage() {
       />
 
       <button
-        style={{
-          background: "#fee2e2",
-          color: "#dc2626",
-          border: "none",
-          width: "40px",
-          height: "40px",
-          borderRadius: "8px",
-          cursor: "pointer",
-          fontWeight: "700"
-        }}
+        style={styles.removeButton}
         onClick={() =>
           removeSkillRow(index)
         }
@@ -522,9 +613,17 @@ function InterviewFeedbackPage() {
 
     </div>
 
-  ))}
+    );
+
+  })}
 
 </div>
+
+          {skillError ? (
+            <div style={styles.inlineError}>
+              {skillError}
+            </div>
+          ) : null}
 
           <button
             style={styles.addButton}
@@ -571,11 +670,12 @@ function InterviewFeedbackPage() {
           <select
             style={styles.select}
             value={finalOutcome}
-            onChange={(e) =>
-              setFinalOutcome(
-                e.target.value
-              )
-            }
+            onChange={(e) => {
+              setFinalOutcome(e.target.value);
+              if (submitError) {
+                setSubmitError("");
+              }
+            }}
           >
             <option value="">
               Select Final Outcome
@@ -597,6 +697,12 @@ function InterviewFeedbackPage() {
 
           <br />
 
+          {submitError ? (
+            <div style={styles.inlineError}>
+              {submitError}
+            </div>
+          ) : null}
+
           <button
             style={styles.submitButton}
             onClick={
@@ -610,7 +716,7 @@ function InterviewFeedbackPage() {
 
       </div>
 
-    </div>
+    </WorkspaceLayout>
 
   );
 
@@ -641,147 +747,229 @@ function InfoCard({
 
 const styles = {
 
-  app: {
-    background: "#f4f6f9",
-    minHeight: "100vh",
-    fontFamily: "Segoe UI, sans-serif"
+  loading: {
+    padding: "24px",
+    fontFamily: '"Roboto", "Segoe UI", Arial, sans-serif',
+    fontSize: "14px",
+    color: "#5f6368"
   },
 
   container: {
-    padding: "45px"
+    padding: "24px 32px 32px",
+    maxWidth: "1600px",
+    fontFamily: '"Roboto", "Segoe UI", Arial, sans-serif',
+    color: "#202124"
   },
 
   pageTitle: {
-    fontSize: "24px",
+    fontSize: "22px",
     fontWeight: "700",
-    color: "#0f2747",
-    marginTop: "25px",
-    marginBottom: "35px"
+    lineHeight: 1.3,
+    color: "#1f3b63",
+    marginTop: "8px",
+    marginBottom: "24px",
+    letterSpacing: "-0.01em"
   },
 
   panel: {
     background: "#ffffff",
-    borderRadius: "18px",
-    padding: "30px",
-    marginBottom: "30px",
-    boxShadow: "0 2px 10px rgba(0,0,0,0.05)"
+    borderRadius: "14px",
+    padding: "20px 24px",
+    marginBottom: "16px",
+    border: "1px solid rgba(31, 59, 99, 0.12)",
+    boxShadow: "0 1px 2px rgba(31, 59, 99, 0.06)"
   },
 
   panelHeader: {
-    fontSize: "18px",
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: "20px"
+    fontSize: "16px",
+    fontWeight: "600",
+    lineHeight: 1.35,
+    color: "#1f3b63",
+    marginBottom: "16px",
+    paddingBottom: "10px",
+    borderBottom: "1px solid rgba(31, 59, 99, 0.08)"
+  },
+
+  sectionTitle: {
+    fontSize: "14px",
+    fontWeight: "600",
+    lineHeight: 1.35,
+    color: "#202124",
+    marginTop: "8px",
+    marginBottom: "10px"
   },
 
   cardGrid: {
     display: "grid",
     gridTemplateColumns:
-      "repeat(auto-fit,minmax(260px,1fr))",
-    gap: "22px",
-    marginTop: "15px"
+      "repeat(auto-fit,minmax(220px,1fr))",
+    gap: "12px",
+    marginTop: "4px"
   },
 
   infoCard: {
-    background: "#ffffff",
-    border: "1px solid #e5e7eb",
-    borderRadius: "12px",
-    padding: "14px 18px",
-    minHeight: "78px",
+    background: "#f5f7fb",
+    border: "1px solid rgba(31, 59, 99, 0.10)",
+    borderRadius: "8px",
+    padding: "12px 14px",
+    minHeight: "64px",
     display: "flex",
     flexDirection: "column",
     justifyContent: "center",
-    boxShadow: "0 1px 3px rgba(0,0,0,0.04)"
+    boxShadow: "none"
   },
 
   infoLabel: {
     fontSize: "11px",
     fontWeight: "600",
-    color: "#64748b",
-    letterSpacing: "0.8px",
+    color: "#5f6368",
+    letterSpacing: "0.04em",
     textTransform: "uppercase",
-    marginBottom: "6px"
+    marginBottom: "4px"
   },
 
   infoValue: {
-    fontSize: "16px",
+    fontSize: "14px",
     fontWeight: "600",
-    color: "#111827"
+    lineHeight: 1.4,
+    color: "#202124"
   },
 
   formRow: {
     display: "flex",
-    gap: "30px",
-    marginBottom: "30px",
+    gap: "24px",
+    marginBottom: "20px",
     flexWrap: "wrap"
   },
 
+  fieldBlock: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "6px"
+  },
+
+  formLabel: {
+    fontSize: "12px",
+    fontWeight: "600",
+    color: "#5f6368",
+    letterSpacing: "0.02em"
+  },
+
   select: {
-    width: "380px",
-    padding: "12px",
+    width: "320px",
+    maxWidth: "100%",
+    padding: "10px 12px",
     borderRadius: "8px",
-    border: "1px solid #d1d5db",
+    border: "1px solid rgba(31, 59, 99, 0.18)",
     fontSize: "14px",
-    marginTop: "6px"
+    fontFamily: "inherit",
+    color: "#202124",
+    background: "#ffffff",
+    boxSizing: "border-box"
   },
 
   input: {
-  width: "100%",
-  padding: "10px 12px",
-  borderRadius: "8px",
-  border: "1px solid #d1d5db",
-  boxSizing: "border-box"
-},
-
-  table: {
     width: "100%",
-    borderCollapse: "collapse",
-    marginTop: "20px",
-    marginBottom: "20px"
+    padding: "10px 12px",
+    borderRadius: "8px",
+    border: "1px solid rgba(31, 59, 99, 0.18)",
+    fontSize: "14px",
+    fontFamily: "inherit",
+    color: "#202124",
+    background: "#ffffff",
+    boxSizing: "border-box"
+  },
+
+  skillRow: {
+    display: "grid",
+    gridTemplateColumns: "2fr 1fr 2fr 48px",
+    gap: "12px",
+    marginBottom: "12px",
+    alignItems: "center"
+  },
+
+  starRow: {
+    display: "flex",
+    gap: "4px",
+    fontSize: "24px",
+    cursor: "pointer",
+    alignItems: "center",
+    lineHeight: 1
+  },
+
+  inlineError: {
+    fontSize: "12px",
+    fontWeight: "600",
+    color: "#c5221f",
+    marginBottom: "10px",
+    fontFamily: "inherit"
   },
 
   textArea: {
     width: "100%",
-    minHeight: "120px",
+    minHeight: "96px",
     borderRadius: "8px",
-    border: "1px solid #d1d5db",
-    padding: "12px",
-    marginBottom: "18px",
-    resize: "vertical"
+    border: "1px solid rgba(31, 59, 99, 0.18)",
+    padding: "10px 12px",
+    marginBottom: "16px",
+    resize: "vertical",
+    fontSize: "14px",
+    fontFamily: "inherit",
+    color: "#202124",
+    background: "#ffffff",
+    boxSizing: "border-box"
   },
 
   addButton: {
     background: "#ffffff",
-    border: "1px solid #cbd5e1",
-    padding: "10px 16px",
+    border: "1px solid rgba(31, 59, 99, 0.22)",
+    color: "#1f3b63",
+    padding: "8px 14px",
     borderRadius: "8px",
     cursor: "pointer",
-    marginBottom: "25px",
-    fontWeight: "600"
+    marginBottom: "20px",
+    fontWeight: "600",
+    fontSize: "13px",
+    fontFamily: "inherit"
+  },
+
+  removeButton: {
+    background: "rgba(197, 34, 31, 0.08)",
+    color: "#c5221f",
+    border: "1px solid rgba(197, 34, 31, 0.18)",
+    width: "40px",
+    height: "40px",
+    borderRadius: "8px",
+    cursor: "pointer",
+    fontWeight: "700",
+    fontSize: "16px",
+    fontFamily: "inherit"
   },
 
   submitButton: {
     background: "#1f3b63",
     color: "#ffffff",
     border: "none",
-    padding: "14px 24px",
-    borderRadius: "10px",
+    padding: "10px 20px",
+    borderRadius: "8px",
     cursor: "pointer",
-    fontSize: "15px",
+    fontSize: "14px",
     fontWeight: "600",
-    marginTop: "15px"
+    fontFamily: "inherit",
+    marginTop: "12px"
   },
 
   backButton: {
     background: "#1f3b63",
     color: "#ffffff",
     border: "none",
-    padding: "14px 28px",
-    borderRadius: "12px",
+    padding: "8px 16px",
+    borderRadius: "8px",
     cursor: "pointer",
-    fontSize: "15px",
+    fontSize: "13px",
     fontWeight: "600",
-    marginBottom: "25px"
+    fontFamily: "inherit",
+    marginBottom: "8px"
   }
 
 };

@@ -1,7 +1,9 @@
 import API from "../api/axios";
 
 const REQUISITION_REQUESTOR_CODE = "REQUISITION_REQUESTOR";
+const REQUISITION_ASSIGNER_CODE = "REQUISITION_ASSIGNER";
 const RAISE_BUDGET_REQUEST_CODE = "RAISE_BUDGET_REQUEST";
+const BUDGET_REQUESTOR_CODE = "BUDGET_REQUESTOR";
 
 function getLoggedInUser() {
   try {
@@ -91,7 +93,7 @@ async function canRaiseRequisition() {
 
 /**
  * Returns whether the logged-in user may raise Budget Requests.
- * Admins are always allowed; others require RAISE_BUDGET_REQUEST from user permissions.
+ * Admins are always allowed; others require an active BUDGET_REQUESTOR Work Assignment.
  */
 async function canRaiseBudgetRequest() {
   const user = getLoggedInUser();
@@ -111,8 +113,33 @@ async function canRaiseBudgetRequest() {
   }
 
   try {
-    const permissions = await fetchUserPermissions(employeeCode);
-    return isPermissionEnabled(permissions, RAISE_BUDGET_REQUEST_CODE);
+    const assignments = await fetchEmployeeWorkAssignments(employeeCode);
+    return hasActiveWorkAssignment(assignments, BUDGET_REQUESTOR_CODE);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Returns whether the logged-in user may access Recruiter Assignment.
+ * Requires an active REQUISITION_ASSIGNER Work Assignment only.
+ */
+async function canAssignRecruiters() {
+  const user = getLoggedInUser();
+
+  if (!user) {
+    return false;
+  }
+
+  const employeeCode = user.employee_code;
+
+  if (!employeeCode) {
+    return false;
+  }
+
+  try {
+    const assignments = await fetchEmployeeWorkAssignments(employeeCode);
+    return hasActiveWorkAssignment(assignments, REQUISITION_ASSIGNER_CODE);
   } catch {
     return false;
   }
@@ -120,8 +147,9 @@ async function canRaiseBudgetRequest() {
 
 const AuthorizationService = {
   canRaiseRequisition,
-  canRaiseBudgetRequest
+  canRaiseBudgetRequest,
+  canAssignRecruiters
 };
 
-export { canRaiseRequisition, canRaiseBudgetRequest };
+export { canRaiseRequisition, canRaiseBudgetRequest, canAssignRecruiters };
 export default AuthorizationService;

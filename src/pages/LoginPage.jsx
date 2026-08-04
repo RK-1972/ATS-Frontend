@@ -1,17 +1,29 @@
 import OptalynxLoader
 from "../components/OptalynxLoader";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import API from "../api/axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import AppHeader from "../components/layout/AppHeader";
 
 function LoginPage() {
 
   const navigate = useNavigate();
+  const location = useLocation();
+  const emailRef = useRef(null);
+  const passwordRef = useRef(null);
+
+  const prefilledEmail =
+    typeof location.state?.email_id === "string"
+      ? location.state.email_id
+      : "";
+
+  const [suppressPasswordAutofill] = useState(
+    () => location.state?.fromPasswordReset === true
+  );
 
  const [formData, setFormData] = useState({
 
-  email_id: "",
+  email_id: prefilledEmail,
   password: ""
 
 });
@@ -20,10 +32,69 @@ useEffect(() => {
 
   setFormData({
 
-    email_id: "",
+    email_id: prefilledEmail,
     password: ""
 
   });
+
+  if (passwordRef.current) {
+
+    passwordRef.current.value = "";
+
+  }
+
+  if (location.state?.fromPasswordReset) {
+
+    navigate("/login", {
+
+      replace: true,
+
+      state: prefilledEmail
+        ? { email_id: prefilledEmail }
+        : undefined
+
+    });
+
+  }
+
+  const focusTarget = prefilledEmail
+    ? passwordRef
+    : emailRef;
+
+  focusTarget.current?.focus();
+
+  if (!suppressPasswordAutofill) {
+
+    return;
+
+  }
+
+  const timers = [0, 50, 150].map((delay) =>
+
+    setTimeout(() => {
+
+      setFormData((prev) => ({
+
+        ...prev,
+        password: ""
+
+      }));
+
+      if (passwordRef.current) {
+
+        passwordRef.current.value = "";
+
+      }
+
+    }, delay)
+
+  );
+
+  return () => {
+
+    timers.forEach(clearTimeout);
+
+  };
 
 }, []);
   
@@ -133,6 +204,10 @@ const handleLogin = async () => {
         {
           enabled: Boolean(workspaceFlags.showRequestWorkspace),
           path: "/workforce-planning/catalogue"
+        },
+        {
+          enabled: Boolean(workspaceFlags.showOfferWorkspace),
+          path: "/offers"
         }
       ].filter((item) => item.enabled);
 
@@ -407,6 +482,7 @@ return (
       </div>
 
       <input
+        ref={emailRef}
         type="text"
         name="email_id"
         placeholder="Email"
@@ -417,12 +493,18 @@ return (
       />
 
       <input
+        ref={passwordRef}
+        key={suppressPasswordAutofill ? "post-reset-login" : "login-password"}
         type="password"
         name="password"
         placeholder="Password"
         value={formData.password}
         onChange={handleChange}
-        autoComplete="current-password"
+        autoComplete={
+          suppressPasswordAutofill
+            ? "new-password"
+            : "current-password"
+        }
         style={styles.input}
       />
 

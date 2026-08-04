@@ -225,7 +225,11 @@ function CandidateListSidebar({
     display: "flex",
     flexDirection: "column",
     minHeight: 0,
-    flexShrink: 0
+    flexShrink: 0,
+    height: `calc(100vh - ${layout.headerHeight}px)`,
+    maxHeight: `calc(100vh - ${layout.headerHeight}px)`,
+    overflow: "hidden",
+    alignSelf: "flex-start"
   };
 
   const contentProps = {

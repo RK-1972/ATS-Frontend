@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import API from "../api/axios";
 import Header from "../components/Header";
+import AdminNavRail from "../components/layout/AdminNavRail";
+import { useCopilotContext } from "../components/copilot/CopilotContext";
 
 import {
   FaUserPlus,
@@ -14,6 +16,8 @@ import {
 
 function ReportsAnalyticsPage() {
 
+  const { setCurrentPage } = useCopilotContext();
+
   const [dashboard, setDashboard] =
     useState({});
 
@@ -22,6 +26,10 @@ function ReportsAnalyticsPage() {
 
   const [funnelData, setFunnelData] =
     useState([]);
+
+  useEffect(() => {
+    setCurrentPage("Reports");
+  }, [setCurrentPage]);
 
   // =========================================
   // Funnel Icons
@@ -149,8 +157,13 @@ function ReportsAnalyticsPage() {
 
     <Header />
 
+    <div style={{ display: "flex" }}>
+      <AdminNavRail />
+
     <div
       style={{
+        flex: 1,
+        minWidth: 0,
         padding: "24px"
       }}
     >
@@ -356,6 +369,8 @@ function ReportsAnalyticsPage() {
         ))}
 
       </div>
+
+    </div>
 
     </div>
 

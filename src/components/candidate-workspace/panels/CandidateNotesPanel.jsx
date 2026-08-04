@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { Stack, TextField, Typography } from "@mui/material";
 import StickyNote2OutlinedIcon from "@mui/icons-material/StickyNote2Outlined";
+import EnterpriseModuleIcon from "@/components/enterprise/EnterpriseModuleIcon";
 
 import CandidateEditableCard from "../CandidateEditableCard";
 
@@ -9,22 +10,26 @@ const NOTE_THEMES = {
   recruiter: {
     title: "Recruiter Notes",
     bgcolor: "#FFF8E1",
-    borderColor: "#FFB300"
+    borderColor: "#FFB300",
+    module: "notifications"
   },
   manager: {
     title: "Hiring Manager Notes",
     bgcolor: "#E3F2FD",
-    borderColor: "#42A5F5"
+    borderColor: "#42A5F5",
+    module: "recruitment"
   },
   hr: {
     title: "HR Notes",
     bgcolor: "#E8F5E9",
-    borderColor: "#66BB6A"
+    borderColor: "#66BB6A",
+    module: "interviews"
   },
   private: {
     title: "Private Notes",
     bgcolor: "#F3E5F5",
-    borderColor: "#AB47BC"
+    borderColor: "#AB47BC",
+    module: "approvals"
   }
 };
 
@@ -73,7 +78,13 @@ function NoteCard({
           minHeight: 120
         }}
       >
-        <StickyNote2OutlinedIcon sx={{ color: theme.borderColor, fontSize: 20 }} />
+        <EnterpriseModuleIcon
+          icon={StickyNote2OutlinedIcon}
+          module={theme.module}
+          density="sm"
+          size={28}
+          iconSize={16}
+        />
         <Typography variant="body2" color="text.secondary" whiteSpace="pre-wrap" flex={1}>
           {content || "No notes yet."}
         </Typography>

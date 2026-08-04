@@ -6,7 +6,13 @@ import {
   DialogTitle,
   Typography
 } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
+import { FramerDialogTransition } from "../../theme/motionRenderer";
 
+/**
+ * Shared confirmation dialog.
+ * Motion renderer: Framer Motion via MUI TransitionComponent (token durations).
+ */
 function EnterpriseConfirmationDialog({
   open,
   title,
@@ -18,14 +24,24 @@ function EnterpriseConfirmationDialog({
   onClose,
   children
 }) {
+  const theme = useTheme();
+  const { tokens } = theme.motion;
+
   return (
     <Dialog
       open={open}
       onClose={loading ? undefined : onClose}
       fullWidth
       maxWidth="sm"
+      slots={{ transition: FramerDialogTransition }}
+      transitionDuration={{
+        enter: tokens.duration.enter,
+        exit: tokens.duration.exit
+      }}
       PaperProps={{
-        sx: { borderRadius: 3 }
+        sx: {
+          borderRadius: 3
+        }
       }}
     >
       <DialogTitle sx={{ pb: 1.5 }}>

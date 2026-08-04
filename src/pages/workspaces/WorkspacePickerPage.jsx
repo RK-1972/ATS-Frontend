@@ -1,16 +1,15 @@
-import {
-  Box,
-  Typography,
-  Stack,
-  Button,
-  Paper
-} from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
 import WorkOutlineOutlinedIcon from "@mui/icons-material/WorkOutlineOutlined";
 import FactCheckOutlinedIcon from "@mui/icons-material/FactCheckOutlined";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
-import WorkspaceLayout from "@/components/enterprise/WorkspaceLayout";
+import LocalOfferOutlinedIcon from "@mui/icons-material/LocalOfferOutlined";
+import {
+  WorkspaceLayout,
+  EnterpriseModuleCard,
+  EnterpriseModuleGrid
+} from "@/components/enterprise";
 
 function WorkspacePickerPage() {
   const navigate = useNavigate();
@@ -21,7 +20,7 @@ function WorkspacePickerPage() {
   try {
     workspaceFlags =
       JSON.parse(localStorage.getItem("workspace") || "{}") || {};
-  } catch (_error) {
+  } catch {
     workspaceFlags = {};
   }
 
@@ -32,7 +31,8 @@ function WorkspacePickerPage() {
       title: "Recruitment Workspace",
       description: "What work requires my attention today?",
       path: "/recruiter",
-      icon: DashboardOutlinedIcon
+      icon: DashboardOutlinedIcon,
+      module: "recruitment"
     },
     {
       id: "interviewer",
@@ -40,7 +40,8 @@ function WorkspacePickerPage() {
       title: "Interview Workspace",
       description: "What interviews must I conduct today?",
       path: "/interviewer",
-      icon: WorkOutlineOutlinedIcon
+      icon: WorkOutlineOutlinedIcon,
+      module: "interviews"
     },
     {
       id: "approvals",
@@ -48,7 +49,8 @@ function WorkspacePickerPage() {
       title: "My Approvals",
       description: "What approvals require my decision today?",
       path: "/my-approvals",
-      icon: FactCheckOutlinedIcon
+      icon: FactCheckOutlinedIcon,
+      module: "approvals"
     },
     {
       id: "request",
@@ -56,72 +58,45 @@ function WorkspacePickerPage() {
       title: "Requisitions / Request Workspace",
       description: "What requisitions do I need to raise or track?",
       path: "/workforce-planning/catalogue",
-      icon: DescriptionOutlinedIcon
+      icon: DescriptionOutlinedIcon,
+      module: "requisitions"
+    },
+    {
+      id: "offers",
+      flag: "showOfferWorkspace",
+      title: "Offer Workspace",
+      description: "What offers need action today?",
+      path: "/offers",
+      icon: LocalOfferOutlinedIcon,
+      module: "offers"
     }
   ].filter((workspace) => Boolean(workspaceFlags[workspace.flag]));
 
   return (
     <WorkspaceLayout>
-      <Box maxWidth={720} mx="auto" py={4}>
-        <Typography variant="h2" fontWeight={700} mb={0.5}>
-          Choose Workspace
-        </Typography>
-        <Typography color="text.secondary" mb={3} fontSize={14}>
-          Welcome, {loggedInUser?.full_name || loggedInUser?.name || "User"}. Select where you want to work.
-        </Typography>
+      <Box py={4}>
+        <Box maxWidth={720} mx="auto" mb={3} px={{ xs: 0, sm: 0 }}>
+          <Typography variant="h2" fontWeight={700} mb={0.5}>
+            Choose Workspace
+          </Typography>
+          <Typography color="text.secondary" fontSize={14}>
+            Welcome, {loggedInUser?.full_name || loggedInUser?.name || "User"}. Select where you want to work.
+          </Typography>
+        </Box>
 
-        <Stack spacing={2}>
-          {workspaces.map((workspace) => {
-            const Icon = workspace.icon;
-
-            return (
-              <Paper
-                key={workspace.id}
-                elevation={0}
-                sx={{
-                  p: 2,
-                  border: 1,
-                  borderColor: "divider",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 2
-                }}
-              >
-                <Box
-                  sx={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 2,
-                    bgcolor: "action.selected",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "primary.main"
-                  }}
-                >
-                  <Icon />
-                </Box>
-
-                <Box flex={1}>
-                  <Typography fontWeight={600} fontSize={16}>
-                    {workspace.title}
-                  </Typography>
-                  <Typography color="text.secondary" fontSize={13}>
-                    {workspace.description}
-                  </Typography>
-                </Box>
-
-                <Button
-                  variant="contained"
-                  size="small"
-                  onClick={() => navigate(workspace.path)}
-                >
-                  Open
-                </Button>
-              </Paper>
-            );
-          })}
-        </Stack>
+        <EnterpriseModuleGrid>
+          {workspaces.map((workspace) => (
+            <EnterpriseModuleCard
+              key={workspace.id}
+              title={workspace.title}
+              description={workspace.description}
+              icon={workspace.icon}
+              module={workspace.module}
+              actionLabel="Open"
+              onAction={() => navigate(workspace.path)}
+            />
+          ))}
+        </EnterpriseModuleGrid>
       </Box>
     </WorkspaceLayout>
   );

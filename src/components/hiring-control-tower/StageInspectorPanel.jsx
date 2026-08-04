@@ -3,7 +3,6 @@ import { useState } from "react";
 import {
   Box,
   Typography,
-  Tabs,
   Tab,
   Chip,
   Stack,
@@ -13,6 +12,7 @@ import {
   TableRow
 } from "@mui/material";
 
+import EnterpriseTabs from "@/components/enterprise/EnterpriseTabs";
 import { mapDisplayStatus } from "./EnterpriseProcessTimeline";
 import BusinessRuleDetailDialog from "./BusinessRuleDetailDialog";
 import StageApprovalPanel from "./StageApprovalPanel";
@@ -173,7 +173,7 @@ function StageInspectorPanel({
 
       </Box>
 
-      <Tabs
+      <EnterpriseTabs
         value={tab}
         onChange={(_, value) => setTab(value)}
         variant="scrollable"
@@ -205,7 +205,7 @@ function StageInspectorPanel({
         <Tab label="AI Insights" />
         <Tab label="History" />
 
-      </Tabs>
+      </EnterpriseTabs>
 
       <Box sx={{ flex: 1, overflow: "auto", px: 1.5, py: 1 }}>
 

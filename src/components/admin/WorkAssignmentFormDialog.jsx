@@ -24,7 +24,8 @@ const ASSIGNMENT_CODE_PATTERN = /^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$/;
 const DEFAULT_BUSINESS_MODULE_OPTIONS = [
   "Requisition",
   "Recruitment",
-  "Interview"
+  "Interview",
+  "Offer"
 ];
 
 const WORKSPACE_FLAG_OPTIONS = [
@@ -32,7 +33,8 @@ const WORKSPACE_FLAG_OPTIONS = [
   { value: "showRecruitmentWorkspace", label: "showRecruitmentWorkspace" },
   { value: "showApprovalWorkspace", label: "showApprovalWorkspace" },
   { value: "showInterviewWorkspace", label: "showInterviewWorkspace" },
-  { value: "showRequestWorkspace", label: "showRequestWorkspace" }
+  { value: "showRequestWorkspace", label: "showRequestWorkspace" },
+  { value: "showOfferWorkspace", label: "showOfferWorkspace" }
 ];
 
 const WORKSPACE_ICON_OPTIONS = [
@@ -40,7 +42,8 @@ const WORKSPACE_ICON_OPTIONS = [
   { value: "WorkOutlineOutlined", label: "WorkOutlineOutlined" },
   { value: "DashboardOutlined", label: "DashboardOutlined" },
   { value: "FactCheckOutlined", label: "FactCheckOutlined" },
-  { value: "DescriptionOutlined", label: "DescriptionOutlined" }
+  { value: "DescriptionOutlined", label: "DescriptionOutlined" },
+  { value: "LocalOfferOutlined", label: "LocalOfferOutlined" }
 ];
 
 const emptyForm = {

@@ -11,6 +11,7 @@ import {
   LinearProgress
 } from "@mui/material";
 import { MdWorkOutline } from "react-icons/md";
+import EnterpriseModuleIcon from "@/components/enterprise/EnterpriseModuleIcon";
 import { DESIGN, PANEL_HEADER, PANEL_SHELL, ROW_INTERACTIVE } from "./recruiterHomeTokens";
 
 const STATUS_STYLES = {
@@ -34,7 +35,13 @@ function CockpitRequisitionsTable({ rows = [], selectedId, onSelect, onViewAll }
     <Box sx={{ ...PANEL_SHELL, flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
       <Box sx={{ ...PANEL_HEADER, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
-          <MdWorkOutline size={18} color={DESIGN.textSecondary} />
+          <EnterpriseModuleIcon
+            icon={MdWorkOutline}
+            module="requisitions"
+            density="sm"
+            size={24}
+            iconSize={14}
+          />
           <Typography sx={{ fontSize: 11, fontWeight: 700, color: DESIGN.textSecondary, letterSpacing: "0.04em" }}>
             MY REQUISITIONS
           </Typography>

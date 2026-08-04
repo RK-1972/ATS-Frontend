@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import API from "../api/axios";
 import Select from "react-select";
-import Header from "../components/Header";
+import WorkspaceLayout from "../components/enterprise/WorkspaceLayout";
+import AdminNavRail from "../components/layout/AdminNavRail";
 function InterviewPanelPage() {
 
   useEffect(() => {
@@ -366,18 +367,12 @@ setIsEditMode(false);
 
 return (
 
-<div>
-
-  <Header
-    userName={localStorage.getItem("full_name")}
-    roleName={localStorage.getItem("role_name")}
-  />
+<WorkspaceLayout navRail={<AdminNavRail />}>
 
   <div
     style={{
-      padding: "20px 30px 30px 30px",
+      padding: "0 0 30px 0",
       backgroundColor: "#f4f6f9",
-      minHeight: "100vh",
       fontFamily: "Segoe UI, sans-serif"
 
     }}
@@ -683,7 +678,7 @@ TABLE
 
 </div>
 
-</div>
+</WorkspaceLayout>
 
 );
 

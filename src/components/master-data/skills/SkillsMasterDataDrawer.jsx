@@ -3,7 +3,6 @@ import {
   Box,
   Typography,
   IconButton,
-  Tabs,
   Tab,
   Stack,
   TextField,
@@ -21,6 +20,7 @@ import { MdClose } from "react-icons/md";
 import DependencyPanel from "../DependencyPanel";
 import SkillCategorySelect from "./SkillCategorySelect";
 import { DEFAULT_USED_BY } from "@/enterprise/masterDataConstants";
+import EnterpriseTabs from "@/components/enterprise/EnterpriseTabs";
 
 const DRAWER_TABS = [
   { key: "edit", label: "Edit" },
@@ -105,7 +105,7 @@ function SkillsMasterDataDrawer({
           </IconButton>
         </Box>
 
-        <Tabs
+        <EnterpriseTabs
           value={tabIndex}
           onChange={(_, index) => onTabChange(DRAWER_TABS[index].key)}
           variant="scrollable"
@@ -124,7 +124,7 @@ function SkillsMasterDataDrawer({
               sx={{ minHeight: 40, py: 0.5, fontSize: 12, fontWeight: 600 }}
             />
           ))}
-        </Tabs>
+        </EnterpriseTabs>
 
         <Box sx={{ flex: 1, overflowY: "auto", p: 2 }}>
           {tab === "edit" && draftRecord && (

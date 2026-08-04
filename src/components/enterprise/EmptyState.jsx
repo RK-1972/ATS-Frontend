@@ -1,9 +1,11 @@
-import { Box, Typography, Stack, Button } from "@mui/material";
+import { Box, Typography, Button } from "@mui/material";
 import InboxOutlinedIcon from "@mui/icons-material/InboxOutlined";
 import { useTheme } from "@mui/material/styles";
+import EnterpriseModuleIcon from "./EnterpriseModuleIcon";
 
 function EmptyState({
   icon: Icon = InboxOutlinedIcon,
+  module = "administration",
   title = "Nothing here yet",
   description,
   actionLabel,
@@ -24,7 +26,12 @@ function EmptyState({
         px: 2
       }}
     >
-      <Icon sx={{ fontSize: 40, color: "text.disabled", mb: 1.5 }} />
+      <EnterpriseModuleIcon
+        icon={Icon}
+        module={module}
+        density="md"
+        sx={{ mb: 1.5 }}
+      />
       <Typography sx={{ ...typography.sectionTitle, fontSize: 16 }}>
         {title}
       </Typography>

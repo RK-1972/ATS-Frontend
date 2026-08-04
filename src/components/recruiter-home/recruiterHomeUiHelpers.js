@@ -6,38 +6,37 @@ import {
   MdWarningAmber
 } from "react-icons/md";
 
+/**
+ * Attention / action row meta — glyph + semantic module colour role.
+ * Colours come from EnterpriseModuleIcon / theme.tokens.moduleColors.
+ */
 const TYPE_META = {
   "Interview feedback": {
     displayType: "Interview Feedback Pending",
     icon: MdChatBubbleOutline,
-    iconBg: "#FEF0C7",
-    iconColor: "#DC6803"
+    module: "notifications"
   },
   "Interview today": {
     displayType: "Interview Today",
     icon: MdCalendarToday,
-    iconBg: "#D1E9FF",
-    iconColor: "#1570EF"
+    module: "interviews"
   },
   "Offer approval": {
     displayType: "Offer Approval Required",
     icon: MdLocalOffer,
-    iconBg: "#FCE7F6",
-    iconColor: "#C11574"
+    module: "approvals"
   },
   "Candidate overdue": {
     displayType: "Candidate Overdue",
     icon: MdWarningAmber,
-    iconBg: "#FEE4E2",
-    iconColor: "#D92D20"
+    module: "reports"
   }
 };
 
 const DEFAULT_META = {
   displayType: "Action Required",
   icon: MdForward,
-  iconBg: "#F2F4F7",
-  iconColor: "#475467"
+  module: "settings"
 };
 
 export function getAttentionItemMeta(type) {
@@ -82,10 +81,6 @@ const ACTION_TYPE_NEXT = {
 
 export function resolveTodaysNextAction({ mode, candidate, actionItem, requisition }) {
   if (actionItem?.type) {
-    return ACTION_TYPE_NEXT[actionItem.type] || "Take Action Today";
-  }
-
-  if (mode === "action" && actionItem) {
     return ACTION_TYPE_NEXT[actionItem.type] || "Take Action Today";
   }
 

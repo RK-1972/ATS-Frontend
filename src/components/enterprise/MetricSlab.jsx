@@ -1,7 +1,13 @@
-import { Paper, Box } from "@mui/material";
+import { Box } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import MetricCell from "./MetricCell";
+import EnterpriseSurface from "./EnterpriseSurface";
 
+/**
+ * Metric strip — public contract unchanged.
+ * Internally uses EnterpriseSurface so Framer enterprise motion applies
+ * without consumers changing imports/props/layout.
+ */
 function MetricSlab({ metrics = [], highlightKey, onMetricClick = null }) {
   const theme = useTheme();
   const { radius } = theme.tokens;
@@ -11,13 +17,15 @@ function MetricSlab({ metrics = [], highlightKey, onMetricClick = null }) {
   }
 
   return (
-    <Paper
+    <EnterpriseSurface
       elevation={0}
+      padding={false}
       sx={{
         borderRadius: `${radius.md}px`,
         border: 1,
         borderColor: "divider",
-        overflow: "hidden"
+        overflow: "hidden",
+        bgcolor: "background.paper"
       }}
     >
       <Box
@@ -58,7 +66,7 @@ function MetricSlab({ metrics = [], highlightKey, onMetricClick = null }) {
           </Box>
         ))}
       </Box>
-    </Paper>
+    </EnterpriseSurface>
   );
 }
 

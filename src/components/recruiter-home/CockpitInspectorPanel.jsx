@@ -7,6 +7,7 @@ import {
   Avatar
 } from "@mui/material";
 import { MdPerson, MdOpenInNew } from "react-icons/md";
+import EnterpriseModuleIcon from "@/components/enterprise/EnterpriseModuleIcon";
 import { DESIGN, PANEL_HEADER, PANEL_SHELL } from "./recruiterHomeTokens";
 import { candidateInitials, resolveTodaysNextAction } from "./recruiterHomeUiHelpers";
 
@@ -117,7 +118,13 @@ function CockpitInspectorPanel({
   return (
     <Box sx={{ ...PANEL_SHELL, display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
       <Box sx={{ ...PANEL_HEADER, display: "flex", alignItems: "center", gap: 0.75 }}>
-        <MdPerson size={18} color={DESIGN.blue} />
+        <EnterpriseModuleIcon
+          icon={MdPerson}
+          module="candidates"
+          density="sm"
+          size={24}
+          iconSize={14}
+        />
         <Typography sx={{ fontSize: 11, fontWeight: 700, color: DESIGN.textSecondary, letterSpacing: "0.04em" }}>
           INSPECTOR
         </Typography>

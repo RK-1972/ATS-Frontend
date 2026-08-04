@@ -18,6 +18,7 @@ import {
   notificationsRepository,
   auditRepository
 } from "../repositories";
+import { buildPendingApprovalQueue } from "../utils/offerApprovalUtils";
 
 const platformConfigInitial = platformConfigRepository.getInitialState();
 const businessRulesInitial = businessRulesRepository.getInitialState();
@@ -78,6 +79,11 @@ const useEnterpriseStore = create((set, get) => ({
     selectedRequestId: workforcePlanningRepository.getDefaultSelectedRequestId(
       workforceInitial
     ),
+    toastMessage: ""
+  },
+
+  offerUi: {
+    selectedOfferId: null,
     toastMessage: ""
   },
 
@@ -173,6 +179,10 @@ const useEnterpriseStore = create((set, get) => ({
       masterData: masterDataRepository.getInitialState(),
       workforceUi: {
         selectedRequestId: workforcePlanningRepository.getDefaultSelectedRequestId(workforce),
+        toastMessage: ""
+      },
+      offerUi: {
+        selectedOfferId: null,
         toastMessage: ""
       },
       hiringTowerUi: {
@@ -442,6 +452,41 @@ const useEnterpriseStore = create((set, get) => ({
       .catch((error) => {
         console.error(
           "[enterpriseStore] refreshWorkforce failed:",
+          error?.response?.data || error.message
+        );
+        throw error;
+      });
+  },
+
+  refreshOffers() {
+    if (!isLiveMode()) {
+      console.warn("[enterpriseStore] refreshOffers skipped — mock mode");
+      return Promise.resolve(null);
+    }
+
+    return offerRepository.getAll()
+      .then((offers) => {
+        const pendingQueue = buildPendingApprovalQueue(offers);
+        const currentSelectedId = get().offerUi.selectedOfferId;
+        const selectedExists = pendingQueue.some(
+          (item) => item.offerId === currentSelectedId
+        );
+
+        set({
+          offers,
+          offerUi: {
+            ...get().offerUi,
+            selectedOfferId: selectedExists
+              ? currentSelectedId
+              : offerRepository.getDefaultSelectedOfferId(offers)
+          }
+        });
+
+        return offers;
+      })
+      .catch((error) => {
+        console.error(
+          "[enterpriseStore] refreshOffers failed:",
           error?.response?.data || error.message
         );
         throw error;
@@ -841,6 +886,14 @@ const useEnterpriseStore = create((set, get) => ({
     set((state) => ({
       workforceUi: typeof updater === "function"
         ? updater(state.workforceUi)
+        : updater
+    }));
+  },
+
+  setOfferUi(updater) {
+    set((state) => ({
+      offerUi: typeof updater === "function"
+        ? updater(state.offerUi)
         : updater
     }));
   },
@@ -1368,15 +1421,23 @@ const useEnterpriseStore = create((set, get) => ({
 
   approveOfferStep(offerId, approvalStep, comment = "") {
 
-    Promise.resolve(
+    return Promise.resolve(
       offerRepository.approveOffer(get().offers, offerId, approvalStep, comment)
     ).then((result) => {
+      const pendingQueue = buildPendingApprovalQueue(result.offers);
+      const currentSelectedId = get().offerUi.selectedOfferId;
+      const selectedExists = pendingQueue.some(
+        (item) => item.offerId === currentSelectedId
+      );
 
       set({
         offers: result.offers,
-        workforceUi: {
-          ...get().workforceUi,
-          toastMessage: result.toastMessage
+        offerUi: {
+          ...get().offerUi,
+          toastMessage: result.toastMessage,
+          selectedOfferId: selectedExists
+            ? currentSelectedId
+            : offerRepository.getDefaultSelectedOfferId(result.offers)
         }
       });
 
@@ -1394,6 +1455,7 @@ const useEnterpriseStore = create((set, get) => ({
         metadata: { comment }
       });
 
+      return result;
     });
 
   },

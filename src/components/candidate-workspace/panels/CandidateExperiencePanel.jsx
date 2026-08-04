@@ -23,7 +23,7 @@ import DeleteOutlineOutlinedIcon from "@mui/icons-material/DeleteOutlineOutlined
 import BusinessOutlinedIcon from "@mui/icons-material/BusinessOutlined";
 import WorkOutlineOutlinedIcon from "@mui/icons-material/WorkOutlineOutlined";
 
-import { EmptyState, EnterpriseSurface, LoadingState } from "@/components/enterprise";
+import { EmptyState, EnterpriseSurface, EnterpriseModuleIcon, LoadingState } from "@/components/enterprise";
 import EnterpriseCard from "@/components/enterprise/framework/EnterpriseCard";
 import EnterpriseConfirmationDialog from "@/components/enterprise/EnterpriseConfirmationDialog";
 import candidateRepository from "@/repositories/candidateRepository";
@@ -308,7 +308,13 @@ function ExperienceCompanyCard({ record, onEdit, onDelete }) {
             width="100%"
             pr={1}
           >
-            <BusinessOutlinedIcon color="primary" />
+            <EnterpriseModuleIcon
+              icon={BusinessOutlinedIcon}
+              module="team"
+              density="sm"
+              size={28}
+              iconSize={16}
+            />
             <BoxMeta
               title={title}
               designation={designation}

@@ -5,6 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import API from "../api/axios";
 
 import Header from "../components/Header";
+import RecruiterNavRail from "../components/layout/RecruiterNavRail";
 
 export default function ViewFeedback() {
 
@@ -16,6 +17,12 @@ export default function ViewFeedback() {
 
   const [details, setDetails] = useState([]);
 
+  const [loading, setLoading] = useState(true);
+
+  const [statusMessage, setStatusMessage] = useState("");
+
+  const loggedInUser = JSON.parse(localStorage.getItem("user") || "null");
+
   useEffect(() => {
 
     loadFeedback();
@@ -23,6 +30,9 @@ export default function ViewFeedback() {
   }, []);
 
   const loadFeedback = async () => {
+
+    setLoading(true);
+    setStatusMessage("");
 
     try {
 
@@ -38,8 +48,14 @@ export default function ViewFeedback() {
         );
 
         setDetails(
-          response.data.details
+          response.data.details || []
         );
+
+      } else {
+
+        setHeader(null);
+        setDetails([]);
+        setStatusMessage("No feedback found for this interview.");
 
       }
 
@@ -49,9 +65,18 @@ export default function ViewFeedback() {
 
       console.log(error);
 
-      alert(
+      setHeader(null);
+      setDetails([]);
+      setStatusMessage(
+        error?.response?.data?.message ||
         "Unable to load feedback"
       );
+
+    }
+
+    finally {
+
+      setLoading(false);
 
     }
 
@@ -101,6 +126,30 @@ export default function ViewFeedback() {
 
   };
 
+  if (loading) {
+
+  return (
+
+    <div>
+
+      <Header
+        userName={localStorage.getItem("full_name")}
+        roleName={localStorage.getItem("role_name")}
+      />
+
+      <div style={{ display: "flex" }}>
+        <RecruiterNavRail loggedInUser={loggedInUser} />
+        <div style={{ flex: 1, minWidth: 0, padding: "40px" }}>
+          Loading...
+        </div>
+      </div>
+
+    </div>
+
+  );
+
+}
+
   if (!header) {
 
   return (
@@ -112,8 +161,28 @@ export default function ViewFeedback() {
         roleName={localStorage.getItem("role_name")}
       />
 
-      <div style={{ padding: "40px" }}>
-        Loading...
+      <div style={{ display: "flex" }}>
+        <RecruiterNavRail loggedInUser={loggedInUser} />
+        <div style={{ flex: 1, minWidth: 0, padding: "40px" }}>
+          <button
+            onClick={() => navigate(-1)}
+            style={{
+              background: "#1e3a8a",
+              color: "#fff",
+              border: "none",
+              padding: "12px 25px",
+              borderRadius: "8px",
+              cursor: "pointer",
+              marginBottom: "25px",
+              fontWeight: "600"
+            }}
+          >
+            ← Back
+          </button>
+          <div style={{ color: "#64748b", fontWeight: 600 }}>
+            {statusMessage || "No feedback found for this interview."}
+          </div>
+        </div>
       </div>
 
     </div>
@@ -131,8 +200,13 @@ export default function ViewFeedback() {
       roleName={localStorage.getItem("role_name")}
     />
 
+    <div style={{ display: "flex" }}>
+      <RecruiterNavRail loggedInUser={loggedInUser} />
+
     <div
       style={{
+        flex: 1,
+        minWidth: 0,
         padding: "30px",
         background: "#f3f4f6",
         minHeight: "100vh"
@@ -507,6 +581,7 @@ export default function ViewFeedback() {
     </div>
 
   </div>
+    </div>
 </div>
 );
 }

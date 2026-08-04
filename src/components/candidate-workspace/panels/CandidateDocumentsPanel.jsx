@@ -11,7 +11,7 @@ import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import DownloadOutlinedIcon from "@mui/icons-material/DownloadOutlined";
 import UploadFileOutlinedIcon from "@mui/icons-material/UploadFileOutlined";
 
-import { EnterpriseSurface } from "@/components/enterprise";
+import { EnterpriseSurface, EnterpriseModuleIcon } from "@/components/enterprise";
 import { getPublishedRecords } from "@/enterprise/masterDataHelpers";
 
 const DOCUMENT_GROUPS = [
@@ -89,19 +89,11 @@ function DocumentCard({ document, onAction }) {
     >
       <Stack spacing={1.5} height="100%">
         <Stack direction="row" spacing={1.25} alignItems="center">
-          <Box
-            sx={{
-              width: 40,
-              height: 40,
-              borderRadius: 2,
-              bgcolor: isUploaded ? "primary.main" : "action.selected",
-              color: isUploaded ? "primary.contrastText" : "text.secondary",
-              display: "grid",
-              placeItems: "center"
-            }}
-          >
-            <DescriptionOutlinedIcon fontSize="small" />
-          </Box>
+          <EnterpriseModuleIcon
+            icon={DescriptionOutlinedIcon}
+            module="candidates"
+            density="sm"
+          />
           <Box minWidth={0}>
             <Typography variant="subtitle2" fontWeight={700} noWrap>
               {document.label}

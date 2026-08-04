@@ -1,5 +1,10 @@
-import { Box, Paper, Typography } from "@mui/material";
+import { Box, Typography } from "@mui/material";
+import EnterpriseSurface from "../EnterpriseSurface";
 
+/**
+ * KPI tile bar — public contract unchanged.
+ * Each tile renders through EnterpriseSurface for enterprise motion.
+ */
 function EnterpriseKPIBar({ items = [] }) {
   if (!items.length) {
     return null;
@@ -19,9 +24,10 @@ function EnterpriseKPIBar({ items = [] }) {
       }}
     >
       {items.map((item, index) => (
-        <Paper
+        <EnterpriseSurface
           key={`${item.label}-${index}`}
           elevation={0}
+          padding={false}
           sx={{
             px: 1.5,
             py: 1.25,
@@ -53,7 +59,7 @@ function EnterpriseKPIBar({ items = [] }) {
           >
             {item.label}
           </Typography>
-        </Paper>
+        </EnterpriseSurface>
       ))}
     </Box>
   );

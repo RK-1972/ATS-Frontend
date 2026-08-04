@@ -12,25 +12,29 @@ import {
 import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import TrendingUpOutlinedIcon from "@mui/icons-material/TrendingUpOutlined";
 import LightbulbOutlinedIcon from "@mui/icons-material/LightbulbOutlined";
+import EnterpriseModuleIcon from "@/components/enterprise/EnterpriseModuleIcon";
 
 const PLACEHOLDER_INSIGHTS = [
   {
     id: "pipeline-health",
     title: "Pipeline Health",
     description: "AI will summarize bottlenecks across your active requisitions.",
-    icon: TrendingUpOutlinedIcon
+    icon: TrendingUpOutlinedIcon,
+    module: "reports"
   },
   {
     id: "priority-actions",
     title: "Priority Actions",
     description: "OpenAI will recommend candidates and reqs needing attention today.",
-    icon: LightbulbOutlinedIcon
+    icon: LightbulbOutlinedIcon,
+    module: "notifications"
   },
   {
     id: "hiring-forecast",
     title: "Hiring Forecast",
     description: "Predictive fill-rate and time-to-hire insights will appear here.",
-    icon: AutoAwesomeOutlinedIcon
+    icon: AutoAwesomeOutlinedIcon,
+    module: "team"
   }
 ];
 
@@ -68,26 +72,11 @@ function AiInsightsPlaceholder() {
 
                 <Box display="flex" alignItems="center" gap={1} mb={1.5}>
 
-                  <Box
-
-                    sx={{
-
-                      width: 40,
-                      height: 40,
-                      borderRadius: 2,
-                      bgcolor: "rgba(243, 156, 18, 0.15)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "secondary.main"
-
-                    }}
-
-                  >
-
-                    <Icon fontSize="small" />
-
-                  </Box>
+                  <EnterpriseModuleIcon
+                    icon={Icon}
+                    module={insight.module}
+                    density="sm"
+                  />
 
                   <Chip
 

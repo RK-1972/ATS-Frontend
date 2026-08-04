@@ -99,8 +99,16 @@ async function acceptOffer(offers, offerId) {
   };
 }
 
+function getDefaultSelectedOfferId(offersBundle) {
+  const pending = (offersBundle?.offers || []).find(
+    (offer) => offer.offerStatus === "Pending Approval"
+  );
+  return pending?.offerId ?? offersBundle?.offers?.[0]?.offerId ?? null;
+}
+
 const offerRepository = {
   getInitialState,
+  getDefaultSelectedOfferId,
   getAll,
   createOffer,
   submitOffer,

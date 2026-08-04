@@ -4,23 +4,27 @@ import ContentCopyOutlinedIcon from "@mui/icons-material/ContentCopyOutlined";
 import FactCheckOutlinedIcon from "@mui/icons-material/FactCheckOutlined";
 
 import EnterpriseCard from "@/components/enterprise/framework/EnterpriseCard";
+import EnterpriseModuleIcon from "@/components/enterprise/EnterpriseModuleIcon";
 
 const INTELLIGENCE_SECTIONS = [
   {
     title: "Validation",
     icon: FactCheckOutlinedIcon,
+    module: "approvals",
     message:
       "Validation checks will appear here once candidate data is available."
   },
   {
     title: "Duplicate Check",
     icon: ContentCopyOutlinedIcon,
+    module: "candidates",
     message:
       "Duplicate screening results will appear here after resume processing."
   },
   {
     title: "AI Insights",
     icon: AutoAwesomeOutlinedIcon,
+    module: "team",
     message:
       "AI-generated insights will appear here after resume parsing completes."
   }
@@ -29,23 +33,20 @@ const INTELLIGENCE_SECTIONS = [
 function CandidateIntakeRightPanel() {
   return (
     <Stack spacing={1.5} sx={{ p: 1.5, minHeight: 0 }}>
-      {INTELLIGENCE_SECTIONS.map((section) => {
-        const SectionIcon = section.icon;
-
-        return (
-          <EnterpriseCard key={section.title} title={section.title}>
-            <Stack spacing={1.25}>
-              <SectionIcon
-                fontSize="small"
-                sx={{ color: "text.disabled" }}
-              />
-              <Typography variant="body2" color="text.secondary">
-                {section.message}
-              </Typography>
-            </Stack>
-          </EnterpriseCard>
-        );
-      })}
+      {INTELLIGENCE_SECTIONS.map((section) => (
+        <EnterpriseCard key={section.title} title={section.title}>
+          <Stack spacing={1.25}>
+            <EnterpriseModuleIcon
+              icon={section.icon}
+              module={section.module}
+              density="sm"
+            />
+            <Typography variant="body2" color="text.secondary">
+              {section.message}
+            </Typography>
+          </Stack>
+        </EnterpriseCard>
+      ))}
     </Stack>
   );
 }

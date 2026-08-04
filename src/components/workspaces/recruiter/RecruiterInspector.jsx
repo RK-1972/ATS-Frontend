@@ -6,7 +6,6 @@ import {
   Box,
   Stack,
   Typography,
-  Tabs,
   Tab,
   Button,
   FormControl,
@@ -20,7 +19,8 @@ import {
   StatusChip,
   TaskSummary,
   ActivityTimeline,
-  EmptyState
+  EmptyState,
+  EnterpriseTabs
 } from "@/components/enterprise";
 import { PIPELINE_STAGES, normalizeStage } from "@/enterprise/recruiterSelectors";
 
@@ -111,7 +111,7 @@ function RecruiterInspector({
         />
       )}
 
-      <Tabs
+      <EnterpriseTabs
         value={activeTab}
         onChange={handleTabChange}
         variant="scrollable"
@@ -122,7 +122,7 @@ function RecruiterInspector({
         <Tab label={`Tasks (${entityTasks.length})`} value="tasks" />
         <Tab label="Activity" value="activity" />
         <Tab label="Audit" value="audit" />
-      </Tabs>
+      </EnterpriseTabs>
 
       <TabPanel active={activeTab} value="details">
         {!selectedRequisition && !selectedCandidate && (

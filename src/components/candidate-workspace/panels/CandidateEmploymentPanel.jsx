@@ -14,6 +14,7 @@ import {
 import WorkOutlineOutlinedIcon from "@mui/icons-material/WorkOutlineOutlined";
 import BusinessOutlinedIcon from "@mui/icons-material/BusinessOutlined";
 import PaymentsOutlinedIcon from "@mui/icons-material/PaymentsOutlined";
+import EnterpriseModuleIcon from "@/components/enterprise/EnterpriseModuleIcon";
 
 import CandidateEditableCard from "../CandidateEditableCard";
 import CandidateEmSelect from "../CandidateEmSelect";
@@ -117,10 +118,16 @@ function ValueText({ children }) {
   );
 }
 
-function CardTitle({ icon, label }) {
+function CardTitle({ icon: Icon, module = "recruitment", label }) {
   return (
     <Stack direction="row" spacing={1} alignItems="center" component="span">
-      {icon}
+      <EnterpriseModuleIcon
+        icon={Icon}
+        module={module}
+        density="sm"
+        size={28}
+        iconSize={16}
+      />
       <Box component="span">{label}</Box>
     </Stack>
   );
@@ -243,7 +250,8 @@ function CandidateEmploymentPanel({
       <CandidateEditableCard
         title={
           <CardTitle
-            icon={<WorkOutlineOutlinedIcon color="primary" sx={{ fontSize: 20 }} />}
+            icon={WorkOutlineOutlinedIcon}
+            module="recruitment"
             label="Professional Summary"
           />
         }
@@ -371,7 +379,8 @@ function CandidateEmploymentPanel({
       <CandidateEditableCard
         title={
           <CardTitle
-            icon={<BusinessOutlinedIcon color="primary" sx={{ fontSize: 20 }} />}
+            icon={BusinessOutlinedIcon}
+            module="team"
             label="Current Employment"
           />
         }
@@ -490,7 +499,8 @@ function CandidateEmploymentPanel({
       <CandidateEditableCard
         title={
           <CardTitle
-            icon={<PaymentsOutlinedIcon color="primary" sx={{ fontSize: 20 }} />}
+            icon={PaymentsOutlinedIcon}
+            module="requisitions"
             label="Compensation"
           />
         }

@@ -1,4 +1,6 @@
 import Header from "../components/Header";
+import AdminNavRail from "../components/layout/AdminNavRail";
+import EnterpriseModuleIcon from "../components/enterprise/EnterpriseModuleIcon";
 import {
 
   FaBriefcase,
@@ -11,90 +13,17 @@ import {
 
 } from "react-icons/fa";
 
-import { useNavigate } from "react-router-dom";
-import { useState, useMemo } from "react";
+import { useState } from "react";
 
 import { Navigate } from "react-router-dom";
-import useEnterpriseStore from "@/store/enterpriseStore";
-import { isHomeMenuItemVisible } from "@/enterprise/moduleVisibility";
 
 function AdminHomeLegacy() {
-
-  const navigate = useNavigate();
-
-  const loggedInUser =
-    JSON.parse(localStorage.getItem("user"));
-
-  const userRole =
-    loggedInUser?.role_name;
 
   const [dashboardData, setDashboardData] =
   useState({});
 
   const [myRequisitions, setMyRequisitions] =
   useState([]);
-
-
-  // =========================================
-  // Dynamic Menu Based On Role
-  // =========================================
-
-  const platformConfig = useEnterpriseStore((state) => state.platformConfig);
-
-  const menuItems =
-
-userRole === "Admin"
-
-  ?
-
-  [
-
-    "Dashboard",
-    "Talent Management",
-    "Requisition Management",
-    "Interview Management",
-    "Offer Management",
-    "Reports & Analytics",
-    "Master Management",
-    "Enterprise Master Data",
-    "User Management",
-    "Interview Panel Management",
-    "Platform Configuration",
-    "Business Rules",
-    "Hiring Control Tower",
-    "Workforce Planning",
-    "My Approvals"
-
-  ]
-
-  :
-
-  [
-  "Dashboard",
-  "Talent Management",
-
-  ...(userRole !== "Recruiter"
-    ? ["Requisition Management"]
-    : []),
-
-  "Interview Management",
-  "Feedback Management",
-  "My Approvals",
-
-  ...(loggedInUser?.secondary_role ===
-    "Interviewer"
-
-    ? ["Interviewer Workspace"]
-
-    : [])
-];
-
-  const visibleMenuItems = useMemo(
-    () => menuItems.filter((item) =>
-      isHomeMenuItemVisible(item, userRole, platformConfig)
-    ),
-    [menuItems, userRole, platformConfig]
-  );
 
 return (
 
@@ -107,172 +36,7 @@ return (
     <div style={styles.body}>
 
 
-        {/* SIDEBAR */}
-        <div style={styles.sidebar}>
-
-
-          {
-
-            visibleMenuItems.map((item) => (
-
-              <button
-
-                key={item}
-
-                style={styles.menuButton}
-
-                onClick={() => {
-
-                  if (item === "Talent Management") {
-
-                    navigate("/candidates");
-
-                  }
-
-                  else if (
-
-                    item === "User Management"
-
-                  ) {
-
-                    navigate("/users");
-
-                  }
-
-                  else if (
-
-                    item === "Requisition Management"
-
-                  ) {
-
-                    navigate("/requisitions");
-
-                  }
-
-                  else if (
-
-                   item === "Reports & Analytics"
-
-                  ) {
-
-                    navigate("/reports");
-
-                    }
-                  else if (
-
-                  item === "Master Management"
-
-                ) {
-
-                  navigate("/masters");
-
-                    }
-
-                    else if (
-
-                  item === "Enterprise Master Data"
-
-                ) {
-
-                  navigate("/master-data");
-
-                    }
-
-                    else if (
-
-  item === "Interview Panel Management"
-
-) {
-
-  navigate("/interview-panel")
-
-}
-
-else if (
-
-  item === "Interview Management"
-
-) {
-
-  navigate("/interview-schedule")
-
-}
-
-else if (
-
-  item ===
-  "Interviewer Workspace"
-
-) {
-
-  navigate("/interviewer");
-
-}
-
-else if (
-
-  item === "Platform Configuration"
-
-) {
-
-  navigate("/platform-configuration");
-
-}
-
-else if (
-
-  item === "Business Rules"
-
-) {
-
-  navigate("/business-rules");
-
-}
-
-else if (
-
-  item === "Hiring Control Tower"
-
-) {
-
-  navigate("/hiring-control-tower");
-
-}
-
-else if (
-
-  item === "Workforce Planning"
-
-) {
-
-  navigate("/workforce-planning");
-
-}
-
-else if (
-
-  item === "My Approvals"
-
-) {
-
-  navigate("/my-approvals");
-
-}
-
-
-                }}
-
-              >
-              
-                {item}
-
-              </button>
-
-            ))
-
-          }
-
-        </div>
+        <AdminNavRail />
 
 
         {/* MAIN CONTENT */}
@@ -293,7 +57,9 @@ else if (
     border: "2px solid #3b82f6",
     textAlign: "center"
   }}>
-    <FaBriefcase size={20} color="#3b82f6" />
+    <div style={{ display: "flex", justifyContent: "center" }}>
+      <EnterpriseModuleIcon icon={FaBriefcase} module="requisitions" density="sm" />
+    </div>
     <div style={styles.metricTitle}>
       My Requisitions
     </div>
@@ -311,7 +77,9 @@ else if (
     border: "2px solid #7c3aed",
     textAlign: "center"
   }}>
-    <FaUsers size={20} color="#7c3aed" />
+    <div style={{ display: "flex", justifyContent: "center" }}>
+      <EnterpriseModuleIcon icon={FaUsers} module="candidates" density="sm" />
+    </div>
     <div style={styles.metricTitle}>
       My Candidates
     </div>
@@ -329,7 +97,9 @@ else if (
     border: "2px solid #2563eb",
     textAlign: "center"
   }}>
-    <FaUserPlus size={20} color="#2563eb" />
+    <div style={{ display: "flex", justifyContent: "center" }}>
+      <EnterpriseModuleIcon icon={FaUserPlus} module="recruitment" density="sm" />
+    </div>
     <div style={styles.metricTitle}>
       Applied
     </div>
@@ -347,7 +117,9 @@ else if (
     border: "2px solid #0891b2",
     textAlign: "center"
   }}>
-    <FaUserCheck size={20} color="#0891b2" />
+    <div style={{ display: "flex", justifyContent: "center" }}>
+      <EnterpriseModuleIcon icon={FaUserCheck} module="interviews" density="sm" />
+    </div>
     <div style={styles.metricTitle}>
       L1 Interview
     </div>
@@ -365,7 +137,9 @@ else if (
     border: "2px solid #0f766e",
     textAlign: "center"
   }}>
-    <FaUserFriends size={20} color="#0f766e" />
+    <div style={{ display: "flex", justifyContent: "center" }}>
+      <EnterpriseModuleIcon icon={FaUserFriends} module="interviews" density="sm" />
+    </div>
     <div style={styles.metricTitle}>
       L2 Interview
     </div>
@@ -383,7 +157,9 @@ else if (
     border: "2px solid #ea580c",
     textAlign: "center"
   }}>
-    <FaHandshake size={20} color="#ea580c" />
+    <div style={{ display: "flex", justifyContent: "center" }}>
+      <EnterpriseModuleIcon icon={FaHandshake} module="approvals" density="sm" />
+    </div>
     <div style={styles.metricTitle}>
       Offer
     </div>
@@ -401,7 +177,9 @@ else if (
     border: "2px solid #16a34a",
     textAlign: "center"
   }}>
-    <FaCheckCircle size={20} color="#16a34a" />
+    <div style={{ display: "flex", justifyContent: "center" }}>
+      <EnterpriseModuleIcon icon={FaCheckCircle} module="team" density="sm" />
+    </div>
     <div style={styles.metricTitle}>
       Joined
     </div>

@@ -10,6 +10,7 @@ import {
 } from "@mui/material";
 
 import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
+import EnterpriseModuleIcon from "@/components/enterprise/EnterpriseModuleIcon";
 
 function CandidateOwnershipCard({
   ownerDisplayName = "—",
@@ -149,7 +150,13 @@ function CandidateOwnershipCard({
     >
       <CardContent sx={{ py: 1.5, px: 2, "&:last-child": { pb: 1.5 } }}>
         <Stack direction="row" spacing={1} alignItems="center" mb={1.25}>
-          <PersonOutlineOutlinedIcon color="primary" fontSize="small" />
+          <EnterpriseModuleIcon
+            icon={PersonOutlineOutlinedIcon}
+            module="recruitment"
+            density="sm"
+            size={28}
+            iconSize={16}
+          />
           <Typography variant="subtitle1" fontWeight={600}>
             Ownership
           </Typography>

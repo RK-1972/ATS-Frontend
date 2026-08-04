@@ -1,7 +1,6 @@
 import {
   Box,
   Typography,
-  Tabs,
   Tab,
   Button,
   Stack,
@@ -11,6 +10,7 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import { MdMoreHoriz, MdOpenInNew, MdStarOutline } from "react-icons/md";
+import EnterpriseTabs from "@/components/enterprise/EnterpriseTabs";
 import { DESIGN, PANEL_SHELL } from "./recruiterHomeTokens";
 import { candidateInitials, resolveTodaysNextAction } from "./recruiterHomeUiHelpers";
 
@@ -231,7 +231,7 @@ function RecruiterHomeInspector({
         </Stack>
       </Box>
 
-      <Tabs
+      <EnterpriseTabs
         value={tab}
         onChange={(_, value) => setTab(value)}
         sx={{
@@ -254,7 +254,7 @@ function RecruiterHomeInspector({
       >
         <Tab label="Details" />
         <Tab label="Actions" />
-      </Tabs>
+      </EnterpriseTabs>
 
       <Box sx={{ px: 1.5, py: 0.75, flex: 1, minHeight: 0, overflow: "auto" }}>
         {tab === 0 && ctx.properties.map((row) => (

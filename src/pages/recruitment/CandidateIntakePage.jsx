@@ -64,6 +64,7 @@ import EnterpriseWorkbench from "@/components/enterprise/framework/EnterpriseWor
 import EnterpriseWorkspaceHeader from "@/components/enterprise/framework/EnterpriseWorkspaceHeader";
 import EnterpriseCard from "@/components/enterprise/framework/EnterpriseCard";
 import EnterpriseFileUploadCard from "@/components/enterprise/EnterpriseFileUploadCard";
+import EnterpriseModuleIcon from "@/components/enterprise/EnterpriseModuleIcon";
 import useCandidateIntake from "@/hooks/useCandidateIntake";
 import useCandidateSources from "@/hooks/useCandidateSources";
 import API from "@/api/axios";
@@ -1048,7 +1049,13 @@ function CandidateIntakeIntelligencePanel({ editableCandidate = null }) {
           spacing={1}
           sx={{ px: 2, py: 1.25 }}
         >
-          <AutoAwesomeOutlinedIcon color="primary" fontSize="small" />
+          <EnterpriseModuleIcon
+            icon={AutoAwesomeOutlinedIcon}
+            module="team"
+            density="sm"
+            size={28}
+            iconSize={16}
+          />
           <Typography variant="subtitle2" fontWeight={700} sx={{ flex: 1 }}>
             AI Insights
           </Typography>
@@ -1240,6 +1247,7 @@ function RegisterCandidateDestinationDialog({
       value: "PIPELINE",
       title: "My Pipeline",
       Icon: PersonIcon,
+      module: "recruitment",
       description:
         "Candidate becomes part of your active recruitment pipeline.",
       owner: ownerLabel
@@ -1248,6 +1256,7 @@ function RegisterCandidateDestinationDialog({
       value: "TALENT_POOL",
       title: "Enterprise Talent Pool",
       Icon: PublicIcon,
+      module: "candidates",
       description: "Candidate is available to all recruiters.",
       owner: "None"
     }
@@ -1307,22 +1316,13 @@ function RegisterCandidateDestinationDialog({
                     alignItems="flex-start"
                     sx={{ p: 1.5 }}
                   >
-                    <Box
-                      sx={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: "12px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                        bgcolor: (theme) =>
-                          alpha(theme.palette.primary.main, 0.12),
-                        color: "primary.main"
-                      }}
-                    >
-                      <OptionIcon fontSize="small" />
-                    </Box>
+                    <EnterpriseModuleIcon
+                      icon={OptionIcon}
+                      module={option.module}
+                      density="sm"
+                      size={40}
+                      iconSize={20}
+                    />
                     <Box sx={{ minWidth: 0, flex: 1 }}>
                       <Stack
                         direction="row"

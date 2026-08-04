@@ -16,7 +16,9 @@ import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import RefreshOutlinedIcon from "@mui/icons-material/RefreshOutlined";
 
-import Header from "../../components/Header";
+import WorkspaceLayout from "../../components/enterprise/WorkspaceLayout";
+import AdminNavRail from "../../components/layout/AdminNavRail";
+import RecruiterNavRail from "../../components/layout/RecruiterNavRail";
 import EnterpriseCard from "../../components/enterprise/framework/EnterpriseCard";
 import EnterpriseWorkspaceHeader from "../../components/enterprise/framework/EnterpriseWorkspaceHeader";
 import EnterpriseConfirmationDialog from "../../components/enterprise/EnterpriseConfirmationDialog";
@@ -28,6 +30,21 @@ import {
   StatusChip
 } from "../../components/enterprise";
 import TalentDemandDraftService from "../../services/talentDemandDraftService";
+
+function resolveEnterpriseNavRail(user) {
+  let workspace = {};
+  try {
+    workspace = JSON.parse(localStorage.getItem("workspace") || "{}") || {};
+  } catch (_error) {
+    workspace = {};
+  }
+
+  if (workspace.showRecruitmentWorkspace || workspace.showInterviewWorkspace) {
+    return <RecruiterNavRail loggedInUser={user} />;
+  }
+
+  return <AdminNavRail />;
+}
 
 function formatDateTime(value) {
   if (!value) return "—";
@@ -48,6 +65,13 @@ function toStatusChipLabel(status) {
 
 function MyDraftsPage() {
   const navigate = useNavigate();
+  const loggedInUser = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem("user") || "null");
+    } catch (_error) {
+      return null;
+    }
+  }, []);
 
   const [drafts, setDrafts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -233,20 +257,8 @@ function MyDraftsPage() {
   ];
 
   return (
-    <div>
-      <Header
-        userName={localStorage.getItem("full_name")}
-        roleName={localStorage.getItem("role_name")}
-      />
-
-      <Box
-        sx={{
-          px: { xs: 1.5, sm: 2 },
-          py: 1.5,
-          bgcolor: "background.default",
-          minHeight: "100vh"
-        }}
-      >
+    <WorkspaceLayout navRail={resolveEnterpriseNavRail(loggedInUser)}>
+      <Box sx={{ bgcolor: "background.default" }}>
         <EnterpriseWorkspaceHeader
           title="My Drafts"
           subtitle="Resume and manage your Talent Demand draft documents"
@@ -369,7 +381,7 @@ function MyDraftsPage() {
           {toast.message}
         </Alert>
       </Snackbar>
-    </div>
+    </WorkspaceLayout>
   );
 }
 

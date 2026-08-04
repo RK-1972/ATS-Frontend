@@ -5,6 +5,7 @@ import useEnterpriseStore from "@/store/enterpriseStore";
 import candidateRepository from "@/repositories/candidateRepository";
 import { executeLegacyCandidateRegistration } from "@/pages/CandidatePage";
 import { getPublishedRecords } from "@/enterprise/masterDataHelpers";
+import { useNavigationFilters } from "@/copilot/core/useNavigationFilters";
 import {
   buildTimelineEvents,
   calculateProfileCompletion,
@@ -170,7 +171,13 @@ function useCandidateWorkspace() {
       const name = getCandidateDisplayName(row).toLowerCase();
       const code = String(row.candidate_code || "").toLowerCase();
       const email = String(row.email_id || "").toLowerCase();
-      const matchesSearch = !query || name.includes(query) || code.includes(query) || email.includes(query);
+      const primarySkill = String(row.primary_skill || "").toLowerCase();
+      const matchesSearch =
+        !query ||
+        name.includes(query) ||
+        code.includes(query) ||
+        email.includes(query) ||
+        primarySkill.includes(query);
 
       if (!matchesSearch) {
         return false;
@@ -193,6 +200,13 @@ function useCandidateWorkspace() {
       }
     });
   }, [candidates, searchQuery, statusFilter]);
+
+  // Generic navigation filters (any producer may set location.state.filters).
+  useNavigationFilters((filters) => {
+    if (filters.search != null && filters.search !== "") {
+      setSearchQuery(String(filters.search));
+    }
+  });
 
   const masterLabels = useMemo(
     () => ({

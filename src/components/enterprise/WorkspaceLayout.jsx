@@ -1,8 +1,14 @@
 import { Box, Snackbar, Alert } from "@mui/material";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useTheme } from "@mui/material/styles";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { pageFramerProps } from "../../theme/motion";
 import AppHeader from "../layout/AppHeader";
 
+/**
+ * Shared workspace shell.
+ * Motion renderer: Framer Motion page enter on route change (Motion Tokens).
+ */
 function WorkspaceLayout({
   navRail = null,
   sidebar = null,
@@ -14,9 +20,12 @@ function WorkspaceLayout({
   maxWidth
 }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const theme = useTheme();
   const { layout } = theme.tokens;
   const contentMaxWidth = maxWidth || layout.maxContentWidth;
+  const reduced = useReducedMotion();
+  const pageMotion = pageFramerProps(Boolean(reduced));
 
   const loggedInUser = JSON.parse(localStorage.getItem("user") || "null");
   const userRole = loggedInUser?.role_name || "";
@@ -69,21 +78,29 @@ function WorkspaceLayout({
               minHeight: 0
             }}
           >
-            <Box
-              sx={{
-                flex: 1,
-                px: { xs: 2, sm: 2.5 },
-                py: { xs: 2, sm: 2 },
-                maxWidth: contentMaxWidth,
-                width: "100%",
-                mx: "auto",
-                display: "flex",
-                flexDirection: "column",
-                minHeight: 0
-              }}
-            >
-              {children}
-            </Box>
+            <AnimatePresence mode="wait">
+              <Box
+                component={motion.div}
+                key={location.pathname}
+                initial={pageMotion.initial}
+                animate={pageMotion.animate}
+                exit={pageMotion.exit}
+                transition={pageMotion.transition}
+                sx={{
+                  flex: 1,
+                  px: { xs: 2, sm: 2.5 },
+                  py: { xs: 2, sm: 2 },
+                  maxWidth: contentMaxWidth,
+                  width: "100%",
+                  mx: "auto",
+                  display: "flex",
+                  flexDirection: "column",
+                  minHeight: 0
+                }}
+              >
+                {children}
+              </Box>
+            </AnimatePresence>
 
             {timeline && (
               <Box

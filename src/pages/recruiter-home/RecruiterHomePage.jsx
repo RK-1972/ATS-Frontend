@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Box, Button, Typography } from "@mui/material";
 import { MdSwapHoriz } from "react-icons/md";
-import { LoadingState } from "@/components/enterprise";
+import { LoadingState, EnterpriseModuleIcon } from "@/components/enterprise";
 import RecruiterCockpitHeader from "@/components/recruiter-home/RecruiterCockpitHeader";
 import CockpitSummaryCards from "@/components/recruiter-home/CockpitSummaryCards";
 import CockpitActionsNeededPanel from "@/components/recruiter-home/CockpitActionsNeededPanel";
@@ -18,10 +18,16 @@ import {
   defaultCockpitRange,
   presetToRange
 } from "./recruiterHomeDateFilter";
+import { useCopilotContext } from "@/components/copilot/CopilotContext";
 
 function RecruiterHomePage() {
   const navigate = useNavigate();
+  const { setCurrentPage } = useCopilotContext();
   const initialRange = defaultCockpitRange();
+
+  useEffect(() => {
+    setCurrentPage("Dashboard");
+  }, [setCurrentPage]);
 
   const [loading, setLoading] = useState(true);
   const [activePreset, setActivePreset] = useState(initialRange.preset);
@@ -235,20 +241,11 @@ function RecruiterHomePage() {
         }}
       >
         <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1 }}>
-          <Box
-            sx={{
-              width: 36,
-              height: 36,
-              borderRadius: "50%",
-              bgcolor: DESIGN.purpleBg,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0
-            }}
-          >
-            <MdSwapHoriz size={18} color={DESIGN.purple} />
-          </Box>
+          <EnterpriseModuleIcon
+            icon={MdSwapHoriz}
+            module="approvals"
+            density="sm"
+          />
           <Box sx={{ minWidth: 0 }}>
             <Typography sx={{ fontSize: 13, fontWeight: 700, color: DESIGN.textPrimary, lineHeight: 1.2 }}>
               Ownership Requests

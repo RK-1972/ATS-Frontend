@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -21,21 +21,24 @@ import VideocamOutlinedIcon from "@mui/icons-material/VideocamOutlined";
 import RateReviewOutlinedIcon from "@mui/icons-material/RateReviewOutlined";
 
 import API from "../api/axios";
-import AppHeader from "../components/layout/AppHeader";
+import WorkspaceLayout from "../components/enterprise/WorkspaceLayout";
+import RecruiterNavRail from "../components/layout/RecruiterNavRail";
 import ResumePreviewDialog from "../components/ResumePreviewDialog";
 import EnterpriseConfirmationDialog from "../components/enterprise/EnterpriseConfirmationDialog";
 import { resolveResumeViewerUrl } from "../utils/resolveResumeViewerUrl";
 import {
   EmptyState,
   EnterpriseDataGrid,
+  EnterpriseModuleIcon,
   StatusChip,
   WorkspaceHeader
 } from "../components/enterprise";
+import { useNavigationFilters } from "@/copilot/core/useNavigationFilters";
 
 function InterviewerHome() {
   const loggedInUser = JSON.parse(localStorage.getItem("user") || "null");
-  const userRole = loggedInUser?.role_name || loggedInUser?.secondary_role || "Interviewer";
   const [interviews, setInterviews] = useState([]);
+  const [focusScheduleId, setFocusScheduleId] = useState(null);
   const [resumePreview, setResumePreview] = useState({ open: false, url: "", title: "" });
   const [resumeUnavailable, setResumeUnavailable] = useState({ open: false, title: "" });
   const navigate = useNavigate();
@@ -53,10 +56,24 @@ function InterviewerHome() {
     fetchMyInterviews();
   }, []);
 
-  const handleLogout = () => {
-    localStorage.clear();
-    window.location.href = "/login";
-  };
+  // Minimum navigation filter — same useNavigationFilters pattern as InterviewSchedulePage.
+  // Any producer may navigate with { state: { filters: { schedule_id } } }.
+  useNavigationFilters((filters) => {
+    if (filters.schedule_id == null || filters.schedule_id === "") {
+      setFocusScheduleId(null);
+      return;
+    }
+    setFocusScheduleId(filters.schedule_id);
+  });
+
+  const displayedInterviews = useMemo(() => {
+    if (focusScheduleId == null || focusScheduleId === "") {
+      return interviews;
+    }
+    return interviews.filter(
+      (row) => String(row.schedule_id) === String(focusScheduleId)
+    );
+  }, [interviews, focusScheduleId]);
 
   // Live dashboard counts from /my-interviews (same rules as before).
   const scheduledCount = interviews.filter((x) => !x.feedback_submitted).length;
@@ -69,29 +86,29 @@ function InterviewerHome() {
       key: "scheduled",
       label: "Scheduled",
       value: scheduledCount,
-      icon: <EventAvailableOutlinedIcon fontSize="small" />,
-      color: "primary.main"
+      icon: EventAvailableOutlinedIcon,
+      module: "interviews"
     },
     {
       key: "completed",
       label: "Completed",
       value: completedCount,
-      icon: <TaskAltOutlinedIcon fontSize="small" />,
-      color: "info.main"
+      icon: TaskAltOutlinedIcon,
+      module: "recruitment"
     },
     {
       key: "selected",
       label: "Selected",
       value: selectedCount,
-      icon: <CheckCircleOutlineOutlinedIcon fontSize="small" />,
-      color: "success.main"
+      icon: CheckCircleOutlineOutlinedIcon,
+      module: "team"
     },
     {
       key: "rejected",
       label: "Rejected",
       value: rejectedCount,
-      icon: <CancelOutlinedIcon fontSize="small" />,
-      color: "error.main"
+      icon: CancelOutlinedIcon,
+      module: "reports"
     }
   ];
 
@@ -286,14 +303,10 @@ function InterviewerHome() {
   ];
 
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
-      <AppHeader
-        loggedInUser={loggedInUser}
-        userRole={userRole}
-        onLogout={handleLogout}
-      />
-
-      <Container maxWidth="xl" sx={{ pt: 3, pb: 4 }}>
+    <WorkspaceLayout
+      navRail={<RecruiterNavRail loggedInUser={loggedInUser} />}
+    >
+      <Container maxWidth="xl" disableGutters sx={{ pt: 0, pb: 1 }}>
         <Stack spacing={2}>
           <WorkspaceHeader
             title="Interviewer Workspace"
@@ -314,20 +327,13 @@ function InterviewerHome() {
                 >
                   <CardContent sx={{ p: 1.75, "&:last-child": { pb: 1.75 } }}>
                     <Stack direction="row" spacing={1} alignItems="center" mb={1}>
-                      <Box
-                        sx={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          width: 28,
-                          height: 28,
-                          borderRadius: 1,
-                          bgcolor: "action.hover",
-                          color: kpi.color
-                        }}
-                      >
-                        {kpi.icon}
-                      </Box>
+                      <EnterpriseModuleIcon
+                        icon={kpi.icon}
+                        module={kpi.module}
+                        density="sm"
+                        size={28}
+                        iconSize={16}
+                      />
                       <Typography
                         variant="caption"
                         color="text.secondary"
@@ -356,14 +362,22 @@ function InterviewerHome() {
               My Interview Schedule
             </Typography>
 
-            {interviews.length === 0 ? (
+            {displayedInterviews.length === 0 ? (
               <EmptyState
-                title="No interviews assigned"
-                description="Assigned interviews will appear here when a recruiter schedules you on the panel."
+                title={
+                  focusScheduleId != null
+                    ? "Interview not found"
+                    : "No interviews assigned"
+                }
+                description={
+                  focusScheduleId != null
+                    ? "The selected interview is not in your assigned schedule."
+                    : "Assigned interviews will appear here when a recruiter schedules you on the panel."
+                }
               />
             ) : (
               <EnterpriseDataGrid
-                rows={interviews}
+                rows={displayedInterviews}
                 columns={columns}
                 getRowId={(row) =>
                   row.schedule_id ??
@@ -395,7 +409,7 @@ function InterviewerHome() {
         onConfirm={closeResumeUnavailable}
         onClose={closeResumeUnavailable}
       />
-    </Box>
+    </WorkspaceLayout>
   );
 }
 

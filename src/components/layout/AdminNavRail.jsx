@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 import {
@@ -6,8 +7,12 @@ import {
   Tooltip,
   Divider
 } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
+import { motion, useReducedMotion } from "framer-motion";
+import { framerTransition, translateTokenPx } from "@/theme/motion";
 
 import DashboardOutlinedIcon from "@mui/icons-material/DashboardOutlined";
+import HomeWorkOutlinedIcon from "@mui/icons-material/HomeWorkOutlined";
 import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
 import PolicyOutlinedIcon from "@mui/icons-material/PolicyOutlined";
 import ViewTimelineOutlinedIcon from "@mui/icons-material/ViewTimelineOutlined";
@@ -19,9 +24,22 @@ import BarChartOutlinedIcon from "@mui/icons-material/BarChartOutlined";
 import WorkOutlineOutlinedIcon from "@mui/icons-material/WorkOutlineOutlined";
 import AssignmentIndOutlinedIcon from "@mui/icons-material/AssignmentIndOutlined";
 import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
+import PersonAddAlt1OutlinedIcon from "@mui/icons-material/PersonAddAlt1Outlined";
+import LocalOfferOutlinedIcon from "@mui/icons-material/LocalOfferOutlined";
 
 import useEnterpriseStore from "@/store/enterpriseStore";
 import { isNavPathVisible } from "@/enterprise/moduleVisibility";
+import AuthorizationService from "@/services/authorizationService";
+
+const WORKSPACE_HOME_PATH = "/workspace";
+const RECRUITER_ASSIGNMENT_PATH = "/requisitions/assign-recruiters";
+const OFFER_WORKSPACE_PATH = "/offers";
+
+const WORKSPACE_HOME_ITEM = {
+  label: "Workspace Home",
+  path: WORKSPACE_HOME_PATH,
+  icon: HomeWorkOutlinedIcon
+};
 
 const ADMIN_NAV_ITEMS = [
   {
@@ -78,6 +96,25 @@ const ADMIN_NAV_ITEMS = [
   },
   {
     type: "section",
+    label: "Offers"
+  },
+  {
+    label: "Offer Workspace",
+    path: OFFER_WORKSPACE_PATH,
+    icon: LocalOfferOutlinedIcon,
+    requiresOfferWorkspace: true
+  },
+  {
+    type: "section",
+    label: "Requisitions"
+  },
+  {
+    label: "Recruiter Assignment",
+    path: RECRUITER_ASSIGNMENT_PATH,
+    icon: PersonAddAlt1OutlinedIcon
+  },
+  {
+    type: "section",
     label: "Configuration"
   },
   {
@@ -110,18 +147,93 @@ function AdminNavRail() {
 
   const navigate = useNavigate();
   const location = useLocation();
+  const theme = useTheme();
+  const reducedMotion = useReducedMotion();
   const platformConfig = useEnterpriseStore((state) => state.platformConfig);
+  const [canAssignRecruiters, setCanAssignRecruiters] = useState(false);
 
   const loggedInUser = JSON.parse(localStorage.getItem("user") || "null");
-  const userRole = loggedInUser?.role_name || "Admin";
+  const userRole = loggedInUser?.role_name || "";
 
-  const visibleItems = ADMIN_NAV_ITEMS.filter((item) => {
+  let workspace = {};
+  try {
+    workspace = JSON.parse(localStorage.getItem("workspace") || "{}") || {};
+  } catch (_error) {
+    workspace = {};
+  }
+
+  const isAdmin = userRole === "Admin";
+
+  useEffect(() => {
+    let cancelled = false;
+
+    AuthorizationService.canAssignRecruiters()
+      .then((allowed) => {
+        if (!cancelled) {
+          setCanAssignRecruiters(Boolean(allowed));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCanAssignRecruiters(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const filteredItems = ADMIN_NAV_ITEMS.filter((item) => {
     if (item.type === "section") {
       return true;
     }
 
-    return isNavPathVisible(item.path, userRole, platformConfig);
+    // Recruiter Assignment: REQUISITION_ASSIGNER Work Assignment only.
+    if (item.path === RECRUITER_ASSIGNMENT_PATH) {
+      return canAssignRecruiters;
+    }
+
+    // Admin catalog: existing platform / role visibility only (login role_name).
+    if (isAdmin) {
+      return isNavPathVisible(item.path, userRole, platformConfig);
+    }
+
+    // Non-Admin on this rail: only destinations already granted via workspace flags
+    // from Work Assignment resolution at login (no invented capability map).
+    if (item.path === "/candidates") {
+      return Boolean(workspace.showRecruitmentWorkspace);
+    }
+
+    if (item.path === "/workforce-planning") {
+      return Boolean(workspace.showRequestWorkspace);
+    }
+
+    if (item.path === OFFER_WORKSPACE_PATH || item.requiresOfferWorkspace) {
+      return Boolean(workspace.showOfferWorkspace);
+    }
+
+    return false;
   });
+
+  // Drop section labels that have no visible icons beneath them.
+  const catalogItems = filteredItems.filter((item, index, list) => {
+    if (item.type !== "section") {
+      return true;
+    }
+
+    for (let i = index + 1; i < list.length; i += 1) {
+      if (list[i].type === "section") {
+        return false;
+      }
+      return true;
+    }
+
+    return false;
+  });
+
+  // Always first — return to existing Workspace Selection without logout.
+  const visibleItems = [WORKSPACE_HOME_ITEM, ...catalogItems];
 
   const handleNavigate = (path) => {
 
@@ -132,6 +244,10 @@ function AdminNavRail() {
   };
 
   const isActive = (path) => {
+
+    if (path === WORKSPACE_HOME_PATH) {
+      return location.pathname === WORKSPACE_HOME_PATH;
+    }
 
     if (path === "/") {
       return location.pathname === "/";
@@ -221,9 +337,36 @@ function AdminNavRail() {
             >
 
               <IconButton
+                component={motion.button}
                 aria-label={item.label}
                 aria-current={active ? "page" : undefined}
                 onClick={() => handleNavigate(item.path)}
+                animate={{
+                  boxShadow: active
+                    ? theme.tokens.shadows.mid
+                    : "0px 0px 0px rgba(31, 59, 99, 0)"
+                }}
+                whileHover={
+                  reducedMotion
+                    ? undefined
+                    : {
+                        boxShadow: theme.tokens.shadows.high,
+                        y: translateTokenPx("hoverY") / 2,
+                        transition: framerTransition("fast", "standard", false)
+                      }
+                }
+                whileTap={
+                  reducedMotion
+                    ? undefined
+                    : {
+                        opacity: theme.motion.tokens.interaction.press.opacity
+                      }
+                }
+                transition={framerTransition(
+                  "fast",
+                  "standard",
+                  Boolean(reducedMotion)
+                )}
                 sx={{
                   width: 56,
                   height: 56,
@@ -232,6 +375,7 @@ function AdminNavRail() {
                   bgcolor: active
                     ? "action.selected"
                     : "transparent",
+                  transition: "none",
                   "&:hover": {
                     bgcolor: active
                       ? "action.selected"
