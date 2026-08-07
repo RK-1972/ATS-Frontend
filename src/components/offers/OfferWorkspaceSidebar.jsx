@@ -2,6 +2,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 
 import {
   Box,
+  Chip,
   List,
   ListItemButton,
   ListItemIcon,
@@ -15,8 +16,16 @@ import AddBusinessOutlinedIcon from "@mui/icons-material/AddBusinessOutlined";
 import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
 import PendingActionsOutlinedIcon from "@mui/icons-material/PendingActionsOutlined";
 import VerifiedOutlinedIcon from "@mui/icons-material/VerifiedOutlined";
+import MailOutlineOutlinedIcon from "@mui/icons-material/MailOutlineOutlined";
+import MarkEmailReadOutlinedIcon from "@mui/icons-material/MarkEmailReadOutlined";
 import HighlightOffOutlinedIcon from "@mui/icons-material/HighlightOffOutlined";
 import UndoOutlinedIcon from "@mui/icons-material/UndoOutlined";
+
+import useEnterpriseStore from "@/store/enterpriseStore";
+import {
+  buildAwaitingLettersList,
+  buildGeneratedLettersList
+} from "@/utils/offerApprovalUtils";
 
 const OFFER_SECTIONS = [
   {
@@ -50,6 +59,20 @@ const OFFER_SECTIONS = [
     icon: VerifiedOutlinedIcon
   },
   {
+    key: "awaiting-letters",
+    label: "Awaiting Letters",
+    path: "/offers/awaiting-letters",
+    icon: MailOutlineOutlinedIcon,
+    countKey: "awaitingLetters"
+  },
+  {
+    key: "generated-letters",
+    label: "Generated Letters",
+    path: "/offers/generated-letters",
+    icon: MarkEmailReadOutlinedIcon,
+    countKey: "generatedLetters"
+  },
+  {
     key: "rejected",
     label: "Rejected Offers",
     path: "/offers/rejected",
@@ -63,13 +86,15 @@ const OFFER_SECTIONS = [
   }
 ];
 
-/**
- * Offer Workspace module sidebar — mirrors WorkforcePlanningSidebar structure.
- * Placeholders only; no authorization gates in Phase 10.0.
- */
 function OfferWorkspaceSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const offers = useEnterpriseStore((state) => state.offers);
+
+  const counts = {
+    awaitingLetters: buildAwaitingLettersList(offers).length,
+    generatedLetters: buildGeneratedLettersList(offers).length
+  };
 
   return (
     <Box
@@ -102,7 +127,7 @@ function OfferWorkspaceSidebar() {
         color="text.secondary"
         sx={{ display: "block", px: 1, mt: 0.5, mb: 1.5 }}
       >
-        Raise · Approve · Track
+        Raise · Approve · Letters
       </Typography>
 
       <Divider sx={{ mb: 1 }} />
@@ -114,6 +139,9 @@ function OfferWorkspaceSidebar() {
             section.path === "/offers"
               ? location.pathname === "/offers" || location.pathname === "/offers/"
               : location.pathname.startsWith(section.path);
+          const badgeCount = section.countKey
+            ? counts[section.countKey]
+            : 0;
 
           return (
             <ListItemButton
@@ -138,6 +166,20 @@ function OfferWorkspaceSidebar() {
                   fontWeight: selected ? 700 : 500
                 }}
               />
+              {badgeCount > 0 ? (
+                <Chip
+                  label={badgeCount}
+                  size="small"
+                  color="primary"
+                  sx={{
+                    height: 20,
+                    minWidth: 20,
+                    fontWeight: 700,
+                    fontSize: 10,
+                    "& .MuiChip-label": { px: 0.5 }
+                  }}
+                />
+              ) : null}
             </ListItemButton>
           );
         })}

@@ -18,6 +18,7 @@ import EnterpriseConfirmationDialog from "@/components/enterprise/EnterpriseConf
 import { StatusChip } from "@/components/enterprise";
 import { formatCurrency } from "@/utils/formatCurrency";
 import OfferApprovalHistory from "@/components/offers/OfferApprovalHistory";
+import OfferCommercialSummaryFields from "@/components/offers/OfferCommercialSummaryFields";
 
 function SummaryField({ label, value }) {
   return (
@@ -175,6 +176,10 @@ function OfferApprovalWorkspacePanel({
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
               <SummaryField label="Offered CTC" value={formatCurrency(offeredCtc)} />
             </Grid>
+          </Grid>
+
+          <Grid container spacing={2} sx={{ mt: 0.5 }}>
+            <OfferCommercialSummaryFields offer={offer} />
           </Grid>
         </Box>
 

@@ -8,6 +8,7 @@ import {
   Snackbar,
   Stack,
   TextField,
+  Tooltip,
   Typography
 } from "@mui/material";
 import ApprovalOutlinedIcon from "@mui/icons-material/ApprovalOutlined";
@@ -35,6 +36,13 @@ import {
 import MyApprovalsService from "../../services/myApprovalsService";
 import useEnterpriseStore from "../../store/enterpriseStore";
 import { formatCurrency } from "@/utils/formatCurrency";
+import {
+  formatCommercialAmount,
+  formatCommercialJoiningDate,
+  formatCommercialPayFrequency,
+  readCommercialValue
+} from "@/utils/offerCommercialUtils";
+import { matchesApprovalSearch } from "@/utils/myApprovalsSearch";
 
 function resolveEnterpriseNavRail(user) {
   let workspace = {};
@@ -110,6 +118,30 @@ function normalizePriority(priority) {
   return raw.charAt(0).toUpperCase() + raw.slice(1);
 }
 
+function resolveCandidateName(row) {
+  return row?.candidateName || row?.candidate_name || "—";
+}
+
+function GridEllipsisCell({ value }) {
+  const displayValue = value || "—";
+
+  return (
+    <Tooltip title={displayValue} placement="top" arrow>
+      <Typography
+        variant="body2"
+        noWrap
+        sx={{
+          width: "100%",
+          overflow: "hidden",
+          textOverflow: "ellipsis"
+        }}
+      >
+        {displayValue}
+      </Typography>
+    </Tooltip>
+  );
+}
+
 function MyApprovalsPage() {
   const navigate = useNavigate();
   const refreshWorkforce = useEnterpriseStore((state) => state.refreshWorkforce);
@@ -158,26 +190,9 @@ function MyApprovalsPage() {
   }, [loadApprovals]);
 
   const filteredRows = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    const matched = !term
-      ? rows
-      : rows.filter((row) => {
-          const haystack = [
-            formatDocumentType(row),
-            row.document_type,
-            row.workflow_type,
-            row.document_number,
-            row.document_title,
-            row.requestor,
-            row.current_approval_step,
-            row.status,
-            row.priority
-          ]
-            .filter(Boolean)
-            .join(" ")
-            .toLowerCase();
-          return haystack.includes(term);
-        });
+    const matched = rows.filter((row) =>
+      matchesApprovalSearch(row, search, formatDocumentType)
+    );
 
     // Newest assignments first (UI display only; API order unchanged).
     return [...matched].sort((left, right) => {
@@ -340,6 +355,14 @@ function MyApprovalsPage() {
       flex: 0.9,
       minWidth: 120,
       valueGetter: (_value, row) => formatDocumentType(row)
+    },
+    {
+      field: "candidate_name",
+      headerName: "Candidate Name",
+      flex: 1.1,
+      minWidth: 140,
+      valueGetter: (_value, row) => resolveCandidateName(row),
+      renderCell: (params) => <GridEllipsisCell value={params.value} />
     },
     {
       field: "document_number",
@@ -521,8 +544,8 @@ function MyApprovalsPage() {
             <SearchBar
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search approvals"
-              width={320}
+              placeholder="Search by candidate, offer, requisition, project..."
+              width={360}
             />
           </Stack>
 
@@ -586,6 +609,81 @@ function MyApprovalsPage() {
                     Number(inspectorRow.offeredCtc ?? inspectorRow.offered_ctc ?? 0)
                   )}
                 />
+                <Box sx={{ pt: 0.25 }}>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ display: "block", mb: 0.75, fontWeight: 700 }}
+                  >
+                    Commercial Terms
+                  </Typography>
+                  <Stack spacing={1.5}>
+                    <DetailRow
+                      label="Expected Date of Joining"
+                      value={formatCommercialJoiningDate(
+                        readCommercialValue(
+                          inspectorRow,
+                          "expectedJoiningDate",
+                          "expected_joining_date"
+                        )
+                      )}
+                    />
+                    <DetailRow
+                      label="Annual Variable Pay"
+                      value={formatCommercialAmount(
+                        readCommercialValue(
+                          inspectorRow,
+                          "variablePay",
+                          "variable_pay",
+                          0
+                        )
+                      )}
+                    />
+                    <DetailRow
+                      label="Variable Pay Payout Frequency"
+                      value={formatCommercialPayFrequency(
+                        readCommercialValue(
+                          inspectorRow,
+                          "variablePay",
+                          "variable_pay",
+                          0
+                        ),
+                        readCommercialValue(
+                          inspectorRow,
+                          "variablePayFrequency",
+                          "variable_pay_frequency"
+                        )
+                      )}
+                    />
+                    <DetailRow
+                      label="Joining Bonus"
+                      value={formatCommercialAmount(
+                        readCommercialValue(
+                          inspectorRow,
+                          "joiningBonus",
+                          "joining_bonus",
+                          0
+                        )
+                      )}
+                    />
+                    <DetailRow
+                      label="Joining Bonus Payout Frequency"
+                      value={formatCommercialPayFrequency(
+                        readCommercialValue(
+                          inspectorRow,
+                          "joiningBonus",
+                          "joining_bonus",
+                          0
+                        ),
+                        readCommercialValue(
+                          inspectorRow,
+                          "joiningBonusFrequency",
+                          "joining_bonus_frequency"
+                        )
+                      )}
+                    />
+                  </Stack>
+                </Box>
               </>
             ) : null}
             <DetailRow label="Requestor" value={inspectorRow.requestor} />

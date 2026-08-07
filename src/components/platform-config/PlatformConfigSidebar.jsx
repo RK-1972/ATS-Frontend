@@ -17,6 +17,8 @@ import PaymentsOutlinedIcon from "@mui/icons-material/PaymentsOutlined";
 import NotificationsOutlinedIcon from "@mui/icons-material/NotificationsOutlined";
 import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
+import AccountBalanceWalletOutlinedIcon from "@mui/icons-material/AccountBalanceWalletOutlined";
+import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 
 const CONFIG_SECTIONS = [
   {
@@ -42,6 +44,18 @@ const CONFIG_SECTIONS = [
     label: "Budget & Workforce",
     path: "/platform-configuration/budget",
     icon: PaymentsOutlinedIcon
+  },
+  {
+    key: "compensation",
+    label: "Compensation Structures",
+    path: "/platform-configuration/compensation-structures",
+    icon: AccountBalanceWalletOutlinedIcon
+  },
+  {
+    key: "document-templates",
+    label: "Document Templates",
+    path: "/platform-configuration/document-templates",
+    icon: DescriptionOutlinedIcon
   },
   {
     key: "notifications",

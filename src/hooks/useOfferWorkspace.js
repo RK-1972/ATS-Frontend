@@ -3,6 +3,8 @@ import { useCallback, useMemo } from "react";
 import useEnterpriseStore from "@/store/enterpriseStore";
 import {
   buildApprovedOffersList,
+  buildAwaitingLettersList,
+  buildGeneratedLettersList,
   buildPendingApprovalQueue
 } from "@/utils/offerApprovalUtils";
 
@@ -14,6 +16,7 @@ function useOfferWorkspace() {
   const setOfferUi = useEnterpriseStore((state) => state.setOfferUi);
   const refreshOffers = useEnterpriseStore((state) => state.refreshOffers);
   const approveOfferStep = useEnterpriseStore((state) => state.approveOfferStep);
+  const generateOfferDocument = useEnterpriseStore((state) => state.generateOfferDocument);
 
   const setSelectedOfferId = useCallback((id) => {
     setOfferUi((prev) => ({ ...prev, selectedOfferId: id }));
@@ -25,11 +28,18 @@ function useOfferWorkspace() {
 
   const queue = useMemo(() => buildPendingApprovalQueue(offers), [offers]);
   const approvedOffers = useMemo(() => buildApprovedOffersList(offers), [offers]);
+  const awaitingLetters = useMemo(() => buildAwaitingLettersList(offers), [offers]);
+  const generatedLetters = useMemo(() => buildGeneratedLettersList(offers), [offers]);
 
-  const selectedOffer = useMemo(
-    () => queue.find((offer) => offer.offerId === selectedOfferId) || null,
-    [queue, selectedOfferId]
-  );
+  const selectedOffer = useMemo(() => {
+    const allOffers = [
+      ...queue,
+      ...approvedOffers,
+      ...awaitingLetters,
+      ...generatedLetters
+    ];
+    return allOffers.find((offer) => offer.offerId === selectedOfferId) || null;
+  }, [queue, approvedOffers, awaitingLetters, generatedLetters, selectedOfferId]);
 
   const approveOffer = useCallback(
     (offerId, approvalStep, comment) =>
@@ -41,11 +51,14 @@ function useOfferWorkspace() {
     offers,
     queue,
     approvedOffers,
+    awaitingLetters,
+    generatedLetters,
     selectedOfferId,
     setSelectedOfferId,
     selectedOffer,
     approveOffer,
     refreshOffers,
+    generateOfferDocument,
     toastMessage,
     setToastMessage
   };

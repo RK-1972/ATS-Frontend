@@ -8,6 +8,7 @@ export { default as recruitmentRepository } from "./recruitmentRepository";
 export { default as taskRepository } from "./taskRepository";
 export { default as interviewRepository } from "./interviewRepository";
 export { default as offerRepository } from "./offerRepository";
+export { default as offerLetterRepository } from "./offerLetterRepository";
 export { default as hiringControlTowerRepository } from "./hiringControlTowerRepository";
 export { default as notificationsRepository } from "./notificationsRepository";
 export { default as auditRepository } from "./auditRepository";

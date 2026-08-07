@@ -13,6 +13,7 @@ import Home from "./pages/Home";
 import UITestPage from "./pages/UITestPage";
 import CandidatePage from "./pages/CandidatePage";
 import LoginPage from "./pages/LoginPage";
+import CandidatePortalPlaceholderPage from "./pages/candidate/CandidatePortalPlaceholderPage";
 import RequisitionPage from "./pages/RequisitionPage";
 import MyDraftsPage from "./pages/talent-demand/MyDraftsPage";
 import RecruiterAssignmentWorkspacePage from "./pages/requisitions/RecruiterAssignmentWorkspacePage";
@@ -46,6 +47,18 @@ const WorkflowsConfigSection = lazy(
 );
 const BudgetConfigSection = lazy(
   () => import("./pages/platform-config/BudgetConfigSection")
+);
+const CompensationStructuresSection = lazy(
+  () => import("./pages/platform-config/CompensationStructuresSection")
+);
+const DocumentTemplatesLayout = lazy(
+  () => import("./components/platform-config/DocumentTemplatesLayout")
+);
+const DocumentTemplatesSection = lazy(
+  () => import("./pages/platform-config/DocumentTemplatesSection")
+);
+const SupportedPlaceholdersSection = lazy(
+  () => import("./pages/platform-config/SupportedPlaceholdersSection")
 );
 const NotificationsConfigSection = lazy(
   () => import("./pages/platform-config/NotificationsConfigSection")
@@ -161,6 +174,12 @@ const RejectedOffersPage = lazy(
 const WithdrawnOffersPage = lazy(
   () => import("./pages/offers/WithdrawnOffersPage")
 );
+const AwaitingLettersPage = lazy(
+  () => import("./pages/offers/AwaitingLettersPage")
+);
+const GeneratedLettersPage = lazy(
+  () => import("./pages/offers/GeneratedLettersPage")
+);
 
 const CandidateWorkspaceLayout = lazy(
   () => import("./components/candidate-workspace/CandidateWorkspaceLayout")
@@ -224,6 +243,16 @@ function App() {
 <Route
   path="/login"
   element={<LoginPage />}
+/>
+
+<Route
+  path="/candidate/login"
+  element={<CandidatePortalPlaceholderPage mode="login" />}
+/>
+
+<Route
+  path="/candidate/activate"
+  element={<CandidatePortalPlaceholderPage mode="activate" />}
 />
 
 {/* =====================================
@@ -471,6 +500,22 @@ function App() {
             }
           />
           <Route
+            path="awaiting-letters"
+            element={
+              <LazyRoute>
+                <AwaitingLettersPage />
+              </LazyRoute>
+            }
+          />
+          <Route
+            path="generated-letters"
+            element={
+              <LazyRoute>
+                <GeneratedLettersPage />
+              </LazyRoute>
+            }
+          />
+          <Route
             path="rejected"
             element={
               <LazyRoute>
@@ -690,6 +735,41 @@ function App() {
       </LazyRoute>
     }
   />
+
+  <Route
+    path="compensation-structures"
+    element={
+      <LazyRoute>
+        <CompensationStructuresSection />
+      </LazyRoute>
+    }
+  />
+
+  <Route
+    path="document-templates"
+    element={
+      <LazyRoute>
+        <DocumentTemplatesLayout />
+      </LazyRoute>
+    }
+  >
+    <Route
+      index
+      element={
+        <LazyRoute>
+          <DocumentTemplatesSection />
+        </LazyRoute>
+      }
+    />
+    <Route
+      path="placeholders"
+      element={
+        <LazyRoute>
+          <SupportedPlaceholdersSection />
+        </LazyRoute>
+      }
+    />
+  </Route>
 
   <Route
     path="notifications"

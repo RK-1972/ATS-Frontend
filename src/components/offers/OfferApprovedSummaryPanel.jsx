@@ -1,9 +1,10 @@
-import { Box, Stack, Typography } from "@mui/material";
+import { Box, Grid, Stack, Typography } from "@mui/material";
 
 import EnterpriseCard from "@/components/enterprise/framework/EnterpriseCard";
 import { StatusChip } from "@/components/enterprise";
 import { formatCurrency } from "@/utils/formatCurrency";
 import OfferApprovalHistory from "./OfferApprovalHistory";
+import OfferCommercialSummaryFields from "./OfferCommercialSummaryFields";
 
 function SummaryField({ label, value }) {
   return (
@@ -49,6 +50,10 @@ function OfferApprovedSummaryPanel({ offer }) {
           <SummaryField label="Project Name" value={projectName} />
           <SummaryField label="Offered CTC" value={formatCurrency(offeredCtc)} />
         </Stack>
+
+        <Grid container spacing={2} sx={{ mb: 1.5 }}>
+          <OfferCommercialSummaryFields offer={offer} />
+        </Grid>
 
         <Stack
           direction="row"

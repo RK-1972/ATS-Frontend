@@ -18,6 +18,7 @@ import {
   notificationsRepository,
   auditRepository
 } from "../repositories";
+import generatedDocumentRepository from "../repositories/generatedDocumentRepository";
 import { buildPendingApprovalQueue } from "../utils/offerApprovalUtils";
 
 const platformConfigInitial = platformConfigRepository.getInitialState();
@@ -468,9 +469,12 @@ const useEnterpriseStore = create((set, get) => ({
       .then((offers) => {
         const pendingQueue = buildPendingApprovalQueue(offers);
         const currentSelectedId = get().offerUi.selectedOfferId;
-        const selectedExists = pendingQueue.some(
-          (item) => item.offerId === currentSelectedId
-        );
+        const selectedExists = [
+          ...pendingQueue,
+          ...(offers.awaitingLetters || []),
+          ...(offers.generatedLetters || []),
+          ...(offers.offers || []).filter((item) => item.offerStatus === "Approved")
+        ].some((item) => item.offerId === currentSelectedId);
 
         set({
           offers,
@@ -487,6 +491,77 @@ const useEnterpriseStore = create((set, get) => ({
       .catch((error) => {
         console.error(
           "[enterpriseStore] refreshOffers failed:",
+          error?.response?.data || error.message
+        );
+        throw error;
+      });
+  },
+
+  generateOfferLetter(offerId, payload) {
+    if (!isLiveMode()) {
+      return Promise.resolve({
+        toastMessage: "Offer letter generated successfully."
+      });
+    }
+
+    return offerRepository.generateOfferLetter(offerId, payload)
+      .then(({ toastMessage }) =>
+        get().refreshOffers().then(() => ({
+          toastMessage
+        }))
+      )
+      .then(({ toastMessage }) => {
+        set({
+          offerUi: {
+            ...get().offerUi,
+            selectedOfferId: null,
+            toastMessage
+          }
+        });
+
+        return { toastMessage };
+      })
+      .catch((error) => {
+        console.error(
+          "[enterpriseStore] generateOfferLetter failed:",
+          error?.response?.data || error.message
+        );
+        throw error;
+      });
+  },
+
+  generateOfferDocument(offerId, payload = {}) {
+    if (!isLiveMode()) {
+      return Promise.resolve({
+        toastMessage: "Offer letter generated successfully."
+      });
+    }
+
+    return generatedDocumentRepository
+      .generateOfferDocument(offerId, payload?.templateId)
+      .then((result) =>
+        get().refreshOffers().then(() => ({
+          toastMessage:
+            result?.responseMessage ||
+            result?.message ||
+            "Offer letter generated successfully.",
+          result
+        }))
+      )
+      .then(({ toastMessage, result }) => {
+        set({
+          offerUi: {
+            ...get().offerUi,
+            selectedOfferId: null,
+            toastMessage
+          }
+        });
+
+        return { toastMessage, result };
+      })
+      .catch((error) => {
+        console.error(
+          "[enterpriseStore] generateOfferDocument failed:",
           error?.response?.data || error.message
         );
         throw error;

@@ -1,8 +1,24 @@
 import { isLiveMode } from "@/api/config";
 import offerClient from "@/api/clients/offerClient";
+import offerLetterClient from "@/api/clients/offerLetterClient";
 import { cloneData } from "@/utils/cloneData";
 
 function getInitialState() {
+  return {
+    offers: [],
+    approvals: [],
+    negotiations: [],
+    summary: { draft: 0, pendingApproval: 0, released: 0, accepted: 0 },
+    awaitingLetters: [],
+    generatedLetters: []
+  };
+}
+
+function normalizeOfferBundle(response) {
+  if (response?.offers) {
+    return cloneData(response);
+  }
+
   return {
     offers: [],
     approvals: [],
@@ -11,18 +27,29 @@ function getInitialState() {
   };
 }
 
-function normalizeBundle(response) {
-  if (response?.offers) {
-    return cloneData(response);
-  }
+async function fetchLetterQueues() {
+  const [pendingResponse, generatedResponse] = await Promise.all([
+    offerLetterClient.getPending(),
+    offerLetterClient.getGenerated()
+  ]);
 
-  return getInitialState();
+  return {
+    awaitingLetters: pendingResponse?.data || [],
+    generatedLetters: generatedResponse?.data || []
+  };
 }
 
 async function getAll(currentData) {
   if (isLiveMode() || !currentData) {
-    const response = await offerClient.getAll();
-    return normalizeBundle(response);
+    const [offerResponse, letterQueues] = await Promise.all([
+      offerClient.getAll(),
+      fetchLetterQueues()
+    ]);
+
+    return {
+      ...normalizeOfferBundle(offerResponse),
+      ...letterQueues
+    };
   }
 
   return cloneData(currentData);
@@ -34,10 +61,10 @@ async function createOffer(offers, payload) {
   }
 
   const result = await offerClient.createOffer(payload);
-  const bundle = await offerClient.getAll();
+  const bundle = await getAll();
 
   return {
-    offers: normalizeBundle(bundle),
+    offers: bundle,
     offer: result.offer,
     toastMessage: result.toastMessage
   };
@@ -49,10 +76,10 @@ async function submitOffer(offers, offerId, comment) {
   }
 
   const result = await offerClient.submitOffer(offerId, comment);
-  const bundle = await offerClient.getAll();
+  const bundle = await getAll();
 
   return {
-    offers: normalizeBundle(bundle),
+    offers: bundle,
     toastMessage: result.toastMessage
   };
 }
@@ -63,10 +90,10 @@ async function approveOffer(offers, offerId, approvalStep, comment) {
   }
 
   const result = await offerClient.approveOffer(offerId, approvalStep, comment);
-  const bundle = await offerClient.getAll();
+  const bundle = await getAll();
 
   return {
-    offers: normalizeBundle(bundle),
+    offers: bundle,
     toastMessage: result.toastMessage
   };
 }
@@ -77,10 +104,10 @@ async function releaseOffer(offers, offerId, payload) {
   }
 
   const result = await offerClient.releaseOffer(offerId, payload);
-  const bundle = await offerClient.getAll();
+  const bundle = await getAll();
 
   return {
-    offers: normalizeBundle(bundle),
+    offers: bundle,
     toastMessage: result.toastMessage
   };
 }
@@ -91,11 +118,19 @@ async function acceptOffer(offers, offerId) {
   }
 
   const result = await offerClient.acceptOffer(offerId);
-  const bundle = await offerClient.getAll();
+  const bundle = await getAll();
 
   return {
-    offers: normalizeBundle(bundle),
+    offers: bundle,
     toastMessage: result.toastMessage
+  };
+}
+
+async function generateOfferLetter(offerId, payload) {
+  const response = await offerLetterClient.generate(offerId, payload);
+
+  return {
+    toastMessage: response?.message || "Offer letter generated successfully."
   };
 }
 
@@ -114,7 +149,8 @@ const offerRepository = {
   submitOffer,
   approveOffer,
   releaseOffer,
-  acceptOffer
+  acceptOffer,
+  generateOfferLetter
 };
 
 export default offerRepository;

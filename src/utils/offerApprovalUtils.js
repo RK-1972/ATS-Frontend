@@ -48,13 +48,33 @@ export function buildPendingApprovalQueue(bundle) {
 export function buildApprovedOffersList(bundle) {
   const offers = bundle?.offers || [];
   const approvals = bundle?.approvals || [];
+  const excludedOfferIds = new Set([
+    ...(bundle?.awaitingLetters || []).map((item) => item.offerId),
+    ...(bundle?.generatedLetters || []).map((item) => item.offerId)
+  ]);
 
   return offers
-    .filter((offer) => String(offer.offerStatus || "") === "Approved")
+    .filter(
+      (offer) =>
+        String(offer.offerStatus || "") === "Approved" &&
+        !excludedOfferIds.has(offer.offerId)
+    )
     .map((offer) => ({
       ...offer,
       approvalSteps: normalizeApprovals(approvals, offer.offerId)
     }));
+}
+
+export function buildAwaitingLettersList(bundle) {
+  return cloneAwaitingLetters(bundle?.awaitingLetters || []);
+}
+
+export function buildGeneratedLettersList(bundle) {
+  return cloneAwaitingLetters(bundle?.generatedLetters || []);
+}
+
+function cloneAwaitingLetters(items) {
+  return items.map((item) => ({ ...item }));
 }
 
 export function mapApprovalStepRow(step) {
