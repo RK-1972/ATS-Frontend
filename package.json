@@ -8,7 +8,9 @@
     "dev:fresh": "node scripts/clean-vite-cache.mjs && vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:e2e-demo": "playwright test e2e/demo-e2e-dry-run.spec.mjs",
+    "test:e2e-demo:headed": "playwright test e2e/demo-e2e-dry-run.spec.mjs --headed"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -29,6 +31,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.62.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",

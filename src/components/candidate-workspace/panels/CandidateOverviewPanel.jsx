@@ -2,6 +2,7 @@ import { Box, Typography, Stack } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 
 import { EnterpriseSurface, MetricCell, StatusChip } from "@/components/enterprise";
+import InterviewProgressStepCell from "@/components/interviews/InterviewProgressStepCell";
 import { formatExperience } from "@/enterprise/candidateWorkspaceUtils";
 
 function SummaryCard({ title, children, sx = {} }) {
@@ -84,7 +85,10 @@ function CandidateOverviewPanel({
           <Typography variant="body2" color="text.secondary">
             Pipeline Stage
           </Typography>
-          <StatusChip status={mapping.stage_name || "Not Mapped"} variant="soft" />
+          <InterviewProgressStepCell
+            row={mapping}
+            value={mapping.stage_name || "Not Mapped"}
+          />
         </Stack>
         <FieldRow label="Requisition" value={mapping.req_id} />
         <FieldRow label="Map ID" value={mapping.map_id} />

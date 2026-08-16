@@ -94,31 +94,14 @@ function getInitialProfile() {
   };
 }
 
-async function listCandidates(
-  workspaceView = "pool",
-  isRecruiter = false
-) {
-  let response;
+function isTalentPoolView(workspaceView = "pool") {
+  return String(workspaceView || "").toLowerCase() === "pool";
+}
 
-  if (!isRecruiter) {
-
-    response = await candidateClient.listCandidates();
-
-  } else {
-
-    if (workspaceView === "pool") {
-
-      response =
-        await candidateClient.listAvailableCandidates();
-
-    } else {
-
-      response =
-        await candidateClient.listMyCandidates();
-
-    }
-
-  }
+async function listCandidates(workspaceView = "pool") {
+  const response = isTalentPoolView(workspaceView)
+    ? await candidateClient.listAvailableCandidates()
+    : await candidateClient.listMyCandidates();
 
   if (response?.success === false) {
     throw new Error(response.message || "Failed to load candidates");

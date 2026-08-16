@@ -110,7 +110,11 @@ function IntegrationTraceBar({ chain }) {
         borderRadius: 2,
         bgcolor: "background.paper",
         px: 2,
-        py: 1.5
+        py: 1.5,
+        width: "100%",
+        minWidth: 0,
+        maxWidth: "100%",
+        overflow: "hidden"
       }}
     >
 
@@ -118,16 +122,34 @@ function IntegrationTraceBar({ chain }) {
         Integration Pipeline
       </Typography>
 
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "flex-start",
-          overflowX: "auto",
-          pb: 0.5,
-          "&::-webkit-scrollbar": { height: 5 },
-          "&::-webkit-scrollbar-thumb": { bgcolor: "divider", borderRadius: 1 }
-        }}
-      >
+        <Box
+          sx={{
+            display: "block",
+            overflowX: "auto",
+            overflowY: "hidden",
+            overscrollBehaviorX: "contain",
+            width: "100%",
+            minWidth: 0,
+            maxWidth: "100%",
+            pb: 0.5,
+            "&::-webkit-scrollbar": { height: 5 },
+            "&::-webkit-scrollbar-thumb": { bgcolor: "divider", borderRadius: 1 }
+          }}
+        >
+
+        <Box
+          sx={{
+            width: "max-content",
+            minWidth: "100%"
+          }}
+        >
+
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "flex-start"
+          }}
+        >
 
         {pipelineSteps.map((step, index) => {
 
@@ -186,6 +208,10 @@ function IntegrationTraceBar({ chain }) {
           );
 
         })}
+
+        </Box>
+
+        </Box>
 
       </Box>
 

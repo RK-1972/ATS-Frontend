@@ -7,3 +7,4 @@ export { default as workforcePlanningClient } from "./workforcePlanningClient";
 export { default as hiringControlTowerClient } from "./hiringControlTowerClient";
 export { default as notificationsClient } from "./notificationsClient";
 export { default as auditClient } from "./auditClient";
+export { default as reportsClient } from "./reportsClient";

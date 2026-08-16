@@ -64,6 +64,29 @@ const workforcePlanningClient = {
     );
   },
 
+  getRequisitionActionContext(requisitionCode) {
+    return httpGet(
+      `${ENDPOINTS.workforce}/requisitions/${encodeURIComponent(requisitionCode)}/action-context`,
+      () => ({
+        requisition_code: requisitionCode,
+        can_act: false,
+        can_resubmit: false,
+        is_read_only: true,
+        clarification_rounds: []
+      })
+    );
+  },
+
+  submitRequisitionClarification(requisitionCode, comments = "") {
+    return httpPost(
+      `${ENDPOINTS.workforce}/requisitions/${encodeURIComponent(requisitionCode)}/submit-clarification`,
+      { comments },
+      () => ({
+        toastMessage: "Clarification submitted. Workflow resumed."
+      })
+    );
+  },
+
   approveBudgetRequest(id, comment = "") {
     return httpPost(
       `${ENDPOINTS.workforce}/budget-requests/${id}/approve`,

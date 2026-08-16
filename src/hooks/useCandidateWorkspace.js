@@ -61,22 +61,20 @@ function useCandidateWorkspace() {
     return map;
   }, [masterData]);
 
-  const loadCandidates = useCallback(async () => {
+  const loadCandidates = useCallback(async (options = {}) => {
+    const { preserveSelection = false } = options;
     setIsLoadingList(true);
     setError("");
 
     try {
-      const rows = await candidateRepository.listCandidates(
-        workspaceView,
-        isRecruiter
-      );
+      const rows = await candidateRepository.listCandidates(workspaceView);
       setCandidates(rows);
 
       const currentId = candidateIdRef.current;
 
       // Empty list: show index Empty State; do not pick another candidate.
       if (rows.length === 0) {
-        if (currentId) {
+        if (currentId && !preserveSelection) {
           navigate("/candidates");
         }
         return;
@@ -87,7 +85,7 @@ function useCandidateWorkspace() {
       );
 
       // Keep selection if it belongs to this list; otherwise open the first.
-      if (!currentExists) {
+      if (!currentExists && !preserveSelection) {
         navigate(`/candidates/${rows[0].candidate_id}`);
       }
     } catch (loadError) {

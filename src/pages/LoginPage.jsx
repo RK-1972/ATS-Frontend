@@ -19,8 +19,8 @@ import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import VisibilityOffOutlinedIcon from "@mui/icons-material/VisibilityOffOutlined";
 import LoginOutlinedIcon from "@mui/icons-material/LoginOutlined";
 import PersonAddOutlinedIcon from "@mui/icons-material/PersonAddOutlined";
-import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 
+import { getAvailableWorkspaces } from "@/enterprise/workspaceAvailability";
 import API from "../api/axios";
 import AppHeader from "../components/layout/AppHeader";
 import OptalynxLoader from "../components/OptalynxLoader";
@@ -77,6 +77,11 @@ const loginWelcomeEnterSx = {
   ...loginReducedMotionSx
 };
 
+const LOGIN_LOADER_VISIBLE_MS = 1000;
+
+const waitForLoginLoaderVisibility = () =>
+  new Promise((resolve) => setTimeout(resolve, LOGIN_LOADER_VISIBLE_MS));
+
 const loginFieldSx = {
   "& .MuiOutlinedInput-root": {
     transition: `box-shadow ${LOGIN_MICRO_TRANSITION}, border-color ${LOGIN_MICRO_TRANSITION}`
@@ -87,6 +92,11 @@ const loginPrimaryButtonSx = (theme) => ({
   transition: `background-color ${LOGIN_MICRO_TRANSITION}, box-shadow ${LOGIN_MICRO_TRANSITION}`,
   "&:hover": {
     boxShadow: theme.tokens.shadows.mid
+  },
+  "&.Mui-disabled": {
+    backgroundColor: theme.palette.primary.main,
+    color: theme.palette.primary.contrastText,
+    opacity: 1
   }
 });
 
@@ -94,6 +104,25 @@ const loginCandidateButtonSx = (theme) => ({
   transition: `background-color ${LOGIN_MICRO_TRANSITION}, border-color ${LOGIN_MICRO_TRANSITION}, box-shadow ${LOGIN_MICRO_TRANSITION}`,
   "&:hover": {
     boxShadow: theme.tokens.shadows.mid
+  }
+});
+
+const loginCandidateOutlinedButtonSx = (theme) => ({
+  ...loginCandidateButtonSx(theme),
+  "&.Mui-disabled": {
+    backgroundColor: theme.palette.primary.main,
+    color: theme.palette.primary.contrastText,
+    borderColor: theme.palette.primary.main,
+    opacity: 1
+  }
+});
+
+const loginCandidateContainedButtonSx = (theme) => ({
+  ...loginCandidateButtonSx(theme),
+  "&.Mui-disabled": {
+    backgroundColor: theme.palette.primary.main,
+    color: theme.palette.primary.contrastText,
+    opacity: 1
   }
 });
 
@@ -236,7 +265,12 @@ function LoginFooter() {
   );
 }
 
-function CandidatePortalCard({ onSignIn, onActivate }) {
+function CandidatePortalCard({
+  onSignIn,
+  onRegister,
+  signInLoading = false,
+  registerLoading = false
+}) {
   const theme = useTheme();
 
   return (
@@ -275,49 +309,45 @@ function CandidatePortalCard({ onSignIn, onActivate }) {
               variant="outlined"
               color="primary"
               size="medium"
-              startIcon={<LoginOutlinedIcon fontSize="small" />}
+              startIcon={
+                signInLoading ? undefined : (
+                  <LoginOutlinedIcon fontSize="small" />
+                )
+              }
               onClick={onSignIn}
+              disabled={signInLoading}
               sx={{
                 py: 0.75,
                 textTransform: "none",
                 fontWeight: 600,
                 borderRadius: 2,
-                ...loginCandidateButtonSx(theme)
+                ...loginCandidateOutlinedButtonSx(theme)
               }}
             >
-              Sign In
+              {signInLoading ? <OptalynxLoader size={22} /> : "Sign In"}
             </Button>
             <Button
               fullWidth
               variant="contained"
-              color="success"
+              color="primary"
               size="medium"
-              startIcon={<PersonAddOutlinedIcon fontSize="small" />}
-              onClick={onActivate}
+              startIcon={
+                registerLoading ? undefined : (
+                  <PersonAddOutlinedIcon fontSize="small" />
+                )
+              }
+              onClick={onRegister}
+              disabled={registerLoading}
               sx={{
                 py: 0.75,
                 textTransform: "none",
                 fontWeight: 600,
                 borderRadius: 2,
-                ...loginCandidateButtonSx(theme)
+                ...loginCandidateContainedButtonSx(theme)
               }}
             >
-              Activate Account
+              {registerLoading ? <OptalynxLoader size={22} /> : "Register"}
             </Button>
-          </Stack>
-
-          <Stack direction="row" spacing={0.75} alignItems="flex-start">
-            <InfoOutlinedIcon
-              sx={{ fontSize: 15, color: "text.secondary", mt: 0.15 }}
-            />
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              lineHeight={1.45}
-            >
-              New candidate? Activate your account using the email sent by your
-              recruiter.
-            </Typography>
           </Stack>
         </Stack>
       </CardContent>
@@ -349,6 +379,8 @@ function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isCandidateSignInLoading, setIsCandidateSignInLoading] = useState(false);
+  const [isCandidateRegisterLoading, setIsCandidateRegisterLoading] = useState(false);
 
   useEffect(() => {
     setFormData({
@@ -404,7 +436,7 @@ function LoginPage() {
   const handleLogin = async () => {
     setIsLoading(true);
 
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await waitForLoginLoaderVisibility();
 
     try {
       const response = await API.post("/login", {
@@ -430,28 +462,10 @@ function LoginPage() {
       const user = response.data.user;
       const workspaceFlags = response.data.workspace || {};
 
-      const availableWorkspaces = [
-        {
-          enabled: Boolean(workspaceFlags.showRecruitmentWorkspace),
-          path: "/recruiter"
-        },
-        {
-          enabled: Boolean(workspaceFlags.showInterviewWorkspace),
-          path: "/interviewer"
-        },
-        {
-          enabled: Boolean(workspaceFlags.showApprovalWorkspace),
-          path: "/my-approvals"
-        },
-        {
-          enabled: Boolean(workspaceFlags.showRequestWorkspace),
-          path: "/workforce-planning/catalogue"
-        },
-        {
-          enabled: Boolean(workspaceFlags.showOfferWorkspace),
-          path: "/offers"
-        }
-      ].filter((item) => item.enabled);
+      const availableWorkspaces = getAvailableWorkspaces({
+        user,
+        workspaceFlags
+      });
 
       setIsLoading(false);
 
@@ -520,6 +534,26 @@ function LoginPage() {
     if (!isLoading) {
       handleLogin();
     }
+  };
+
+  const handleCandidateSignIn = async () => {
+    if (isCandidateSignInLoading) {
+      return;
+    }
+
+    setIsCandidateSignInLoading(true);
+    await waitForLoginLoaderVisibility();
+    navigate("/candidate/login");
+  };
+
+  const handleCandidateRegister = async () => {
+    if (isCandidateRegisterLoading) {
+      return;
+    }
+
+    setIsCandidateRegisterLoading(true);
+    await waitForLoginLoaderVisibility();
+    navigate("/candidate/register");
   };
 
   return (
@@ -726,8 +760,10 @@ function LoginPage() {
             </Card>
 
             <CandidatePortalCard
-              onSignIn={() => navigate("/candidate/login")}
-              onActivate={() => navigate("/candidate/activate")}
+              signInLoading={isCandidateSignInLoading}
+              registerLoading={isCandidateRegisterLoading}
+              onSignIn={handleCandidateSignIn}
+              onRegister={handleCandidateRegister}
             />
           </Stack>
         </Box>

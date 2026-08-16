@@ -1,115 +1,208 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 
 import {
   Box,
   Typography,
   Chip,
-  Tooltip
+  CircularProgress,
+  Popper,
+  Paper,
+  Fade
 } from "@mui/material";
 
 import {
   MdAccountBalance,
-  MdAccountTree,
-  MdAutoAwesome,
-  MdBusinessCenter,
   MdCheckCircle,
   MdDescription,
-  MdFilterAlt,
-  MdGavel,
   MdGroups,
   MdHowToReg,
-  MdInventory,
   MdLocalOffer,
-  MdMonetizationOn,
-  MdNotifications,
-  MdPayments,
-  MdPerson,
   MdPersonAdd,
-  MdPolicy,
-  MdRateReview,
   MdRecordVoiceOver,
-  MdSend,
-  MdTune,
   MdWorkOutline
 } from "react-icons/md";
 
+import {
+  buildDetailRows,
+  getMilestoneKeyLine,
+  mapDisplayStatus
+} from "./lifecycleTimelinePresentation";
+
 const STAGE_ICONS = {
-  position_budget_approval: MdAccountBalance,
-  approved_position: MdInventory,
-  requisition_raised: MdDescription,
-  ta_leader_review: MdRateReview,
-  approved_requisition: MdCheckCircle,
+  budget_submitted: MdAccountBalance,
+  budget_approved: MdCheckCircle,
+  requisition_created: MdDescription,
+  requisition_submitted: MdWorkOutline,
+  requisition_approved: MdCheckCircle,
   recruiter_assigned: MdPersonAdd,
-  recruiter_notified: MdNotifications,
-  applied: MdPerson,
-  screening: MdFilterAlt,
+  candidate_pipeline: MdGroups,
+  interview_progress: MdRecordVoiceOver,
+  offer_progress: MdLocalOffer,
+  hire_outcome: MdHowToReg,
+  position_budget_approval: MdAccountBalance,
+  approved_position: MdCheckCircle,
+  requisition_raised: MdDescription,
+  ta_leader_review: MdWorkOutline,
+  approved_requisition: MdCheckCircle,
+  recruiter_notified: MdPersonAdd,
+  applied: MdGroups,
+  screening: MdGroups,
   l1: MdRecordVoiceOver,
-  l2: MdGroups,
-  client: MdBusinessCenter,
+  l2: MdRecordVoiceOver,
+  client: MdGroups,
   offer: MdLocalOffer,
-  budget_validation: MdMonetizationOn,
-  finance_approval: MdGavel,
-  leadership_approval: MdGavel,
-  release_offer: MdSend,
+  budget_validation: MdAccountBalance,
+  finance_approval: MdCheckCircle,
+  leadership_approval: MdCheckCircle,
+  release_offer: MdLocalOffer,
   joined: MdHowToReg
 };
 
-const SHORT_LABELS = {
-  position_budget_approval: "Position Approved",
-  approved_position: "Approved Catalogue",
-  requisition_raised: "Requisition Raised",
-  ta_leader_review: "TA Review",
-  approved_requisition: "Req Approved",
-  recruiter_assigned: "Recruiter Assigned",
-  recruiter_notified: "Recruiter Notified",
-  applied: "Applied",
-  screening: "Screening",
-  l1: "L1",
-  l2: "L2",
-  client: "Client",
-  offer: "Offer",
-  budget_validation: "Budget Check",
-  finance_approval: "Finance Approval",
-  leadership_approval: "Leadership",
-  release_offer: "Released",
-  joined: "Joined"
-};
+const CARD_WIDTH = 128;
+const TIMELINE_CARD_MIN_HEIGHT = 132;
+const TIMELINE_TRACK_VERTICAL_PADDING = 32;
 
-const STATUS_DISPLAY = {
-  Completed: { label: "Completed", color: "success" },
-  "In Progress": { label: "Running", color: "primary" },
-  Pending: { label: "Waiting", color: "default" },
-  "Waiting for Clarification": { label: "Clarification", color: "warning" },
-  "Clarification Submitted": { label: "Clarification", color: "info" },
-  Rejected: { label: "Rejected", color: "error" }
-};
+/** Fallback panel height aligned to timeline header + milestone track. */
+const HCT_LIFECYCLE_PANEL_FALLBACK_HEIGHT = 41 + TIMELINE_CARD_MIN_HEIGHT + TIMELINE_TRACK_VERTICAL_PADDING;
 
-function mapDisplayStatus(status) {
-
-  return STATUS_DISPLAY[status] ?? { label: "On Hold", color: "default" };
-
-}
-
-function WorkflowCard({ stage, selected, onSelect, cardRef }) {
-
-  const Icon = STAGE_ICONS[stage.key] ?? MdCheckCircle;
-  const display = mapDisplayStatus(stage.status);
-  const label = SHORT_LABELS[stage.key] ?? stage.name;
-
-  const slaLabel =
-    stage.sla_hours > 0
-      ? `${stage.sla_remaining_hours}h remaining`
-      : "—";
+function MilestoneDetailCard({ title, rows }) {
 
   return (
 
-    <Tooltip title={stage.name} placement="top">
+    <Paper
+      elevation={4}
+      sx={{
+        p: 1.5,
+        minWidth: 220,
+        maxWidth: 300,
+        borderRadius: 2,
+        border: 1,
+        borderColor: "divider"
+      }}
+    >
+
+      <Typography variant="subtitle2" fontWeight={700} mb={1}>
+        {title}
+      </Typography>
+
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 0.75 }}>
+        {rows.map((row) => (
+          <Box key={`${row.label}-${row.value}`}>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              fontWeight={600}
+              display="block"
+              sx={{ lineHeight: 1.2 }}
+            >
+              {row.label}
+            </Typography>
+            <Typography variant="body2" sx={{ lineHeight: 1.35 }}>
+              {row.value}
+            </Typography>
+          </Box>
+        ))}
+      </Box>
+
+    </Paper>
+
+  );
+
+}
+
+function WorkflowCard({
+  stage,
+  selected,
+  onSelect,
+  cardRef,
+  summary,
+  metadata,
+  onHoverChange
+}) {
+
+  const anchorRef = useRef(null);
+  const hoverTimerRef = useRef(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [anchorEl, setAnchorEl] = useState(null);
+
+  const Icon = STAGE_ICONS[stage.key] ?? MdCheckCircle;
+  const display = mapDisplayStatus(stage.status);
+  const label = stage.name;
+  const keyLine = getMilestoneKeyLine(stage, summary);
+  const detailRows = buildDetailRows(stage, summary, metadata);
+  const screenReaderDetails = detailRows.map((row) => `${row.label}: ${row.value}`).join(". ");
+  const descriptionId = `milestone-detail-${stage.key}`;
+
+  const openDetail = useCallback((immediate = false) => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+    }
+
+    if (immediate) {
+      setDetailOpen(true);
+      onHoverChange?.(true);
+      return;
+    }
+
+    hoverTimerRef.current = setTimeout(() => {
+      setDetailOpen(true);
+      onHoverChange?.(true);
+    }, 200);
+  }, [onHoverChange]);
+
+  const closeDetail = useCallback(() => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+    }
+
+    setDetailOpen(false);
+    onHoverChange?.(false);
+  }, [onHoverChange]);
+
+  useEffect(() => () => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+    }
+  }, []);
+
+  return (
+
+    <Box
+      sx={{
+        position: "relative",
+        flexShrink: 0,
+        display: "flex"
+      }}
+    >
 
       <Box
-        ref={cardRef}
+        ref={(node) => {
+          anchorRef.current = node;
+          setAnchorEl(node);
+
+          if (typeof cardRef === "function") {
+            cardRef(node);
+          }
+        }}
+        role="button"
+        tabIndex={0}
+        aria-label={`${label}, ${stage.status}. ${keyLine}.`}
+        aria-describedby={descriptionId}
+        aria-expanded={detailOpen}
         onClick={() => onSelect(stage.key)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            onSelect(stage.key);
+          }
+        }}
+        onMouseEnter={() => openDetail(false)}
+        onMouseLeave={closeDetail}
+        onFocus={() => openDetail(true)}
+        onBlur={closeDetail}
         sx={{
-          width: 108,
+          width: CARD_WIDTH,
+          minHeight: TIMELINE_CARD_MIN_HEIGHT,
           flexShrink: 0,
           border: 2,
           borderColor: selected ? "primary.main" : "divider",
@@ -120,24 +213,32 @@ function WorkflowCard({ stage, selected, onSelect, cardRef }) {
           cursor: "pointer",
           transition: "border-color 0.2s ease, box-shadow 0.2s ease",
           boxShadow: selected ? 1 : 0,
+          display: "flex",
+          flexDirection: "column",
+          outline: "none",
           "&:hover": {
             borderColor: "primary.light",
             boxShadow: 1
+          },
+          "&:focus-visible": {
+            borderColor: "primary.main",
+            boxShadow: 2
           }
         }}
       >
 
         <Box
           sx={{
-            width: 32,
-            height: 32,
+            width: 34,
+            height: 34,
             borderRadius: 1.5,
             bgcolor: selected ? "primary.main" : "rgba(31, 59, 99, 0.08)",
             color: selected ? "primary.contrastText" : "primary.main",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            mb: 0.75
+            mb: 0.875,
+            flexShrink: 0
           }}
         >
           <Icon size={18} />
@@ -146,10 +247,11 @@ function WorkflowCard({ stage, selected, onSelect, cardRef }) {
         <Typography
           variant="caption"
           fontWeight={700}
-          lineHeight={1.25}
+          lineHeight={1.3}
           sx={{
-            fontSize: 11,
-            mb: 0.5,
+            fontSize: 11.5,
+            mb: 0.75,
+            minHeight: 30,
             overflow: "hidden",
             textOverflow: "ellipsis",
             WebkitLineClamp: 2,
@@ -164,39 +266,78 @@ function WorkflowCard({ stage, selected, onSelect, cardRef }) {
           label={display.label}
           size="small"
           color={display.color}
-          variant={stage.status === "Completed" ? "filled" : "outlined"}
+          variant={display.variant}
           sx={{
-            height: 20,
+            height: 22,
             fontSize: 10,
             fontWeight: 700,
-            mb: 0.5,
+            mb: 0.75,
+            alignSelf: "flex-start",
             maxWidth: "100%",
-            "& .MuiChip-label": { px: 0.75 }
+            "& .MuiChip-label": { px: 0.75, whiteSpace: "normal", lineHeight: 1.2 }
           }}
         />
 
         <Typography
           variant="caption"
           color="text.secondary"
-          display="block"
           sx={{
-            fontSize: 10,
+            fontSize: 10.5,
+            lineHeight: 1.3,
+            mt: "auto",
             overflow: "hidden",
             textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-            mb: 0.25
+            whiteSpace: "nowrap"
           }}
         >
-          {stage.owner}
+          {keyLine}
         </Typography>
 
-        <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10 }}>
-          SLA · {slaLabel}
+        <Typography
+          id={descriptionId}
+          component="span"
+          sx={{
+            position: "absolute",
+            width: 1,
+            height: 1,
+            padding: 0,
+            margin: -1,
+            overflow: "hidden",
+            clip: "rect(0, 0, 0, 0)",
+            whiteSpace: "nowrap",
+            border: 0
+          }}
+        >
+          {screenReaderDetails}
         </Typography>
 
       </Box>
 
-    </Tooltip>
+      <Popper
+        open={detailOpen && Boolean(anchorEl)}
+        anchorEl={anchorEl}
+        placement="top"
+        transition
+        disablePortal
+        modifiers={[
+          { name: "offset", options: { offset: [0, 10] } },
+          { name: "preventOverflow", options: { padding: 8 } }
+        ]}
+        sx={{ zIndex: (theme) => theme.zIndex.tooltip + 1 }}
+      >
+        {({ TransitionProps }) => (
+          <Fade {...TransitionProps} timeout={150}>
+            <Box
+              onMouseEnter={() => openDetail(false)}
+              onMouseLeave={closeDetail}
+            >
+              <MilestoneDetailCard title={label} rows={detailRows} />
+            </Box>
+          </Fade>
+        )}
+      </Popper>
+
+    </Box>
 
   );
 
@@ -232,34 +373,7 @@ function CardConnector({ active }) {
 
 }
 
-function EnterpriseProcessTimeline({
-
-  stages,
-  selectedKey,
-  onSelect
-
-}) {
-
-  const scrollRef = useRef(null);
-  const cardRefs = useRef({});
-
-  useEffect(() => {
-
-    const el = cardRefs.current[selectedKey];
-
-    if (el?.scrollIntoView) {
-      el.scrollIntoView({
-        behavior: "smooth",
-        inline: "center",
-        block: "nearest"
-      });
-    }
-
-  }, [selectedKey]);
-
-  const completedCount = stages.filter(
-    (s) => s.status === "Completed"
-  ).length;
+function TimelineWorkspaceShell({ subtitle, children, centerContent = false }) {
 
   return (
 
@@ -269,7 +383,10 @@ function EnterpriseProcessTimeline({
         borderColor: "divider",
         borderRadius: 2,
         bgcolor: "background.paper",
-        overflow: "hidden"
+        overflow: "hidden",
+        width: "100%",
+        minWidth: 0,
+        maxWidth: "100%"
       }}
     >
 
@@ -281,7 +398,8 @@ function EnterpriseProcessTimeline({
           borderColor: "divider",
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "center"
+          alignItems: "center",
+          gap: 1
         }}
       >
 
@@ -289,21 +407,144 @@ function EnterpriseProcessTimeline({
           Hiring Lifecycle
         </Typography>
 
-        <Typography variant="caption" color="text.secondary">
-          {completedCount} of {stages.length} stages complete
-        </Typography>
+        {subtitle ? (
+          <Typography variant="caption" color="text.secondary" textAlign="right">
+            {subtitle}
+          </Typography>
+        ) : null}
 
       </Box>
 
       <Box
+        sx={{
+          minHeight: TIMELINE_CARD_MIN_HEIGHT + TIMELINE_TRACK_VERTICAL_PADDING,
+          width: "100%",
+          minWidth: 0,
+          maxWidth: "100%",
+          overflow: centerContent ? "visible" : "hidden",
+          display: centerContent ? "flex" : "grid",
+          gridTemplateColumns: centerContent ? undefined : "minmax(0, 1fr)",
+          alignItems: centerContent ? "center" : undefined,
+          justifyContent: centerContent ? "center" : undefined,
+          px: centerContent ? 3 : 0,
+          py: centerContent ? 2 : 0
+        }}
+      >
+        {children}
+      </Box>
+
+    </Box>
+
+  );
+
+}
+
+function TimelinePlaceholder({ message, loading = false }) {
+
+  return (
+
+    <TimelineWorkspaceShell centerContent>
+
+      {loading ? (
+        <CircularProgress size={28} />
+      ) : (
+        <Typography variant="body2" color="text.secondary" textAlign="center">
+          {message}
+        </Typography>
+      )}
+
+    </TimelineWorkspaceShell>
+
+  );
+
+}
+
+function EnterpriseProcessTimeline({
+
+  stages,
+  selectedKey,
+  onSelect,
+  loading = false,
+  error = "",
+  emptyMessage = "Select a requisition to view the hiring lifecycle.",
+  lifecycleSummary = null,
+  lifecycleMetadata = null
+
+}) {
+
+  const scrollRef = useRef(null);
+  const cardRefs = useRef({});
+
+  useEffect(() => {
+
+    if (!stages?.length) {
+      return;
+    }
+
+    const container = scrollRef.current;
+    const el = cardRefs.current[selectedKey];
+
+    if (!container || !el) {
+      return;
+    }
+
+    const left =
+      el.getBoundingClientRect().left
+      - container.getBoundingClientRect().left
+      + container.scrollLeft;
+    const targetLeft = left - (container.clientWidth / 2) + (el.clientWidth / 2);
+
+    container.scrollTo({
+      left: Math.max(0, targetLeft),
+      behavior: "smooth"
+    });
+
+  }, [selectedKey, stages?.length]);
+
+  if (loading) {
+    return (
+      <TimelinePlaceholder
+        loading
+        message="Loading hiring lifecycle..."
+      />
+    );
+  }
+
+  if (error) {
+    return (
+      <TimelinePlaceholder message={error} />
+    );
+  }
+
+  if (!stages?.length) {
+    return (
+      <TimelinePlaceholder message={emptyMessage} />
+    );
+  }
+
+  const completedCount = stages.filter(
+    (stage) => stage.status === "Completed"
+  ).length;
+
+  return (
+
+    <TimelineWorkspaceShell
+      subtitle={`${completedCount} of ${stages.length} milestones complete`}
+    >
+
+      <Box
         ref={scrollRef}
         sx={{
-          display: "flex",
-          alignItems: "stretch",
+          display: "block",
           overflowX: "auto",
+          overflowY: "hidden",
+          overscrollBehaviorX: "contain",
+          width: "100%",
+          minWidth: 0,
+          maxWidth: "100%",
+          boxSizing: "border-box",
           py: 2,
           px: 2,
-          gap: 0,
           "&::-webkit-scrollbar": { height: 6 },
           "&::-webkit-scrollbar-thumb": {
             bgcolor: "divider",
@@ -311,6 +552,21 @@ function EnterpriseProcessTimeline({
           }
         }}
       >
+
+        <Box
+          sx={{
+            width: "max-content",
+            minWidth: "100%",
+            maxWidth: "none"
+          }}
+        >
+
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "stretch"
+            }}
+          >
 
         {stages.map((stage, index) => {
 
@@ -321,13 +577,15 @@ function EnterpriseProcessTimeline({
 
             <Box
               key={stage.key}
-              sx={{ display: "flex", alignItems: "stretch" }}
+              sx={{ display: "flex", alignItems: "stretch", flexShrink: 0 }}
             >
 
               <WorkflowCard
                 stage={stage}
                 selected={selected}
                 onSelect={onSelect}
+                summary={lifecycleSummary}
+                metadata={lifecycleMetadata}
                 cardRef={(node) => {
                   cardRefs.current[stage.key] = node;
                 }}
@@ -343,9 +601,13 @@ function EnterpriseProcessTimeline({
 
         })}
 
+          </Box>
+
+        </Box>
+
       </Box>
 
-    </Box>
+    </TimelineWorkspaceShell>
 
   );
 
@@ -353,4 +615,4 @@ function EnterpriseProcessTimeline({
 
 export default EnterpriseProcessTimeline;
 
-export { mapDisplayStatus };
+export { HCT_LIFECYCLE_PANEL_FALLBACK_HEIGHT };

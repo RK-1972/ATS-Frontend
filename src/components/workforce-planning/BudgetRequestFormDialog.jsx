@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import {
+  Alert,
   Autocomplete,
   Box,
   Button,
@@ -16,6 +17,7 @@ import {
 } from "@mui/material";
 
 import masterDataClient from "@/api/clients/masterDataClient";
+import workforcePlanningClient from "@/api/clients/workforcePlanningClient";
 import { getPublishedRecords } from "@/enterprise/masterDataHelpers";
 import EnterpriseConfirmationDialog from "@/components/enterprise/EnterpriseConfirmationDialog";
 import WorkforceStatusChip from "./WorkforceStatusChip";
@@ -145,10 +147,13 @@ function BudgetRequestFormDialog({
   onClose,
   onSaveDraft,
   onSubmitRequest,
+  onSubmitClarification,
   initialRequest = null
 }) {
+  const isClarificationMode = initialRequest?.status === "Clarification Requested";
   const isEditMode =
-    Boolean(initialRequest?.id) && initialRequest?.status === "Draft";
+    Boolean(initialRequest?.id)
+    && (initialRequest?.status === "Draft" || isClarificationMode);
 
   const [form, setForm] = useState(() =>
     isEditMode ? requestToFormState(initialRequest) : { ...EMPTY_FORM }
@@ -164,6 +169,40 @@ function BudgetRequestFormDialog({
   const [designationOptions, setDesignationOptions] = useState([]);
   const [gradeOptions, setGradeOptions] = useState([]);
   const [loadingMasters, setLoadingMasters] = useState(false);
+  const [actionContext, setActionContext] = useState(null);
+  const [responseComment, setResponseComment] = useState("");
+  const [resubmitting, setResubmitting] = useState(false);
+  const [resubmitConfirmOpen, setResubmitConfirmOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open || !isClarificationMode || !initialRequest?.id) {
+      setActionContext(null);
+      setResponseComment("");
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    const loadContext = async () => {
+      try {
+        const context = await workforcePlanningClient.getBudgetActionContext(
+          initialRequest.id
+        );
+        if (!cancelled) {
+          setActionContext(context);
+        }
+      } catch {
+        if (!cancelled) {
+          setActionContext(null);
+        }
+      }
+    };
+
+    loadContext();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, isClarificationMode, initialRequest?.id]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -257,6 +296,9 @@ function BudgetRequestFormDialog({
     setMeta({ ...EMPTY_META });
     setErrors(buildEmptyErrors());
     setSubmitConfirmOpen(false);
+    setResubmitConfirmOpen(false);
+    setResponseComment("");
+    setActionContext(null);
     onClose?.();
   };
 
@@ -334,24 +376,82 @@ function BudgetRequestFormDialog({
     runSaveThenSubmit();
   };
 
-  const busy = saving || submitting;
+  const runSaveThenResubmit = async () => {
+    if (saving || submitting || resubmitting) return;
+
+    setResubmitting(true);
+    try {
+      const saved = await onSaveDraft?.(toPayload(form, meta));
+      const requestId = saved?.request?.id || meta.id;
+      if (!requestId) {
+        return;
+      }
+
+      const submitted = await onSubmitClarification?.(requestId, responseComment);
+      if (submitted?.request) {
+        resetAndClose();
+      }
+    } finally {
+      setResubmitting(false);
+    }
+  };
+
+  const handleResubmitClick = () => {
+    const { isValid, errors: nextErrors } = validateMandatory(form);
+    setErrors(nextErrors);
+    if (!isValid || saving || submitting || resubmitting) return;
+
+    setResubmitConfirmOpen(true);
+  };
+
+  const handleConfirmResubmit = () => {
+    runSaveThenResubmit();
+  };
+
+  const busy = saving || submitting || resubmitting;
+  const clarificationPending = actionContext?.clarification_pending;
 
   return (
     <>
     <Dialog open={open} onClose={busy ? undefined : resetAndClose} fullWidth maxWidth="md">
       <DialogTitle sx={{ pb: 1 }}>
         <Typography variant="h6" fontWeight={700} sx={{ fontSize: 18 }}>
-          {isEditMode ? "Edit budget request" : "New budget request"}
+          {isClarificationMode
+            ? "Respond to clarification"
+            : isEditMode
+              ? "Edit budget request"
+              : "New budget request"}
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ fontSize: 13, mt: 0.25 }}>
-          {isEditMode
-            ? "Update this draft and save. Non-draft requests cannot be edited here."
-            : "Submit manpower budget before recruitment can begin."}
+          {isClarificationMode
+            ? "Review the approver's request, update the budget if needed, and resubmit."
+            : isEditMode
+              ? "Update this draft and save. Non-draft requests cannot be edited here."
+              : "Submit manpower budget before recruitment can begin."}
         </Typography>
       </DialogTitle>
 
       <DialogContent dividers sx={{ pt: 2 }}>
         <Stack spacing={2}>
+          {isClarificationMode && clarificationPending ? (
+            <Alert severity="warning" sx={{ alignItems: "flex-start" }}>
+              <Typography variant="body2" fontWeight={700} sx={{ fontSize: 13 }}>
+                Clarification required from {clarificationPending.requested_by || "approver"}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" display="block" mt={0.5}>
+                {clarificationPending.requested_on
+                  ? new Date(clarificationPending.requested_on).toLocaleString()
+                  : "—"}
+                {clarificationPending.resume_status
+                  ? ` · Returns to ${clarificationPending.resume_status}`
+                  : ""}
+              </Typography>
+              <Typography variant="body2" sx={{ fontSize: 13, mt: 1 }}>
+                {clarificationPending.request_comments || "No comment provided."}
+              </Typography>
+            </Alert>
+          ) : null}
+
           <Box
             sx={{
               display: "grid",
@@ -529,6 +629,19 @@ function BudgetRequestFormDialog({
               />
             </Grid>
           </Grid>
+
+          {isClarificationMode ? (
+            <TextField
+              fullWidth
+              size="small"
+              multiline
+              minRows={2}
+              label="Clarification response (optional)"
+              placeholder="Explain what was updated or provide additional context for the approver…"
+              value={responseComment}
+              onChange={(event) => setResponseComment(event.target.value)}
+            />
+          ) : null}
         </Stack>
       </DialogContent>
 
@@ -543,17 +656,29 @@ function BudgetRequestFormDialog({
           onClick={handleSaveDraft}
           sx={{ fontWeight: 600 }}
         >
-          {saving ? "Saving…" : "Save Draft"}
+          {saving ? "Saving…" : isClarificationMode ? "Save Changes" : "Save Draft"}
         </Button>
-        <Button
-          variant="contained"
-          size="small"
-          disabled={busy}
-          onClick={handleSubmitClick}
-          sx={{ fontWeight: 600 }}
-        >
-          {submitting ? "Submitting…" : "Submit"}
-        </Button>
+        {isClarificationMode ? (
+          <Button
+            variant="contained"
+            size="small"
+            disabled={busy}
+            onClick={handleResubmitClick}
+            sx={{ fontWeight: 600 }}
+          >
+            {resubmitting ? "Submitting…" : "Submit Clarification"}
+          </Button>
+        ) : (
+          <Button
+            variant="contained"
+            size="small"
+            disabled={busy}
+            onClick={handleSubmitClick}
+            sx={{ fontWeight: 600 }}
+          >
+            {submitting ? "Submitting…" : "Submit"}
+          </Button>
+        )}
       </DialogActions>
     </Dialog>
 
@@ -568,6 +693,20 @@ function BudgetRequestFormDialog({
     >
       <Typography variant="body2" color="text.secondary" sx={{ mt: 1.25 }}>
         You will not be able to edit the Budget while it is under approval.
+      </Typography>
+    </EnterpriseConfirmationDialog>
+
+    <EnterpriseConfirmationDialog
+      open={resubmitConfirmOpen}
+      title="Submit Clarification?"
+      message="Your updates and clarification response will be sent back to the approver."
+      confirmLabel="Submit Clarification"
+      loading={resubmitting}
+      onConfirm={handleConfirmResubmit}
+      onClose={() => setResubmitConfirmOpen(false)}
+    >
+      <Typography variant="body2" color="text.secondary" sx={{ mt: 1.25 }}>
+        The approval workflow will resume at the same approval step.
       </Typography>
     </EnterpriseConfirmationDialog>
     </>

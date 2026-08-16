@@ -29,18 +29,15 @@ function ScheduleInterviewCandidatePicker({
     (async () => {
       setLoading(true);
       try {
-        let isRecruiter = false;
+        let workspaceView = "pool";
         try {
           const user = JSON.parse(localStorage.getItem("user") || "null");
-          isRecruiter = user?.role_name === "Recruiter";
+          workspaceView = user?.role_name === "Recruiter" ? "pipeline" : "pool";
         } catch (_error) {
-          isRecruiter = false;
+          workspaceView = "pool";
         }
 
-        const rows = await candidateRepository.listCandidates(
-          isRecruiter ? "my" : "pool",
-          isRecruiter
-        );
+        const rows = await candidateRepository.listCandidates(workspaceView);
         if (!cancelled) {
           setOptions(Array.isArray(rows) ? rows : []);
         }

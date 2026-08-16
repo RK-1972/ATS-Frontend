@@ -14,7 +14,7 @@ import {
   FaCheckCircle
 } from "react-icons/fa";
 
-function ReportsAnalyticsPage() {
+function ReportsAnalyticsPage({ embedded = false }) {
 
   const { setCurrentPage } = useCopilotContext();
 
@@ -146,25 +146,12 @@ function ReportsAnalyticsPage() {
 
   };
 
-  return (
-
-  <div
-    style={{
-      background: "#f3f4f6",
-      minHeight: "100vh"
-    }}
-  >
-
-    <Header />
-
-    <div style={{ display: "flex" }}>
-      <AdminNavRail />
-
+  const analyticsContent = (
     <div
       style={{
         flex: 1,
         minWidth: 0,
-        padding: "24px"
+        padding: embedded ? 0 : "24px"
       }}
     >
 
@@ -371,11 +358,26 @@ function ReportsAnalyticsPage() {
       </div>
 
     </div>
+  );
 
+  if (embedded) {
+    return analyticsContent;
+  }
+
+  return (
+    <div
+      style={{
+        background: "#f3f4f6",
+        minHeight: "100vh"
+      }}
+    >
+      <Header />
+
+      <div style={{ display: "flex" }}>
+        <AdminNavRail />
+        {analyticsContent}
+      </div>
     </div>
-
- </div>
- 
   );
 
 }

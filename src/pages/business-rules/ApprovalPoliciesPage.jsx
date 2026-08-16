@@ -25,6 +25,7 @@ import {
   Stack,
   Switch,
   TextField,
+  Tooltip,
   Typography
 } from "@mui/material";
 
@@ -46,12 +47,78 @@ function formatDateValue(value) {
   return text.length >= 10 ? text.slice(0, 10) : text;
 }
 
+function uniqueStringValues(values) {
+  return [
+    ...new Set(
+      (Array.isArray(values) ? values : [])
+        .map((item) => String(item || "").trim())
+        .filter(Boolean)
+    )
+  ];
+}
+
+function resolvePolicyCriteriaFromRecord(policy) {
+  const designations = Array.isArray(policy?.designations)
+    && policy.designations.length
+    ? uniqueStringValues(policy.designations)
+    : policy?.designation
+      ? uniqueStringValues([policy.designation])
+      : [];
+
+  const grades = Array.isArray(policy?.grades) && policy.grades.length
+    ? uniqueStringValues(policy.grades)
+    : policy?.grade
+      ? uniqueStringValues([policy.grade])
+      : [];
+
+  return { designations, grades };
+}
+
+function mapValuesToDesignationOptions(values, designationOptions) {
+  return uniqueStringValues(values).map((value) => {
+    const match = designationOptions.find(
+      (option) => option.value.toLowerCase() === value.toLowerCase()
+    );
+
+    return match || { value, label: value };
+  });
+}
+
+function mapValuesToGradeOptions(values, gradeOptions) {
+  return uniqueStringValues(values).map((value) => {
+    const match = gradeOptions.find((option) => option.value === value)
+      || gradeOptions.find(
+        (option) =>
+          option.name === value
+          || option.label === value
+          || option.code === value
+      );
+
+    return match || { value, label: value };
+  });
+}
+
+function renderSelectedOptionChip(option, getTagProps, index) {
+  const { key, ...tagProps } = getTagProps({ index });
+  const fullLabel = option.label || option.value;
+
+  return (
+    <Tooltip key={key} title={fullLabel} arrow placement="top">
+      <Chip
+        {...tagProps}
+        label={fullLabel}
+        size="small"
+      />
+    </Tooltip>
+  );
+}
+
 function blankPolicyForm() {
   return {
     route_id: "",
     department: "",
-    designation: "",
-    grade: "",
+    designations: [],
+    grades: [],
     min_amount: "",
     max_amount: "",
     is_active: true,
@@ -65,11 +132,13 @@ function policyToForm(policy) {
     return blankPolicyForm();
   }
 
+  const { designations, grades } = resolvePolicyCriteriaFromRecord(policy);
+
   return {
     route_id: policy.route_id ?? "",
     department: policy.department ?? "",
-    designation: policy.designation ?? "",
-    grade: policy.grade ?? "",
+    designations,
+    grades,
     min_amount:
       policy.min_amount === null || policy.min_amount === undefined
         ? ""
@@ -86,11 +155,14 @@ function policyToForm(policy) {
 }
 
 function formToPayload(form) {
+  const designations = uniqueStringValues(form.designations);
+  const grades = uniqueStringValues(form.grades);
+
   return {
     route_id: form.route_id === "" ? null : Number(form.route_id),
     department: String(form.department || "").trim() || null,
-    designation: String(form.designation || "").trim() || null,
-    grade: String(form.grade || "").trim() || null,
+    designations: designations.length ? designations : null,
+    grades: grades.length ? grades : null,
     min_amount: form.min_amount === "" ? null : Number(form.min_amount),
     max_amount: form.max_amount === "" ? null : Number(form.max_amount),
     is_active: Boolean(form.is_active),
@@ -99,11 +171,25 @@ function formToPayload(form) {
   };
 }
 
+function formatCriteriaList(values, fallbackLabel) {
+  if (!Array.isArray(values) || !values.length) {
+    return fallbackLabel;
+  }
+
+  if (values.length <= 3) {
+    return values.join(", ");
+  }
+
+  return `${values.slice(0, 3).join(", ")} +${values.length - 3} more`;
+}
+
 function criteriaSummary(policy) {
+  const { designations, grades } = resolvePolicyCriteriaFromRecord(policy);
+
   const parts = [
     policy.department || "Any department",
-    policy.designation || "Any designation",
-    policy.grade || "Any grade"
+    formatCriteriaList(designations, "Any designation"),
+    formatCriteriaList(grades, "Any grade")
   ];
 
   if (policy.min_amount != null || policy.max_amount != null) {
@@ -160,7 +246,8 @@ function ApprovalPoliciesPage() {
     createPolicy,
     updatePolicy,
     activatePolicy,
-    deactivatePolicy
+    deactivatePolicy,
+    loadPolicy
   } = useApprovalRoutePolicies();
 
   const {
@@ -260,13 +347,16 @@ function ApprovalPoliciesPage() {
     }
 
     return policies.filter((policy) => {
+      const { designations: designationValues, grades: gradeValues } =
+        resolvePolicyCriteriaFromRecord(policy);
+
       const haystack = [
         policy.policy_id,
         policy.route_name,
         policy.route_applies_to,
         policy.department,
-        policy.designation,
-        policy.grade,
+        ...designationValues,
+        ...gradeValues,
         policy.is_active ? "active" : "inactive"
       ]
         .filter(Boolean)
@@ -321,36 +411,15 @@ function ApprovalPoliciesPage() {
     );
   }, [departmentOptions, form.department]);
 
-  const selectedDesignation = useMemo(() => {
-    const value = String(form.designation || "").trim();
-    if (!value) {
-      return null;
-    }
+  const selectedDesignations = useMemo(
+    () => mapValuesToDesignationOptions(form.designations, designationOptions),
+    [designationOptions, form.designations]
+  );
 
-    return (
-      designationOptions.find(
-        (option) => option.value.toLowerCase() === value.toLowerCase()
-      ) || { value, label: value }
-    );
-  }, [designationOptions, form.designation]);
-
-  const selectedGrade = useMemo(() => {
-    const value = String(form.grade || "").trim();
-    if (!value) {
-      return null;
-    }
-
-    return (
-      gradeOptions.find((option) => option.value === value)
-      || gradeOptions.find(
-        (option) =>
-          option.name === value
-          || option.label === value
-          || option.code === value
-      )
-      || { value, label: value }
-    );
-  }, [gradeOptions, form.grade]);
+  const selectedGrades = useMemo(
+    () => mapValuesToGradeOptions(form.grades, gradeOptions),
+    [gradeOptions, form.grades]
+  );
 
   const showToast = (message, severity = "success") => {
     setToast({ open: true, message, severity });
@@ -363,14 +432,23 @@ function ApprovalPoliciesPage() {
     setFieldErrors({ route_id: "" });
   };
 
-  const selectPolicy = (policyId) => {
+  const selectPolicy = async (policyId) => {
+    setIsCreating(false);
+    setSelectedPolicyId(policyId);
+    setFieldErrors({ route_id: "" });
+
+    try {
+      const policy = await loadPolicy(policyId);
+      setForm(policyToForm(policy));
+      return;
+    } catch (_loadError) {
+      // Fall back to the list row if the detail fetch fails.
+    }
+
     const policy = policies.find(
       (item) => String(item.policy_id) === String(policyId)
     );
-    setIsCreating(false);
-    setSelectedPolicyId(policyId);
     setForm(policyToForm(policy));
-    setFieldErrors({ route_id: "" });
   };
 
   const updateField = (field, value) => {
@@ -385,7 +463,11 @@ function ApprovalPoliciesPage() {
   };
 
   const handleSave = async () => {
-    const payload = formToPayload(form);
+    const payload = formToPayload({
+      ...form,
+      designations: selectedDesignations.map((option) => option.value),
+      grades: selectedGrades.map((option) => option.value)
+    });
     const nextErrors = { route_id: "" };
 
     if (!payload.route_id) {
@@ -715,20 +797,41 @@ function ApprovalPoliciesPage() {
 
                     <Grid size={{ xs: 12, md: 4 }}>
                       <Autocomplete
+                        key={`designations-${selectedPolicyId ?? "new"}`}
+                        multiple
+                        filterSelectedOptions
                         size="small"
+                        limitTags={2}
                         options={designationOptions}
                         loading={loadingMasters}
-                        value={selectedDesignation}
-                        onChange={(_event, option) =>
-                          updateField("designation", option?.value || "")
+                        value={selectedDesignations}
+                        onChange={(_event, options) =>
+                          updateField(
+                            "designations",
+                            uniqueStringValues(
+                              (options || []).map((option) => option.value)
+                            )
+                          )
                         }
                         getOptionLabel={(option) => option.label || ""}
-                        isOptionEqualToValue={(a, b) => a.value === b.value}
+                        isOptionEqualToValue={(a, b) =>
+                          String(a?.value || "").toLowerCase()
+                          === String(b?.value || "").toLowerCase()
+                        }
+                        renderTags={(tagValue, getTagProps) =>
+                          tagValue.map((option, index) =>
+                            renderSelectedOptionChip(option, getTagProps, index)
+                          )
+                        }
                         renderInput={(params) => (
                           <TextField
                             {...params}
                             label="Designation / Position"
-                            placeholder="Any designation"
+                            placeholder={
+                              selectedDesignations.length
+                                ? ""
+                                : "Any designation"
+                            }
                           />
                         )}
                       />
@@ -736,20 +839,39 @@ function ApprovalPoliciesPage() {
 
                     <Grid size={{ xs: 12, md: 4 }}>
                       <Autocomplete
+                        key={`grades-${selectedPolicyId ?? "new"}`}
+                        multiple
+                        filterSelectedOptions
                         size="small"
+                        limitTags={2}
                         options={gradeOptions}
                         loading={loadingMasters}
-                        value={selectedGrade}
-                        onChange={(_event, option) =>
-                          updateField("grade", option?.value || "")
+                        value={selectedGrades}
+                        onChange={(_event, options) =>
+                          updateField(
+                            "grades",
+                            uniqueStringValues(
+                              (options || []).map((option) => option.value)
+                            )
+                          )
                         }
                         getOptionLabel={(option) => option.label || ""}
-                        isOptionEqualToValue={(a, b) => a.value === b.value}
+                        isOptionEqualToValue={(a, b) =>
+                          String(a?.value || "").toLowerCase()
+                          === String(b?.value || "").toLowerCase()
+                        }
+                        renderTags={(tagValue, getTagProps) =>
+                          tagValue.map((option, index) =>
+                            renderSelectedOptionChip(option, getTagProps, index)
+                          )
+                        }
                         renderInput={(params) => (
                           <TextField
                             {...params}
                             label="Grade"
-                            placeholder="Any grade"
+                            placeholder={
+                              selectedGrades.length ? "" : "Any grade"
+                            }
                           />
                         )}
                       />

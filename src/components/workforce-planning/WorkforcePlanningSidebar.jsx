@@ -23,7 +23,7 @@ import {
 
 import AuthorizationService from "../../services/authorizationService";
 
-const WORKFORCE_SECTIONS = [
+const WORKFORCE_PLANNING_SECTIONS = [
   {
     key: "dashboard",
     label: "Workforce Dashboard",
@@ -65,7 +65,6 @@ const WORKFORCE_SECTIONS = [
 ];
 
 function WorkforcePlanningSidebar() {
-
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -111,7 +110,7 @@ function WorkforcePlanningSidebar() {
     };
   }, []);
 
-  const visibleSections = WORKFORCE_SECTIONS.filter((section) => {
+  const visibleSections = WORKFORCE_PLANNING_SECTIONS.filter((section) => {
     if (section.key === "requests") {
       return canRaiseBudgetRequest;
     }
@@ -126,7 +125,6 @@ function WorkforcePlanningSidebar() {
   });
 
   return (
-
     <Box
       component="nav"
       aria-label="Workforce planning sections"
@@ -140,9 +138,7 @@ function WorkforcePlanningSidebar() {
         py: 1.5
       }}
     >
-
       <Box sx={{ px: 2, pb: 1.5 }}>
-
         <Typography
           variant="caption"
           sx={{
@@ -171,15 +167,12 @@ function WorkforcePlanningSidebar() {
           variant="outlined"
           sx={{ mt: 1, fontWeight: 600, height: 22, fontSize: 11 }}
         />
-
       </Box>
 
       <Divider />
 
       <List sx={{ px: 1, py: 0.5 }}>
-
         {visibleSections.map((section) => {
-
           const Icon = section.icon;
 
           const active =
@@ -188,7 +181,6 @@ function WorkforcePlanningSidebar() {
               : location.pathname.startsWith(section.path);
 
           return (
-
             <ListItemButton
               key={section.key}
               selected={active}
@@ -207,7 +199,6 @@ function WorkforcePlanningSidebar() {
                 }
               }}
             >
-
               <ListItemIcon sx={{ minWidth: 36 }}>
                 <Icon size={20} />
               </ListItemIcon>
@@ -220,7 +211,7 @@ function WorkforcePlanningSidebar() {
                 }}
               />
 
-              {section.badge && (
+              {section.badge ? (
                 <Chip
                   label={section.badge}
                   size="small"
@@ -233,22 +224,15 @@ function WorkforcePlanningSidebar() {
                     "& .MuiChip-label": { px: 0.5 }
                   }}
                 />
-              )}
-
+              ) : null}
             </ListItemButton>
-
           );
-
         })}
-
       </List>
-
     </Box>
-
   );
-
 }
 
 export default WorkforcePlanningSidebar;
 
-export { WORKFORCE_SECTIONS };
+export { WORKFORCE_PLANNING_SECTIONS };

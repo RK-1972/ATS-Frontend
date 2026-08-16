@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -13,17 +13,27 @@ import {
   Divider,
   Badge,
   Menu,
-  MenuItem
+  Stack
 } from "@mui/material";
-import { useTheme } from "@mui/material/styles";
+import { alpha, useTheme } from "@mui/material/styles";
 
 import NotificationsNoneOutlinedIcon from "@mui/icons-material/NotificationsNoneOutlined";
 import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
 
 import candidateRepository from "@/repositories/candidateRepository";
+import MyApprovalsService from "@/services/myApprovalsService";
 import BrandLogo from "./BrandLogo";
+import EnterpriseNotificationFeedItem from "./EnterpriseNotificationFeedItem";
 import { OptalynxCopilot } from "../copilot";
 import { clearAuthStorage, getStoredToken } from "@/utils/sessionAuth";
+import {
+  APPROVAL_NOTIFICATIONS_UPDATED_EVENT,
+  OWNERSHIP_REQUESTS_UPDATED_EVENT
+} from "@/utils/enterpriseNotificationEvents";
+import {
+  buildNotificationFeed,
+  countNotifications
+} from "@/utils/enterpriseNotificationSections";
 
 function readStoredUser() {
   try {
@@ -109,14 +119,53 @@ function AppHeader({
       ? Boolean(showUserActions)
       : isAuthenticated;
 
-  const [pendingCount, setPendingCount] = useState(0);
+  const [ownershipNotifications, setOwnershipNotifications] = useState([]);
+  const [budgetNotifications, setBudgetNotifications] = useState([]);
+  const [requisitionNotifications, setRequisitionNotifications] = useState([]);
   const [menuAnchor, setMenuAnchor] = useState(null);
 
-  const loadPendingOwnershipCount = () => {
-    candidateRepository
-      .getMyOwnershipRequests()
-      .then((requests) => setPendingCount(requests.length))
-      .catch(() => setPendingCount(0));
+  const notificationFeed = useMemo(
+    () =>
+      buildNotificationFeed({
+        budget: budgetNotifications,
+        resourceRequisition: requisitionNotifications,
+        candidateOwnership: ownershipNotifications,
+        interviewScheduled: [],
+        assignedRequisition: []
+      }),
+    [budgetNotifications, requisitionNotifications, ownershipNotifications]
+  );
+
+  const pendingCount = countNotifications(notificationFeed);
+
+  const loadEnterpriseNotifications = () => {
+    Promise.all([
+      candidateRepository.getMyOwnershipRequests(),
+      MyApprovalsService.listMyBudgetApprovalNotifications(),
+      MyApprovalsService.listMyRequisitionApprovalNotifications()
+    ])
+      .then(([ownershipRequests, budgetRows, requisitionRows]) => {
+        setOwnershipNotifications(
+          (Array.isArray(ownershipRequests) ? ownershipRequests : []).map(
+            MyApprovalsService.mapOwnershipNotification
+          )
+        );
+        setBudgetNotifications(
+          (Array.isArray(budgetRows) ? budgetRows : []).map(
+            MyApprovalsService.mapBudgetApprovalNotification
+          )
+        );
+        setRequisitionNotifications(
+          (Array.isArray(requisitionRows) ? requisitionRows : []).map(
+            MyApprovalsService.mapRequisitionApprovalNotification
+          )
+        );
+      })
+      .catch(() => {
+        setOwnershipNotifications([]);
+        setBudgetNotifications([]);
+        setRequisitionNotifications([]);
+      });
   };
 
   useEffect(() => {
@@ -124,24 +173,39 @@ function AppHeader({
       return undefined;
     }
 
-    loadPendingOwnershipCount();
+    loadEnterpriseNotifications();
 
     const handleWindowFocus = () => {
-      loadPendingOwnershipCount();
+      loadEnterpriseNotifications();
     };
 
     const handleOwnershipUpdated = () => {
-      loadPendingOwnershipCount();
+      loadEnterpriseNotifications();
+    };
+
+    const handleApprovalNotificationsUpdated = () => {
+      loadEnterpriseNotifications();
     };
 
     window.addEventListener("focus", handleWindowFocus);
-    window.addEventListener("ownershipRequestsUpdated", handleOwnershipUpdated);
+    window.addEventListener(
+      OWNERSHIP_REQUESTS_UPDATED_EVENT,
+      handleOwnershipUpdated
+    );
+    window.addEventListener(
+      APPROVAL_NOTIFICATIONS_UPDATED_EVENT,
+      handleApprovalNotificationsUpdated
+    );
 
     return () => {
       window.removeEventListener("focus", handleWindowFocus);
       window.removeEventListener(
-        "ownershipRequestsUpdated",
+        OWNERSHIP_REQUESTS_UPDATED_EVENT,
         handleOwnershipUpdated
+      );
+      window.removeEventListener(
+        APPROVAL_NOTIFICATIONS_UPDATED_EVENT,
+        handleApprovalNotificationsUpdated
       );
     };
   }, [shouldShowUserActions]);
@@ -154,9 +218,55 @@ function AppHeader({
     setMenuAnchor(null);
   };
 
-  const handleReviewNow = () => {
+  const handleReviewOwnership = () => {
     handleMenuClose();
     navigate("/recruiter/ownership-requests");
+  };
+
+  const handleRequisitionApprovalClick = (taskId) => {
+    handleMenuClose();
+    navigate("/my-approvals", { state: { taskId } });
+  };
+
+  const handleNotificationClick = (categoryKey, notification) => {
+    if (categoryKey === "budget") {
+      handleBudgetApprovalClick(notification.taskId);
+      return;
+    }
+
+    if (categoryKey === "resourceRequisition") {
+      handleRequisitionApprovalClick(notification.taskId);
+      return;
+    }
+
+    if (categoryKey === "candidateOwnership") {
+      handleReviewOwnership();
+    }
+  };
+
+  const resolveNotificationKey = (categoryKey, notification, index) => {
+    if (categoryKey === "budget") {
+      return `budget-${notification.taskId}`;
+    }
+
+    if (categoryKey === "resourceRequisition") {
+      return `requisition-${notification.taskId}`;
+    }
+
+    if (categoryKey === "candidateOwnership") {
+      return `ownership-${notification.requestId || index}`;
+    }
+
+    if (categoryKey === "interviewScheduled") {
+      return `interview-${notification.id || notification.taskId || index}`;
+    }
+
+    return `assigned-requisition-${notification.id || notification.taskId || index}`;
+  };
+
+  const handleBudgetApprovalClick = (taskId) => {
+    handleMenuClose();
+    navigate("/my-approvals", { state: { taskId } });
   };
 
   const handleLogout = () => {
@@ -249,33 +359,91 @@ function AppHeader({
                 onClose={handleMenuClose}
                 anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
                 transformOrigin={{ vertical: "top", horizontal: "right" }}
-                PaperProps={{
-                  sx: { minWidth: 220, borderRadius: 2, mt: 0.5 }
+                slotProps={{
+                  list: {
+                    sx: { p: 0 }
+                  },
+                  paper: {
+                    sx: {
+                      width: 360,
+                      maxWidth: "92vw",
+                      borderRadius: 2,
+                      mt: 0.5,
+                      overflow: "hidden"
+                    }
+                  }
                 }}
               >
+                <Box
+                  sx={{
+                    px: 2,
+                    py: 1.25,
+                    borderBottom: 1,
+                    borderColor: "divider"
+                  }}
+                >
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <Typography
+                      variant="subtitle2"
+                      sx={{ fontWeight: 700, fontSize: 14 }}
+                    >
+                      Notifications
+                    </Typography>
+                    {pendingCount > 0 ? (
+                      <Chip
+                        label={pendingCount}
+                        size="small"
+                        sx={{
+                          height: 20,
+                          minWidth: 24,
+                          fontSize: 11,
+                          fontWeight: 700,
+                          bgcolor: alpha(theme.palette.info.main, 0.12),
+                          color: "info.main",
+                          "& .MuiChip-label": { px: 0.85 }
+                        }}
+                      />
+                    ) : null}
+                  </Stack>
+                </Box>
+
                 {pendingCount > 0 ? (
-                  <>
-                    <Box sx={{ px: 2, py: 1.25 }}>
-                      <Typography variant="subtitle2" fontWeight={700}>
-                        Ownership Requests
-                      </Typography>
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        sx={{ mt: 0.25 }}
+                  <Box
+                    sx={{
+                      maxHeight: 420,
+                      overflowY: "auto"
+                    }}
+                  >
+                    {notificationFeed.map((item, index) => (
+                      <React.Fragment
+                        key={resolveNotificationKey(
+                          item.categoryKey,
+                          item,
+                          index
+                        )}
                       >
-                        {pendingCount} Pending Request
-                        {pendingCount === 1 ? "" : "s"}
-                      </Typography>
-                    </Box>
-                    <MenuItem onClick={handleReviewNow} sx={{ fontWeight: 600 }}>
-                      Review Now
-                    </MenuItem>
-                  </>
+                        <EnterpriseNotificationFeedItem
+                          categoryKey={item.categoryKey}
+                          categoryLabel={item.categoryLabel}
+                          title={item.title}
+                          message={item.message}
+                          notification={item}
+                          onClick={() =>
+                            handleNotificationClick(item.categoryKey, item)
+                          }
+                        />
+                        {index < notificationFeed.length - 1 ? (
+                          <Divider />
+                        ) : null}
+                      </React.Fragment>
+                    ))}
+                  </Box>
                 ) : (
-                  <MenuItem disabled sx={{ fontSize: 14 }}>
-                    No pending notifications.
-                  </MenuItem>
+                  <Box sx={{ px: 2, py: 2.5 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      No pending notifications.
+                    </Typography>
+                  </Box>
                 )}
               </Menu>
 

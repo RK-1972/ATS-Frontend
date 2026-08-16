@@ -32,6 +32,7 @@ import ApprovedPositionService from "../services/approvedPositionService";
 import recruitmentRepository from "../repositories/recruitmentRepository";
 import { REQUISITION_STATUS } from "../constants/requisitionStatus";
 import { useCopilotContext } from "../components/copilot/CopilotContext";
+import { dispatchApprovalNotificationsUpdated } from "@/utils/enterpriseNotificationEvents";
 
 function resolveEnterpriseNavRail(user) {
   let workspace = {};
@@ -603,6 +604,7 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
         result.requisition_code || resultRequisitionCode
       );
       setDraftStatus("SUBMITTED");
+      dispatchApprovalNotificationsUpdated();
       setSubmitSuccessOpen(true);
     } catch (error) {
       setSubmitErrorMessage(

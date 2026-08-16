@@ -4,6 +4,8 @@ import { Grid, Alert, Typography } from "@mui/material";
 
 import ConfigPageHeader from "../../components/platform-config/ConfigPageHeader";
 import PositionCatalogueCard from "../../components/workforce-planning/PositionCatalogueCard";
+import { EmptyState } from "../../components/enterprise";
+import ApprovalOutlinedIcon from "@mui/icons-material/ApprovalOutlined";
 
 function extractExistingRequisitionCode(error) {
   const message =
@@ -16,6 +18,8 @@ function ApprovedPositionCataloguePage() {
   const navigate = useNavigate();
   const { data, createRequisition, setToastMessage } = useOutletContext();
 
+  const availablePositions = data.approved_positions || [];
+
   const handleCreateRequisition = async (positionId) => {
     let requisitionCode = null;
 
@@ -23,7 +27,6 @@ function ApprovedPositionCataloguePage() {
       const result = await createRequisition(positionId);
       requisitionCode = result?.requisitionId || null;
     } catch (error) {
-      // One Approved Position → one Requisition: open the existing REQ when create is blocked.
       requisitionCode = extractExistingRequisitionCode(error);
 
       if (!requisitionCode && typeof setToastMessage === "function") {
@@ -35,9 +38,6 @@ function ApprovedPositionCataloguePage() {
       }
     }
 
-    // Always open the Enterprise Requisition Editor with Approved Position context.
-    // Put requisitionCode in the query string so EDIT/submit mode survives remount
-    // (location.state alone is lost on refresh and can fall back to draft-create).
     const params = new URLSearchParams();
     if (requisitionCode) {
       params.set("requisitionCode", requisitionCode);
@@ -59,7 +59,7 @@ function ApprovedPositionCataloguePage() {
     <>
       <ConfigPageHeader
         title="Approved position catalogue"
-        subtitle="Every approved manpower position with remaining budget. Requisitions can only be created from this catalogue."
+        subtitle="Approved manpower positions still available for raising a requisition."
         breadcrumbs={[
           { label: "Workforce Planning" },
           { label: "Approved Positions" }
@@ -78,20 +78,29 @@ function ApprovedPositionCataloguePage() {
         <Typography variant="body2" sx={{ fontSize: 13 }}>
           <strong>Gate to recruitment:</strong> The Create Requisition button
           is enabled only when an approved budget exists with remaining
-          headcount and budget.
+          headcount and budget. After a requisition is raised, track it under
+          Requisitions in the main navigation rail.
         </Typography>
       </Alert>
 
-      <Grid container spacing={1.5}>
-        {data.approved_positions.map((position) => (
-          <Grid key={position.id} size={{ xs: 12, sm: 6, lg: 4 }}>
-            <PositionCatalogueCard
-              position={position}
-              onCreateRequisition={handleCreateRequisition}
-            />
-          </Grid>
-        ))}
-      </Grid>
+      {availablePositions.length ? (
+        <Grid container spacing={1.5}>
+          {availablePositions.map((position) => (
+            <Grid key={position.id} size={{ xs: 12, sm: 6, lg: 4 }}>
+              <PositionCatalogueCard
+                position={position}
+                onCreateRequisition={handleCreateRequisition}
+              />
+            </Grid>
+          ))}
+        </Grid>
+      ) : (
+        <EmptyState
+          icon={ApprovalOutlinedIcon}
+          title="No available approved positions"
+          description="All approved positions have already raised a requisition or have no remaining budget."
+        />
+      )}
     </>
   );
 }

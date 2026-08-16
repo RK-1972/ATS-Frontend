@@ -28,6 +28,7 @@ import {
   SearchBar,
   EnterpriseToolbar
 } from "@/components/enterprise";
+import InterviewProgressStepCell from "@/components/interviews/InterviewProgressStepCell";
 
 const REQUISITION_COLUMNS = [
   {
@@ -88,7 +89,9 @@ const PIPELINE_COLUMNS = [
     headerName: "Stage",
     flex: 1,
     minWidth: 130,
-    renderCell: ({ value }) => <StatusChip status={value} variant="soft" />
+    renderCell: ({ value, row }) => (
+      <InterviewProgressStepCell row={row} value={value || "—"} />
+    )
   },
   {
     field: "source_type",

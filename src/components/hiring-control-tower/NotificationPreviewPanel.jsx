@@ -9,7 +9,7 @@ import {
   TableRow
 } from "@mui/material";
 
-import { formatDateTime } from "@/utils/formatDateTime";
+import { formatOptalynxDateTime } from "@/utils/formatDateTime";
 
 function NotificationPreviewPanel({ notification }) {
 
@@ -126,7 +126,7 @@ function NotificationPreviewPanel({ notification }) {
                 </TableCell>
 
                 <TableCell sx={{ py: 1, fontSize: 11, whiteSpace: "nowrap", pr: 2 }}>
-                  {formatDateTime(row.time)}
+                  {formatOptalynxDateTime(row.time)}
                 </TableCell>
 
               </TableRow>

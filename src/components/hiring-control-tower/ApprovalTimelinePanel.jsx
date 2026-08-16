@@ -15,7 +15,7 @@ import {
   MdTrendingUp
 } from "react-icons/md";
 
-import { formatDateTime } from "@/utils/formatDateTime";
+import { formatOptalynxDateTime } from "@/utils/formatDateTime";
 
 const EVENT_CONFIG = {
   approved: {
@@ -120,7 +120,7 @@ function ApprovalTimelinePanel({ events }) {
                   {getInitials(event.actor)}
                 </Avatar>
 
-                <Box flex={1} minWidth={0}>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
 
                   <Stack
                     direction="row"
@@ -140,7 +140,7 @@ function ApprovalTimelinePanel({ events }) {
                       whiteSpace="nowrap"
                       sx={{ fontSize: 11, flexShrink: 0 }}
                     >
-                      {formatDateTime(event.time, { includeYear: true })}
+                      {formatOptalynxDateTime(event.time)}
                     </Typography>
 
                   </Stack>

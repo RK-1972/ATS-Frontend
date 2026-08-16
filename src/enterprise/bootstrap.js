@@ -123,7 +123,9 @@ export async function bootstrapEnterpriseData() {
     workflows: workflowsBundle.config,
     workflowsBaseline: structuredClone(workflowsBundle.baseline),
     workflowsDirty: workflowsBundle.isDirty,
-    workforce: workforceBundle.config,
+    workforce: workforcePlanningRepository.withSortedApprovalQueue(
+      workforceBundle.config
+    ),
     workforceBaseline: structuredClone(workforceBundle.baseline),
     workforceDirty: workforceBundle.isDirty,
     recruitment: recruitmentBundle,

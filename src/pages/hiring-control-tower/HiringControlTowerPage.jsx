@@ -3,17 +3,19 @@ import {
   Grid,
   Chip,
   Typography,
-  Stack
-} from "@mui/material";
-
-import ConfigPageHeader from "../../components/platform-config/ConfigPageHeader";
-import ConfigMetricSlab from "../../components/platform-config/ConfigMetricSlab";
+  Stack,
+  Alert
+} from "@mui/material";import ConfigPageHeader from "../../components/platform-config/ConfigPageHeader";
 import IntegrationTraceBar from "../../components/hiring-control-tower/IntegrationTraceBar";
-import EnterpriseProcessTimeline from "../../components/hiring-control-tower/EnterpriseProcessTimeline";
+import ExecutiveKpiSlab from "../../components/hiring-control-tower/ExecutiveKpiSlab";
+import EnterpriseProcessTimeline, {
+  HCT_LIFECYCLE_PANEL_FALLBACK_HEIGHT
+} from "../../components/hiring-control-tower/EnterpriseProcessTimeline";
 import StageInspectorPanel from "../../components/hiring-control-tower/StageInspectorPanel";
 import ApprovalTimelinePanel from "../../components/hiring-control-tower/ApprovalTimelinePanel";
 import NotificationPreviewPanel from "../../components/hiring-control-tower/NotificationPreviewPanel";
 import BudgetValidationPanel from "../../components/hiring-control-tower/BudgetValidationPanel";
+import RequisitionSelector from "../../components/hiring-control-tower/RequisitionSelector";
 
 function SectionLabel({ children }) {
 
@@ -30,107 +32,206 @@ function SectionLabel({ children }) {
 
 }
 
+function formatHeaderValue(value) {
+  if (value === null || value === undefined || String(value).trim() === "") {
+    return "—";
+  }
+
+  return String(value);
+}
+
 function HiringControlTowerPage({ towerState }) {
 
   const {
     data,
-    selectedStageKey,
     selectedStage,
     showClarificationForm,
     clarificationDraft,
     stageNotifications,
     sortedTimeline,
     stageTimeline,
-    setSelectedStageKey,
     setShowClarificationForm,
     approveStage,
     rejectStage,
     requestClarification,
     sendClarification,
     submitClarification,
-    updateClarificationDraft
+    updateClarificationDraft,
+    liveModeEnabled,
+    selectedRequisition,
+    requisitionSearchOptions,
+    searchLoading,
+    headerLoading,
+    searchError,
+    headerError,
+    displayHeader,
+    lifecycleStages,
+    lifecycleSummary,
+    lifecycleMetadata,
+    lifecycleLoading,
+    lifecycleError,
+    lifecycleSelectedKey,
+    setLifecycleSelectedKey,
+    stageInspectorData,
+    stageInspectorLoading,
+    stageInspectorError,
+    kpiData,
+    kpiLoading,
+    kpiError,
+    handleRequisitionSearch,
+    handleRequisitionSelect
   } = towerState;
 
-  const { meta, kpis, budget } = data;
+  const { budget } = data;
+  const headerReady = !displayHeader.isEmpty;
+
+  const lifecycleEmptyMessage = liveModeEnabled
+    ? "Search and select a requisition to view the real hiring lifecycle."
+    : "Live API required to load the hiring lifecycle.";
+
+  const primaryChipLabel = headerReady
+    ? formatHeaderValue(displayHeader.requisition_code)
+    : "Select a requisition";
+
+  const secondaryChipLabel = headerReady
+    ? `${formatHeaderValue(displayHeader.position_title)} · ${formatHeaderValue(displayHeader.grade)}`
+    : liveModeEnabled
+      ? "Choose a requisition to view details"
+      : "Live API required";
+
+  const captionLabel = headerReady
+    ? [
+      formatHeaderValue(displayHeader.department),
+      formatHeaderValue(displayHeader.req_status),
+      formatHeaderValue(displayHeader.hiring_manager)
+    ].join(" · ")
+    : liveModeEnabled
+      ? "Search and select a requisition to populate the executive header."
+      : "Connect to the live API to search real requisitions.";
+
+  const workspaceHeight = HCT_LIFECYCLE_PANEL_FALLBACK_HEIGHT;
 
   return (
 
-    <>
+    <Box sx={{ width: "100%", minWidth: 0, maxWidth: "100%", overflowX: "hidden" }}>
 
       <ConfigPageHeader
         title="Hiring Control Tower"
         subtitle="Executive operations console — end-to-end hiring lifecycle with integrated governance."
-        breadcrumbs={[{ label: "Hiring Control Tower" }]}
-        statusChip={
-          <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
-            <Chip
-              label={meta.process_id}
-              color="primary"
-              variant="outlined"
-              size="small"
-              sx={{ fontWeight: 600 }}
-            />
-            <Chip
-              label={`${meta.position_title} · ${meta.grade}`}
-              variant="outlined"
-              size="small"
-              sx={{ fontWeight: 600 }}
-            />
-          </Stack>
-        }
       />
 
-      <Typography variant="caption" color="text.secondary" display="block" mb={2}>
-        {meta.department} · {meta.requisition_id} · {meta.candidate_name}
-      </Typography>
-
-      <Box mb={2.5}>
+      <Box mb={2} sx={{ minWidth: 0, maxWidth: "100%" }}>
         <SectionLabel>Executive KPIs</SectionLabel>
-        <ConfigMetricSlab
-          metrics={[
-            { key: "active", value: String(kpis.active_hiring_processes), label: "Active Processes" },
-            { key: "pending", value: String(kpis.pending_approvals), label: "Pending Approvals" },
-            { key: "clarification", value: String(kpis.clarification_requests), label: "Clarifications" },
-            { key: "exceptions", value: String(kpis.budget_exceptions), label: "Budget Exceptions" },
-            { key: "sla", value: `${kpis.avg_approval_sla_hours}h`, label: "Avg Approval SLA" },
-            { key: "tth", value: `${kpis.avg_time_to_hire_days}d`, label: "Avg Time To Hire" },
-            { key: "workload", value: String(kpis.recruiter_workload), label: "Recruiter Workload" }
-          ]}
-          highlightKey="pending"
+        <ExecutiveKpiSlab
+          kpiData={kpiData}
+          loading={kpiLoading}
+          error={kpiError}
+          liveModeEnabled={liveModeEnabled}
         />
       </Box>
 
-      <Box mb={2.5}>
-        <IntegrationTraceBar chain={data.integration_chain} />
+      <Box mb={2} sx={{ minWidth: 0, maxWidth: "100%" }}>
+        <SectionLabel>Requisition</SectionLabel>
+
+        <RequisitionSelector
+          options={requisitionSearchOptions}
+          selected={selectedRequisition}
+          loading={searchLoading || headerLoading}
+          searchError={searchError}
+          disabled={!liveModeEnabled}
+          disabledMessage="Live API required for requisition lookup."
+          hideFieldLabel
+          onSearch={handleRequisitionSearch}
+          onSelect={handleRequisitionSelect}
+        />
+
+        {headerError ? (
+          <Alert severity="error" sx={{ mb: 1 }}>
+            {headerError}
+          </Alert>
+        ) : null}
+
+        <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ mb: 0.5 }}>
+          <Chip
+            label={primaryChipLabel}
+            color={headerReady ? "primary" : "default"}
+            variant="outlined"
+            size="small"
+            sx={{ fontWeight: 600 }}
+          />
+          <Chip
+            label={secondaryChipLabel}
+            variant="outlined"
+            size="small"
+            sx={{ fontWeight: 600 }}
+          />
+        </Stack>
+
+        <Typography variant="caption" color="text.secondary" display="block">
+          {captionLabel}
+        </Typography>
       </Box>
 
       <Box
         sx={{
-          display: "flex",
-          flexDirection: { xs: "column", lg: "row" },
+          display: "grid",
+          gridTemplateColumns: {
+            xs: "minmax(0, 1fr)",
+            lg: "minmax(0, 1fr) minmax(0, 350px)"
+          },
           gap: 2,
-          mb: 2.5,
-          alignItems: "stretch"
+          mb: 2,
+          alignItems: { lg: "start" },
+          width: "100%",
+          minWidth: 0,
+          maxWidth: "100%",
+          overflowX: "hidden"
         }}
       >
 
-        <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Box sx={{ minWidth: 0, maxWidth: "100%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
           <SectionLabel>Hiring Lifecycle</SectionLabel>
-          <EnterpriseProcessTimeline
-            stages={data.stages}
-            selectedKey={selectedStageKey}
-            onSelect={setSelectedStageKey}
-          />
+          <Box sx={{ width: "100%", minWidth: 0, maxWidth: "100%", overflow: "hidden" }}>
+            <EnterpriseProcessTimeline
+              stages={lifecycleStages}
+              selectedKey={lifecycleSelectedKey}
+              onSelect={setLifecycleSelectedKey}
+              loading={Boolean(selectedRequisition?.requisition_code) && lifecycleLoading}
+              error={lifecycleError && !lifecycleLoading ? lifecycleError : ""}
+              emptyMessage={lifecycleEmptyMessage}
+              lifecycleSummary={lifecycleSummary}
+              lifecycleMetadata={lifecycleMetadata}
+            />
+          </Box>
         </Box>
 
         <Box
           sx={{
-            width: { xs: "100%", lg: 350 },
-            flexShrink: 0
+            width: "100%",
+            maxWidth: "100%",
+            display: "flex",
+            flexDirection: "column",
+            minWidth: 0,
+            minHeight: 0
           }}
         >
           <SectionLabel>Inspector</SectionLabel>
-          <StageInspectorPanel
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              minHeight: 0,
+              height: workspaceHeight,
+              maxHeight: workspaceHeight,
+              width: "100%"
+            }}
+          >
+            <StageInspectorPanel
+            liveModeEnabled={liveModeEnabled}
+            lifecycleSelectedKey={lifecycleSelectedKey}
+            stageInspectorData={stageInspectorData}
+            stageInspectorLoading={stageInspectorLoading}
+            stageInspectorError={stageInspectorError}
             stage={selectedStage}
             stageNotifications={stageNotifications}
             stageTimeline={stageTimeline}
@@ -147,11 +248,16 @@ function HiringControlTowerPage({ towerState }) {
             onUpdateClarification={updateClarificationDraft}
             onCancelClarification={() => setShowClarificationForm(false)}
           />
+          </Box>
         </Box>
 
       </Box>
 
-      <Grid container spacing={2} mb={2.5}>
+      <Box mb={2.5} sx={{ minWidth: 0, maxWidth: "100%" }}>
+        <IntegrationTraceBar chain={data.integration_chain} />
+      </Box>
+
+      <Grid container spacing={2} mb={2.5} sx={{ minWidth: 0, maxWidth: "100%" }}>
 
         <Grid size={{ xs: 12, md: 6 }}>
           <SectionLabel>Activity</SectionLabel>
@@ -165,7 +271,7 @@ function HiringControlTowerPage({ towerState }) {
 
       </Grid>
 
-      <Box>
+      <Box sx={{ minWidth: 0, maxWidth: "100%" }}>
         <SectionLabel>Budget</SectionLabel>
         <BudgetValidationPanel
           budget={budget}
@@ -173,7 +279,7 @@ function HiringControlTowerPage({ towerState }) {
         />
       </Box>
 
-    </>
+    </Box>
 
   );
 

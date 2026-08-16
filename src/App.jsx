@@ -14,6 +14,13 @@ import UITestPage from "./pages/UITestPage";
 import CandidatePage from "./pages/CandidatePage";
 import LoginPage from "./pages/LoginPage";
 import CandidatePortalPlaceholderPage from "./pages/candidate/CandidatePortalPlaceholderPage";
+import CandidateRegisterPage from "./pages/candidate/CandidateRegisterPage";
+import CandidateLoginPage from "./pages/candidate/CandidateLoginPage";
+import CandidatePortalWorkspacePage from "./pages/candidate/CandidatePortalWorkspacePage";
+import CandidateCompleteProfilePage from "./pages/candidate/CandidateCompleteProfilePage";
+import CandidateProfilePage from "./pages/candidate/CandidateProfilePage";
+import CandidateProfileStatusPage from "./pages/candidate/CandidateProfileStatusPage";
+import CandidateProtectedRoute from "./components/CandidateProtectedRoute";
 import RequisitionPage from "./pages/RequisitionPage";
 import MyDraftsPage from "./pages/talent-demand/MyDraftsPage";
 import RecruiterAssignmentWorkspacePage from "./pages/requisitions/RecruiterAssignmentWorkspacePage";
@@ -85,6 +92,18 @@ const BudgetApprovalWorkspacePage = lazy(
 const ApprovedPositionCataloguePage = lazy(
   () => import("./pages/workforce-planning/ApprovedPositionCataloguePage")
 );
+const RequisitionsModuleLayout = lazy(
+  () => import("./components/requisitions/RequisitionsModuleLayout")
+);
+const ApprovedRequisitionsPage = lazy(
+  () => import("./pages/workforce-planning/ApprovedRequisitionsPage")
+);
+const ClarificationRequiredRequisitionsPage = lazy(
+  () => import("./pages/workforce-planning/ClarificationRequiredRequisitionsPage")
+);
+const RejectedRequisitionsPage = lazy(
+  () => import("./pages/workforce-planning/RejectedRequisitionsPage")
+);
 const BudgetExceptionMonitorPage = lazy(
   () => import("./pages/workforce-planning/BudgetExceptionMonitorPage")
 );
@@ -119,6 +138,13 @@ const RuleVersionHistoryPage = lazy(
 
 const HiringControlTowerLayout = lazy(
   () => import("./components/hiring-control-tower/HiringControlTowerLayout")
+);
+
+const ReportsLayout = lazy(
+  () => import("./components/reports/ReportsLayout")
+);
+const ReportBuilderPage = lazy(
+  () => import("./pages/reports/ReportBuilderPage")
 );
 
 const MasterDataLayout = lazy(
@@ -247,7 +273,48 @@ function App() {
 
 <Route
   path="/candidate/login"
-  element={<CandidatePortalPlaceholderPage mode="login" />}
+  element={<CandidateLoginPage />}
+/>
+
+<Route
+  path="/candidate/register"
+  element={<CandidateRegisterPage />}
+/>
+
+<Route
+  path="/candidate/workspace"
+  element={
+    <CandidateProtectedRoute>
+      <CandidatePortalWorkspacePage />
+    </CandidateProtectedRoute>
+  }
+/>
+
+<Route
+  path="/candidate/profile/complete"
+  element={
+    <CandidateProtectedRoute>
+      <CandidateCompleteProfilePage />
+    </CandidateProtectedRoute>
+  }
+/>
+
+<Route
+  path="/candidate/profile"
+  element={
+    <CandidateProtectedRoute>
+      <CandidateProfilePage />
+    </CandidateProtectedRoute>
+  }
+/>
+
+<Route
+  path="/candidate/profile/status"
+  element={
+    <CandidateProtectedRoute>
+      <CandidateProfileStatusPage />
+    </CandidateProtectedRoute>
+  }
 />
 
 <Route
@@ -550,20 +617,28 @@ function App() {
         />
 
         <Route
-
-  path="/reports"
-
-  element={
-
-    <ProtectedRoute>
-
-      <ReportsAnalyticsPage />
-
-    </ProtectedRoute>
-
-  }
-
-/>
+          path="/reports"
+          element={
+            <ProtectedRoute>
+              <LazyRoute>
+                <ReportsLayout />
+              </LazyRoute>
+            </ProtectedRoute>
+          }
+        >
+          <Route
+            index
+            element={<ReportsAnalyticsPage embedded />}
+          />
+          <Route
+            path="builder"
+            element={
+              <LazyRoute>
+                <ReportBuilderPage />
+              </LazyRoute>
+            }
+          />
+        </Route>
 
 <Route
   path="/interview-panel"
@@ -877,6 +952,66 @@ function App() {
   />
 
 </Route>
+
+{/* =====================================
+    Requisition Queues (top-level module)
+===================================== */}
+
+<Route
+  path="/requisition-queues"
+  element={
+    <ProtectedRoute>
+      <LazyRoute>
+        <RequisitionsModuleLayout />
+      </LazyRoute>
+    </ProtectedRoute>
+  }
+>
+  <Route
+    index
+    element={<Navigate to="approved" replace />}
+  />
+
+  <Route
+    path="approved"
+    element={
+      <LazyRoute>
+        <ApprovedRequisitionsPage />
+      </LazyRoute>
+    }
+  />
+
+  <Route
+    path="clarification"
+    element={
+      <LazyRoute>
+        <ClarificationRequiredRequisitionsPage />
+      </LazyRoute>
+    }
+  />
+
+  <Route
+    path="rejected"
+    element={
+      <LazyRoute>
+        <RejectedRequisitionsPage />
+      </LazyRoute>
+    }
+  />
+</Route>
+
+<Route
+  path="/workforce-planning/requisitions/approved"
+  element={<Navigate to="/requisition-queues/approved" replace />}
+/>
+<Route
+  path="/workforce-planning/requisitions/clarification"
+  element={<Navigate to="/requisition-queues/clarification" replace />}
+/>
+<Route
+  path="/workforce-planning/requisitions/rejected"
+  element={<Navigate to="/requisition-queues/rejected" replace />}
+/>
 
 {/* =====================================
     Business Rules & Approval Engine

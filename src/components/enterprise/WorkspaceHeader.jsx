@@ -34,7 +34,7 @@ function WorkspaceHeader({
         alignItems={{ xs: "flex-start", sm: "center" }}
         gap={1}
       >
-        <Box minWidth={0}>
+        <Box sx={{ minWidth: 0 }}>
           <Typography
             sx={{
               ...typography.pageTitle,
@@ -44,19 +44,21 @@ function WorkspaceHeader({
             {title}
           </Typography>
 
-          {subtitle && (
+          {subtitle ? (
             <Typography
               color="text.secondary"
               mt={0.5}
-              maxWidth={720}
-              sx={{ fontSize: typography.secondary.fontSize }}
+              sx={{
+                fontSize: typography.secondary.fontSize,
+                maxWidth: 720
+              }}
             >
               {subtitle}
             </Typography>
-          )}
+          ) : null}
         </Box>
 
-        <Stack direction="row" alignItems="center" gap={1} flexShrink={0}>
+        <Stack direction="row" alignItems="center" gap={1} sx={{ flexShrink: 0 }}>
           {statusChip}
           {actions}
         </Stack>

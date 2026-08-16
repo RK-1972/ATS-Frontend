@@ -321,6 +321,47 @@ export function cardFramerProps(reduced = false) {
 }
 
 /**
+ * Dense metric card mount + hover props — calmer lift than full EnterpriseSurface cards.
+ * @param {boolean} reduced prefers-reduced-motion
+ */
+export function denseCardFramerProps(reduced = false) {
+  const enterY = translateTokenPx("enterY") / 3;
+  const hoverY = parseFloat(tokens.denseMotionCard?.hoverTranslateY) || -3;
+
+  if (reduced) {
+    return {
+      initial: false,
+      animate: {
+        opacity: 1,
+        y: 0,
+        boxShadow: motionElevation.shadows.rest
+      },
+      whileHover: undefined,
+      transition: { duration: 0 }
+    };
+  }
+
+  return {
+    initial: {
+      opacity: motionTokens.transform.fade.exit,
+      y: enterY,
+      boxShadow: motionElevation.shadows.rest
+    },
+    animate: {
+      opacity: motionTokens.transform.fade.enter,
+      y: 0,
+      boxShadow: motionElevation.shadows.rest
+    },
+    whileHover: {
+      y: hoverY,
+      boxShadow: motionElevation.shadows.mid,
+      transition: framerTransition("hover", "decelerate", false)
+    },
+    transition: framerTransition("enter", "decelerate", false)
+  };
+}
+
+/**
  * Workspace / page enter props (token-driven).
  * @param {boolean} reduced
  */
@@ -365,6 +406,7 @@ const OptalynxMotion = {
   framerTransition,
   translateTokenPx,
   cardFramerProps,
+  denseCardFramerProps,
   pageFramerProps
 };
 

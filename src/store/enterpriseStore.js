@@ -32,6 +32,10 @@ const offersInitial = offerRepository.getInitialState();
 const hiringProcessInitial = hiringControlTowerRepository.getInitialState();
 const masterDataInitial = masterDataRepository.getInitialState();
 
+function withSortedWorkforce(workforce) {
+  return workforcePlanningRepository.withSortedApprovalQueue(workforce);
+}
+
 function publishAudit(set, get, eventType, auditPayload) {
 
   const { events, record } = auditRepository.create(
@@ -254,34 +258,48 @@ const useEnterpriseStore = create((set, get) => ({
   },
 
   loadRequisitionManagementPage() {
-    Promise.all([
+    Promise.allSettled([
       recruitmentRepository.listManagementRequisitions(),
       recruitmentRepository.listFormClients(),
       recruitmentRepository.listFormRecruiters()
-    ]).then(([requisitions, clients, recruiters]) => {
+    ]).then((results) => {
+      const [requisitionsResult, clientsResult, recruitersResult] = results;
+
+      if (requisitionsResult.status === "rejected") {
+        console.warn(
+          "[enterpriseStore] listManagementRequisitions unavailable:",
+          requisitionsResult.reason?.response?.data || requisitionsResult.reason?.message
+        );
+      }
+
+      if (clientsResult.status === "rejected") {
+        console.error(
+          "[enterpriseStore] listFormClients failed:",
+          clientsResult.reason?.response?.data || clientsResult.reason?.message
+        );
+      }
+
+      if (recruitersResult.status === "rejected") {
+        console.warn(
+          "[enterpriseStore] listFormRecruiters unavailable:",
+          recruitersResult.reason?.response?.data || recruitersResult.reason?.message
+        );
+      }
+
       set({
         requisitionManagement: {
           ...get().requisitionManagement,
-          requisitions,
+          requisitions:
+            requisitionsResult.status === "fulfilled" ? requisitionsResult.value : [],
           formOptions: {
             ...get().requisitionManagement.formOptions,
-            clients,
-            recruiters,
+            clients: clientsResult.status === "fulfilled" ? clientsResult.value : [],
+            recruiters:
+              recruitersResult.status === "fulfilled" ? recruitersResult.value : [],
             projects: [],
             hiringManagers: []
           }
         },
-        requisitionManagementUi: {
-          ...get().requisitionManagementUi,
-          initialLoadComplete: true
-        }
-      });
-    }).catch((error) => {
-      console.error(
-        "[enterpriseStore] loadRequisitionManagementPage failed:",
-        error?.response?.data || error.message
-      );
-      set({
         requisitionManagementUi: {
           ...get().requisitionManagementUi,
           initialLoadComplete: true
@@ -437,7 +455,7 @@ const useEnterpriseStore = create((set, get) => ({
         ].some((item) => item.id === currentSelectedId);
 
         set({
-          workforce,
+          workforce: withSortedWorkforce(workforce),
           workforceBaseline: structuredClone(baseline),
           workforceDirty: false,
           workforceUi: {
@@ -987,7 +1005,7 @@ const useEnterpriseStore = create((set, get) => ({
       }
 
       set({
-        workforce: result.workforce,
+        workforce: withSortedWorkforce(result.workforce),
         workforceUi: {
           ...get().workforceUi,
           toastMessage: result.toastMessage
@@ -1013,16 +1031,18 @@ const useEnterpriseStore = create((set, get) => ({
         return null;
       }
 
+      const nextSelectedId = result.request?.id || requestId;
+
       set({
-        workforce: result.workforce,
+        workforce: withSortedWorkforce(result.workforce),
         workforceUi: {
           ...get().workforceUi,
-          selectedRequestId: result.request?.id || requestId,
+          selectedRequestId: nextSelectedId,
           toastMessage: result.toastMessage
         }
       });
 
-      return result;
+      return get().refreshWorkforce?.().then(() => result).catch(() => result);
 
     });
 
@@ -1044,7 +1064,7 @@ const useEnterpriseStore = create((set, get) => ({
       }
 
       set({
-        workforce: result.workforce,
+        workforce: withSortedWorkforce(result.workforce),
         hiringProcess: result.hiringProcess || get().hiringProcess,
         workforceUi: {
           ...get().workforceUi,
@@ -1073,7 +1093,7 @@ const useEnterpriseStore = create((set, get) => ({
         });
       }
 
-      return result;
+      return get().refreshWorkforce?.().then(() => result).catch(() => result);
     });
   },
 
@@ -1090,7 +1110,7 @@ const useEnterpriseStore = create((set, get) => ({
       }
 
       set({
-        workforce: result.workforce,
+        workforce: withSortedWorkforce(result.workforce),
         workforceUi: {
           ...get().workforceUi,
           toastMessage: result.toastMessage
@@ -1107,7 +1127,7 @@ const useEnterpriseStore = create((set, get) => ({
         metadata: { comment }
       });
 
-      return result;
+      return get().refreshWorkforce?.().then(() => result).catch(() => result);
     });
   },
 
@@ -1124,14 +1144,15 @@ const useEnterpriseStore = create((set, get) => ({
       }
 
       set({
-        workforce: result.workforce,
+        workforce: withSortedWorkforce(result.workforce),
         workforceUi: {
           ...get().workforceUi,
+          selectedRequestId: id,
           toastMessage: result.toastMessage
         }
       });
 
-      return result;
+      return get().refreshWorkforce?.().then(() => result).catch(() => result);
     });
   },
 
@@ -1148,14 +1169,15 @@ const useEnterpriseStore = create((set, get) => ({
       }
 
       set({
-        workforce: result.workforce,
+        workforce: withSortedWorkforce(result.workforce),
         workforceUi: {
           ...get().workforceUi,
+          selectedRequestId: id,
           toastMessage: result.toastMessage
         }
       });
 
-      return result;
+      return get().refreshWorkforce?.().then(() => result).catch(() => result);
     });
   },
 
@@ -1178,13 +1200,15 @@ const useEnterpriseStore = create((set, get) => ({
       }
 
       set({
-        workforce: result.workforce,
+        workforce: withSortedWorkforce(result.workforce),
         hiringProcess: result.hiringProcess,
         workforceUi: {
           ...get().workforceUi,
           toastMessage: result.toastMessage
         }
       });
+
+      get().refreshWorkforce?.().catch(() => null);
 
       publishAudit(set, get, ENTERPRISE_EVENTS.REQUISITION_CREATED, {
         module: "Recruitment Management",

@@ -17,6 +17,7 @@ const GOVERNANCE_PATHS = [
   "/business-rules",
   "/hiring-control-tower",
   "/workforce-planning",
+  "/requisition-queues",
   "/master-data"
 ];
 

@@ -2,6 +2,7 @@ import { isLiveMode } from "@/api/config";
 import workforcePlanningClient from "@/api/clients/workforcePlanningClient";
 import workforcePlanningMock from "@/data/mock/workforcePlanning.mock";
 import { cloneData } from "@/utils/cloneData";
+import { sortApprovalQueueByLatestActivity } from "@/utils/budgetApprovalHistoryUtils";
 
 function buildEmptyShell() {
   return {
@@ -45,19 +46,32 @@ function getInitialState() {
 }
 
 function getDefaultSelectedRequestId(workforce) {
-  return workforce.approval_queue[0]?.id ?? null;
+  const sorted = sortApprovalQueueByLatestActivity(workforce.approval_queue || []);
+  return sorted[0]?.id ?? null;
+}
+
+function withSortedApprovalQueue(workforce) {
+  if (!workforce?.approval_queue?.length) {
+    return workforce;
+  }
+
+  return {
+    ...workforce,
+    approval_queue: sortApprovalQueueByLatestActivity(workforce.approval_queue)
+  };
 }
 
 function normalizeBundle(response) {
   if (response?.config) {
+    const config = withSortedApprovalQueue(cloneData(response.config));
     return {
-      config: cloneData(response.config),
+      config,
       baseline: cloneData(response.baseline || response.config),
       isDirty: Boolean(response.isDirty)
     };
   }
 
-  const config = cloneData(response);
+  const config = withSortedApprovalQueue(cloneData(response));
   return { config, baseline: cloneData(config), isDirty: false };
 }
 
@@ -187,7 +201,7 @@ async function submitBudgetRequest(workforce, requestId) {
 
   const result = await workforcePlanningClient.submitBudgetRequest(requestId);
   return {
-    workforce: result.workforce,
+    workforce: withSortedApprovalQueue(result.workforce),
     request: result.request,
     toastMessage: result.toastMessage
   };
@@ -274,7 +288,7 @@ async function approveBudgetRequest(workforce, hiringProcess, id, comment) {
   const hiringProcessUpdate = result.hiringProcessUpdate || {};
 
   return {
-    workforce: result.workforce,
+    workforce: withSortedApprovalQueue(result.workforce),
     hiringProcess: {
       ...hiringProcess,
       ...hiringProcessUpdate,
@@ -345,7 +359,7 @@ async function rejectBudgetRequest(workforce, id, comment) {
 
   const result = await workforcePlanningClient.rejectBudgetRequest(id, comment);
   return {
-    workforce: result.workforce,
+    workforce: withSortedApprovalQueue(result.workforce),
     request: result.request,
     toastMessage: result.toastMessage
   };
@@ -417,7 +431,7 @@ async function requestBudgetClarification(workforce, id, comments) {
 
   const result = await workforcePlanningClient.requestClarification(id, comments);
   return {
-    workforce: result.workforce,
+    workforce: withSortedApprovalQueue(result.workforce),
     request: result.request,
     toastMessage: result.toastMessage
   };
@@ -433,7 +447,7 @@ async function submitBudgetClarification(workforce, id, comments) {
 
   const result = await workforcePlanningClient.submitClarification(id, comments);
   return {
-    workforce: result.workforce,
+    workforce: withSortedApprovalQueue(result.workforce),
     request: result.request,
     toastMessage: result.toastMessage
   };
@@ -450,10 +464,8 @@ function createRequisitionLocal(workforce, hiringProcess, positionId) {
 
   const nextWorkforce = {
     ...workforce,
-    approved_positions: workforce.approved_positions.map((item) =>
-      item.id === positionId
-        ? { ...item, requisitions_created: item.requisitions_created + 1 }
-        : item
+    approved_positions: workforce.approved_positions.filter(
+      (item) => item.id !== positionId
     )
   };
 
@@ -506,6 +518,7 @@ async function createRequisition(workforce, hiringProcess, positionId) {
 const workforcePlanningRepository = {
   getInitialState,
   getDefaultSelectedRequestId,
+  withSortedApprovalQueue,
   getAll,
   getById,
   createBudgetRequestDraft,

@@ -25,6 +25,7 @@ import { useState } from "react";
 import { MdAdd } from "react-icons/md";
 
 import AuthorizationService from "@/services/authorizationService";
+import { dispatchApprovalNotificationsUpdated } from "@/utils/enterpriseNotificationEvents";
 import { formatCurrency } from "@/utils/formatCurrency";
 import ConfigPageHeader from "../../components/platform-config/ConfigPageHeader";
 import ConfigSurface from "../../components/platform-config/ConfigSurface";
@@ -33,8 +34,13 @@ import BudgetRequestFormDialog from "../../components/workforce-planning/BudgetR
 import WorkforceStatusChip from "../../components/workforce-planning/WorkforceStatusChip";
 
 function BudgetRequestsPage() {
-  const { data, setToastMessage, saveDraftRequest, submitRequest } =
-    useOutletContext();
+  const {
+    data,
+    setToastMessage,
+    saveDraftRequest,
+    submitRequest,
+    resubmitClarification
+  } = useOutletContext();
   const [view, setView] = useState("cards");
   const [formOpen, setFormOpen] = useState(false);
   const [editingRequest, setEditingRequest] = useState(null);
@@ -67,8 +73,10 @@ function BudgetRequestsPage() {
     setFormOpen(true);
   };
 
+  const isOpenable = (request) =>
+    request?.status === "Draft" || request?.status === "Clarification Requested";
   const openDraftRequest = async (request) => {
-    if (request?.status !== "Draft" && request?.status !== "Clarification Requested") {
+    if (!isOpenable(request)) {
       return;
     }
 
@@ -103,7 +111,11 @@ function BudgetRequestsPage() {
 
   const handleSubmitRequest = async (requestId) => {
     try {
-      return await submitRequest(requestId);
+      const result = await submitRequest(requestId);
+      if (result) {
+        dispatchApprovalNotificationsUpdated();
+      }
+      return result;
     } catch (error) {
       const message =
         error.response?.data?.message || "Failed to submit budget request.";
@@ -111,6 +123,21 @@ function BudgetRequestsPage() {
       if (error.response?.status === 403) {
         setAccessDeniedOpen(true);
       }
+      return null;
+    }
+  };
+
+  const handleSubmitClarification = async (requestId, comment) => {
+    try {
+      const result = await resubmitClarification(requestId, comment);
+      if (result) {
+        dispatchApprovalNotificationsUpdated();
+      }
+      return result;
+    } catch (error) {
+      const message =
+        error.response?.data?.message || "Failed to submit clarification.";
+      setToastMessage(message);
       return null;
     }
   };
@@ -160,7 +187,7 @@ function BudgetRequestsPage() {
       {view === "cards" ? (
         <Grid container spacing={1.5}>
           {data.budget_requests.map((request) => {
-            const isDraft = request.status === "Draft";
+            const clickable = isOpenable(request);
 
             return (
               <Grid key={request.id} size={{ xs: 12, md: 6, lg: 4 }}>
@@ -168,7 +195,7 @@ function BudgetRequestsPage() {
                   request={request}
                   selected={editingRequest?.id === request.id && formOpen}
                   onClick={
-                    isDraft ? () => openDraftRequest(request) : undefined
+                    clickable ? () => openDraftRequest(request) : undefined
                   }
                 />
               </Grid>
@@ -213,16 +240,16 @@ function BudgetRequestsPage() {
 
               <TableBody>
                 {data.budget_requests.map((req) => {
-                  const isDraft = req.status === "Draft";
+                  const clickable = isOpenable(req);
 
                   return (
                     <TableRow
                       key={req.id}
-                      hover={isDraft}
+                      hover={clickable}
                       onClick={
-                        isDraft ? () => openDraftRequest(req) : undefined
+                        clickable ? () => openDraftRequest(req) : undefined
                       }
-                      sx={{ cursor: isDraft ? "pointer" : "default" }}
+                      sx={{ cursor: clickable ? "pointer" : "default" }}
                     >
                       <TableCell sx={{ py: 0.75, fontSize: 12 }}>
                         {req.id}
@@ -287,6 +314,7 @@ function BudgetRequestsPage() {
         onClose={closeForm}
         onSaveDraft={handleSaveDraft}
         onSubmitRequest={handleSubmitRequest}
+        onSubmitClarification={handleSubmitClarification}
       />
 
       <Dialog

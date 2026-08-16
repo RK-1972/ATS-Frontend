@@ -6,6 +6,7 @@ import RefreshOutlinedIcon from "@mui/icons-material/RefreshOutlined";
 import { WorkspaceHeader } from "@/components/enterprise";
 import EnterpriseConfirmationDialog from "@/components/enterprise/EnterpriseConfirmationDialog";
 import useOwnershipInbox from "@/hooks/useOwnershipInbox";
+import { dispatchOwnershipRequestsUpdated } from "@/utils/enterpriseNotificationEvents";
 
 function OwnershipInboxPage() {
   const {
@@ -47,14 +48,10 @@ function OwnershipInboxPage() {
     try {
       if (actionType === "approve") {
         await approveOwnershipRequest(selectedRequest.request_id);
-        window.dispatchEvent(
-          new Event("ownershipRequestsUpdated")
-        );
+        dispatchOwnershipRequestsUpdated();
       } else if (actionType === "reject") {
         await rejectOwnershipRequest(selectedRequest.request_id);
-        window.dispatchEvent(
-          new Event("ownershipRequestsUpdated")
-        );
+        dispatchOwnershipRequestsUpdated();
       }
     } finally {
       setDialogOpen(false);

@@ -69,10 +69,41 @@ export const moduleIcon = {
   radius: 12,
   elevation: "none",
   densities: {
+    xs: { size: 32, iconSize: 16 },
     sm: { size: 36, iconSize: 18 },
     md: { size: 48, iconSize: 24 },
     lg: { size: 56, iconSize: 28 }
   }
+};
+
+/**
+ * Dense M3 Motion Card — central metric / summary card primitive.
+ * Consumed by DenseM3MotionCard and future dashboard KPI tiles.
+ */
+export const denseMotionCard = {
+  paddingX: 1.25,
+  paddingY: 1.25,
+  minHeight: 92,
+  gap: 1,
+  icon: {
+    density: "xs",
+    marginBottom: 0.75
+  },
+  value: {
+    fontSize: 18,
+    fontWeight: 700,
+    lineHeight: 1.15
+  },
+  label: {
+    fontSize: 11,
+    fontWeight: 700,
+    lineHeight: 1.25
+  },
+  subtitle: {
+    fontSize: 10.5,
+    lineHeight: 1.2
+  },
+  hoverTranslateY: "-3px"
 };
 
 /**
@@ -287,6 +318,7 @@ export default {
   motion,
   moduleIcon,
   moduleColors,
+  denseMotionCard,
   statusColors,
   priorityColors,
   slaColors

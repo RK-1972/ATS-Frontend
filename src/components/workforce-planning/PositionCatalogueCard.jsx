@@ -15,7 +15,6 @@ import { formatCurrency } from "@/utils/formatCurrency";
 import WorkforceStatusChip from "./WorkforceStatusChip";
 
 function PositionCatalogueCard({ position, onCreateRequisition }) {
-
   const canCreateReq =
     position.remaining_budget > 0 &&
     position.status !== "Fully Utilized";
@@ -36,7 +35,6 @@ function PositionCatalogueCard({ position, onCreateRequisition }) {
       : null;
 
   return (
-
     <Card
       elevation={0}
       sx={{
@@ -46,7 +44,6 @@ function PositionCatalogueCard({ position, onCreateRequisition }) {
         borderColor: "divider"
       }}
     >
-
       <CardContent
         sx={{
           p: 1.5,
@@ -56,16 +53,13 @@ function PositionCatalogueCard({ position, onCreateRequisition }) {
           "&:last-child": { pb: 1.5 }
         }}
       >
-
         <Stack
           direction="row"
           justifyContent="space-between"
           alignItems="flex-start"
           gap={1}
         >
-
           <Box minWidth={0}>
-
             <Typography
               variant="caption"
               color="text.secondary"
@@ -87,17 +81,13 @@ function PositionCatalogueCard({ position, onCreateRequisition }) {
             <Typography variant="caption" color="text.secondary" sx={{ fontSize: 12 }}>
               {position.department} · Grade {position.grade}
             </Typography>
-
           </Box>
 
           <WorkforceStatusChip status={position.status} />
-
         </Stack>
 
         <Box mt={1.25} flex={1}>
-
           <Stack direction="row" justifyContent="space-between" mb={0.25}>
-
             <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>
               Budget {utilizationPct}%
             </Typography>
@@ -105,7 +95,6 @@ function PositionCatalogueCard({ position, onCreateRequisition }) {
             <Typography variant="caption" fontWeight={700} sx={{ fontSize: 11 }}>
               {formatCurrency(position.remaining_budget)} left
             </Typography>
-
           </Stack>
 
           <LinearProgress
@@ -120,15 +109,12 @@ function PositionCatalogueCard({ position, onCreateRequisition }) {
               month: "short",
               day: "numeric"
             })}
-            · {position.requisitions_created} req(s)
+            · {position.requisitions_created || 0} req(s)
           </Typography>
-
         </Box>
 
         <Tooltip title={disabledReason || ""} disableHoverListener={canCreateReq}>
-
           <span>
-
             <Button
               fullWidth
               variant="contained"
@@ -140,17 +126,11 @@ function PositionCatalogueCard({ position, onCreateRequisition }) {
             >
               Create requisition
             </Button>
-
           </span>
-
         </Tooltip>
-
       </CardContent>
-
     </Card>
-
   );
-
 }
 
 export default PositionCatalogueCard;

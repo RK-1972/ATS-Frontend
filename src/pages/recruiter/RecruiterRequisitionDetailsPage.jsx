@@ -36,6 +36,7 @@ import {
   SearchBar,
   StatusChip
 } from "../../components/enterprise";
+import InterviewProgressStepCell from "../../components/interviews/InterviewProgressStepCell";
 import {
   PIPELINE_STAGES,
   normalizeStage
@@ -569,7 +570,10 @@ function RecruiterRequisitionDetailsPage() {
       flex: 1,
       minWidth: 140,
       renderCell: (params) => (
-        <StatusChip status={normalizeStage(params.value) || params.value || "—"} />
+        <InterviewProgressStepCell
+          row={params.row}
+          value={normalizeStage(params.value) || params.value || "—"}
+        />
       )
     },
     {

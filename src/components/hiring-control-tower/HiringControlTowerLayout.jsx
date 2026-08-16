@@ -38,6 +38,9 @@ function HiringControlTowerLayout() {
     <Box
       sx={{
         minHeight: "100vh",
+        width: "100%",
+        maxWidth: "100%",
+        overflowX: "hidden",
         bgcolor: "background.default",
         display: "flex",
         flexDirection: "column"
@@ -50,18 +53,19 @@ function HiringControlTowerLayout() {
         onLogout={handleLogout}
       />
 
-      <Box sx={{ display: "flex", flex: 1 }}>
+      <Box sx={{ display: "flex", flex: 1, minWidth: 0, maxWidth: "100%", overflowX: "hidden" }}>
 
         <AdminNavRail />
 
         <Box
           component="main"
           sx={{
-            flex: 1,
+            flex: "1 1 0%",
             minWidth: 0,
+            maxWidth: "100%",
+            overflowX: "hidden",
             px: { xs: 2, sm: 2.5 },
-            py: { xs: 2, sm: 2.5 },
-            maxWidth: 1400
+            py: { xs: 2, sm: 2.5 }
           }}
         >
 

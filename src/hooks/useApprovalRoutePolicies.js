@@ -2,6 +2,33 @@ import { useCallback, useState } from "react";
 
 import ApprovalRoutePolicyService from "@/services/approvalRoutePolicyService";
 
+function extractPolicyPayload(response) {
+  if (!response) {
+    return null;
+  }
+
+  if (
+    response.policy_id !== undefined
+    || response.route_id !== undefined
+  ) {
+    return response;
+  }
+
+  return response.data ?? null;
+}
+
+function extractPolicyList(response) {
+  if (Array.isArray(response)) {
+    return response;
+  }
+
+  if (Array.isArray(response?.data)) {
+    return response.data;
+  }
+
+  return [];
+}
+
 function useApprovalRoutePolicies() {
   const [policies, setPolicies] = useState([]);
   const [selectedPolicy, setSelectedPolicy] = useState(null);
@@ -14,7 +41,7 @@ function useApprovalRoutePolicies() {
 
     try {
       const response = await ApprovalRoutePolicyService.getApprovalRoutePolicies();
-      const rows = response?.data || [];
+      const rows = extractPolicyList(response);
       setPolicies(rows);
       return rows;
     } catch (loadError) {
@@ -37,7 +64,7 @@ function useApprovalRoutePolicies() {
     try {
       const response =
         await ApprovalRoutePolicyService.getApprovalRoutePolicy(policyId);
-      const policy = response?.data || null;
+      const policy = extractPolicyPayload(response);
       setSelectedPolicy(policy);
       return policy;
     } catch (loadError) {
@@ -60,7 +87,7 @@ function useApprovalRoutePolicies() {
     try {
       const response =
         await ApprovalRoutePolicyService.createApprovalRoutePolicy(policy);
-      return response?.data || null;
+      return extractPolicyPayload(response);
     } catch (createError) {
       const message =
         createError.response?.data?.message
@@ -83,7 +110,7 @@ function useApprovalRoutePolicies() {
           policyId,
           policy
         );
-      return response?.data || null;
+      return extractPolicyPayload(response);
     } catch (updateError) {
       const message =
         updateError.response?.data?.message
@@ -103,7 +130,7 @@ function useApprovalRoutePolicies() {
     try {
       const response =
         await ApprovalRoutePolicyService.activateApprovalRoutePolicy(policyId);
-      return response?.data || null;
+      return extractPolicyPayload(response);
     } catch (activateError) {
       const message =
         activateError.response?.data?.message
@@ -125,7 +152,7 @@ function useApprovalRoutePolicies() {
         await ApprovalRoutePolicyService.deactivateApprovalRoutePolicy(
           policyId
         );
-      return response?.data || null;
+      return extractPolicyPayload(response);
     } catch (deactivateError) {
       const message =
         deactivateError.response?.data?.message

@@ -18,6 +18,23 @@ const interviewClient = {
     return httpGet(`${ENDPOINTS.interviews}/${id}`, () => ({ success: true, data: null }));
   },
 
+  getInterviewProgress(mapId) {
+    return httpGet(
+      `${ENDPOINTS.interviews}/progress/${encodeURIComponent(mapId)}`,
+      () => ({
+        success: true,
+        data: {
+          mapId,
+          candidateCode: null,
+          candidateName: null,
+          requisitionCode: null,
+          currentStage: null,
+          rounds: []
+        }
+      })
+    );
+  },
+
   scheduleInterview(payload) {
     return httpPost(
       `${ENDPOINTS.interviews}/schedule`,

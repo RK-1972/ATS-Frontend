@@ -2,6 +2,8 @@ export { default as WorkspaceLayout } from "./WorkspaceLayout";
 export { default as WorkspaceHeader } from "./WorkspaceHeader";
 export { default as EntityHeader } from "./EntityHeader";
 export { default as EnterpriseSurface } from "./EnterpriseSurface";
+export { default as DenseM3MotionCard } from "./DenseM3MotionCard";
+export { default as InspectableDetailCard } from "./InspectableDetailCard";
 export { default as EnterpriseTabs } from "./EnterpriseTabs";
 export { default as EnterpriseModuleIcon } from "./EnterpriseModuleIcon";
 export { default as EnterpriseModuleCard } from "./EnterpriseModuleCard";

@@ -34,7 +34,7 @@ import CandidateAssignmentCard from "@/components/candidate-workspace/CandidateA
 import CandidateOwnershipCard from "@/components/candidate-workspace/CandidateOwnershipCard";
 import CandidateOwnershipDialog from "@/components/candidate-workspace/CandidateOwnershipDialog";
 import EnterpriseConfirmationDialog from "@/components/enterprise/EnterpriseConfirmationDialog";
-import candidateRepository from "@/repositories/candidateRepository";
+import CandidateDraftRegisterPanel from "@/components/candidate-workspace/CandidateDraftRegisterPanel";
 
 function CandidateWorkspacePage() {
   const navigate = useNavigate();
@@ -78,7 +78,10 @@ function CandidateWorkspacePage() {
     ownerDisplayName,
     isOwner,
     pendingRequest,
-    requestOwnership
+    requestOwnership,
+    loadCandidates,
+    loadProfile,
+    candidateId
   } = workspace;
 
   useEffect(() => {
@@ -416,6 +419,22 @@ if (
 
       <Stack direction={{ xs: "column", lg: "row" }} spacing={1.5} alignItems="flex-start">
         <Box flex={1} minWidth={0}>
+          <CandidateDraftRegisterPanel
+            candidate={candidate}
+            onRegistered={async (updatedCandidate) => {
+              const activeCandidateId =
+                updatedCandidate?.candidate_id ||
+                candidate?.candidate_id ||
+                candidateId;
+
+              if (activeCandidateId) {
+                await loadProfile(activeCandidateId);
+              }
+
+              await loadCandidates({ preserveSelection: true });
+              showToast("Candidate registered successfully.", "success");
+            }}
+          />
           <CandidateHeroCard
             candidate={candidate}
             mapping={mapping}

@@ -25,15 +25,17 @@ import WorkOutlineOutlinedIcon from "@mui/icons-material/WorkOutlineOutlined";
 import AssignmentIndOutlinedIcon from "@mui/icons-material/AssignmentIndOutlined";
 import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
 import PersonAddAlt1OutlinedIcon from "@mui/icons-material/PersonAddAlt1Outlined";
+import AssignmentTurnedInOutlinedIcon from "@mui/icons-material/AssignmentTurnedInOutlined";
 import LocalOfferOutlinedIcon from "@mui/icons-material/LocalOfferOutlined";
 
 import useEnterpriseStore from "@/store/enterpriseStore";
 import { isNavPathVisible } from "@/enterprise/moduleVisibility";
+import { shouldShowWorkspaceSwitcher } from "@/enterprise/workspaceAvailability";
 import AuthorizationService from "@/services/authorizationService";
-
 const WORKSPACE_HOME_PATH = "/workspace";
 const RECRUITER_ASSIGNMENT_PATH = "/requisitions/assign-recruiters";
 const OFFER_WORKSPACE_PATH = "/offers";
+const REQUISITION_QUEUES_PATH = "/requisition-queues";
 
 const WORKSPACE_HOME_ITEM = {
   label: "Workspace Home",
@@ -83,6 +85,12 @@ const ADMIN_NAV_ITEMS = [
     label: "Workforce Planning",
     path: "/workforce-planning",
     icon: GroupsOutlinedIcon
+  },
+  {
+    label: "Requisitions",
+    path: REQUISITION_QUEUES_PATH,
+    icon: AssignmentTurnedInOutlinedIcon,
+    requiresRequisitionWorkspace: true
   },
   {
     label: "Talent Management",
@@ -138,7 +146,7 @@ const ADMIN_NAV_ITEMS = [
   },
   {
     label: "Reports & Analytics",
-    path: "/reports",
+    path: "/reports/builder",
     icon: BarChartOutlinedIcon
   }
 ];
@@ -209,6 +217,13 @@ function AdminNavRail() {
       return Boolean(workspace.showRequestWorkspace);
     }
 
+    if (
+      item.path === REQUISITION_QUEUES_PATH ||
+      item.requiresRequisitionWorkspace
+    ) {
+      return Boolean(workspace.showRequestWorkspace);
+    }
+
     if (item.path === OFFER_WORKSPACE_PATH || item.requiresOfferWorkspace) {
       return Boolean(workspace.showOfferWorkspace);
     }
@@ -232,9 +247,16 @@ function AdminNavRail() {
     return false;
   });
 
-  // Always first — return to existing Workspace Selection without logout.
-  const visibleItems = [WORKSPACE_HOME_ITEM, ...catalogItems];
+  // Workspace switcher only when the user has more than one available workspace.
+  const showWorkspaceSwitcher = shouldShowWorkspaceSwitcher({
+    user: loggedInUser,
+    workspaceFlags: workspace
+  });
 
+  const visibleItems = [
+    ...(showWorkspaceSwitcher ? [WORKSPACE_HOME_ITEM] : []),
+    ...catalogItems
+  ];
   const handleNavigate = (path) => {
 
     if (path) {

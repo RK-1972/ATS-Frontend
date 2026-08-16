@@ -17,8 +17,10 @@ export const ENDPOINTS = {
   documents: `${V1}/documents`,
   interviews: `${V1}/interviews`,
   hiringControlTower: `${V1}/hiring-control-tower`,
+  adminCommandCenter: `${V1}/admin/command-center`,
   notifications: `${V1}/notifications`,
-  audit: `${V1}/audit`
+  audit: `${V1}/audit`,
+  reports: `${V1}/reports`
 };
 
 export function masterEntityEndpoint(entityType) {

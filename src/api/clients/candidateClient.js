@@ -23,6 +23,12 @@ mapCandidateToRequisition(payload) {
     return API.get(`/candidate/${candidateId}`).then((response) => response.data);
   },
 
+  getPortalReviewQueue() {
+    return API
+      .get("/candidate-intake/portal-review-queue")
+      .then((response) => response.data);
+  },
+
   getCandidateFullDetails(candidateId) {
     return API.get(`/candidate-full-details/${candidateId}`).then((response) => response.data);
   },

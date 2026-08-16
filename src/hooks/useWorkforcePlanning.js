@@ -1,6 +1,10 @@
 import { useCallback, useMemo } from "react";
 
 import useEnterpriseStore from "@/store/enterpriseStore";
+import {
+  buildApprovalQueueSortKey,
+  sortApprovalQueueByLatestActivity
+} from "@/utils/budgetApprovalHistoryUtils";
 
 function useWorkforcePlanning() {
   const data = useEnterpriseStore((state) => state.workforce);
@@ -41,9 +45,21 @@ function useWorkforcePlanning() {
     setWorkforceUi((prev) => ({ ...prev, toastMessage: message }));
   }, [setWorkforceUi]);
 
+  const approvalQueueSortKey = useMemo(
+    () => buildApprovalQueueSortKey(data.approval_queue || []),
+    [data.approval_queue]
+  );
+
+  const sortedApprovalQueue = useMemo(
+    () => sortApprovalQueueByLatestActivity(data.approval_queue || []),
+    [approvalQueueSortKey, data.approval_queue]
+  );
+
   const selectedRequest = useMemo(
-    () => data.approval_queue.find((request) => request.id === selectedRequestId),
-    [data.approval_queue, selectedRequestId]
+    () => sortedApprovalQueue.find((request) => request.id === selectedRequestId)
+      || (data.approval_queue || []).find((request) => request.id === selectedRequestId)
+      || null,
+    [sortedApprovalQueue, data.approval_queue, selectedRequestId]
   );
 
   const saveDraftRequest = useCallback(
@@ -78,6 +94,8 @@ function useWorkforcePlanning() {
 
   return {
     data,
+    approvalQueueSortKey,
+    sortedApprovalQueue,
     selectedRequestId,
     setSelectedRequestId,
     selectedRequest,

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import {
   Alert,
@@ -68,6 +69,10 @@ import EnterpriseModuleIcon from "@/components/enterprise/EnterpriseModuleIcon";
 import useCandidateIntake from "@/hooks/useCandidateIntake";
 import useCandidateSources from "@/hooks/useCandidateSources";
 import API from "@/api/axios";
+import {
+  buildDraftUpdatePayload,
+  validateRegisterCandidate
+} from "@/utils/candidateRegistrationUtils";
 
 const RegistrationStepConnector = styled(StepConnector)(({ theme }) => ({
   [`&.${stepConnectorClasses.alternativeLabel}`]: {
@@ -442,40 +447,6 @@ function buildEditableCandidate(parsedCandidate) {
   };
 }
 
-function normalizeNumericExperience(value) {
-  if (value === null || value === undefined || value === "") {
-    return value;
-  }
-
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-
-  const match = String(value).trim().match(/(\d+(?:\.\d+)?)/);
-
-  if (!match) {
-    return value;
-  }
-
-  const parsed = Number(match[1]);
-
-  return Number.isFinite(parsed) ? parsed : value;
-}
-
-function buildDraftUpdatePayload(editableCandidate = {}, candidateContainer = "PIPELINE") {
-  return {
-    first_name: editableCandidate.first_name,
-    last_name: editableCandidate.last_name,
-    email_id: editableCandidate.email,
-    mobile_number: editableCandidate.mobile,
-    current_company: editableCandidate.current_company,
-    current_designation: editableCandidate.designation,
-    total_experience: normalizeNumericExperience(editableCandidate.experience),
-    primary_skill: editableCandidate.skills,
-    candidate_container: candidateContainer || "PIPELINE"
-  };
-}
-
 function validateCreateIntake(selectedSource, resumeFile) {
   const errors = {};
 
@@ -485,29 +456,6 @@ function validateCreateIntake(selectedSource, resumeFile) {
 
   if (!resumeFile) {
     errors.resume = "Resume upload is required.";
-  }
-
-  return errors;
-}
-
-function validateRegisterCandidate(editableCandidate) {
-  const errors = {};
-
-  if (!String(editableCandidate?.first_name || "").trim()) {
-    errors.first_name = "First name is required.";
-  }
-
-  if (!String(editableCandidate?.last_name || "").trim()) {
-    errors.last_name = "Last name is required.";
-  }
-
-  const email = String(editableCandidate?.email || "").trim();
-  const mobile = String(editableCandidate?.mobile || "").trim();
-
-  if (!email && !mobile) {
-    const contactMessage = "Enter email or mobile.";
-    errors.email = contactMessage;
-    errors.mobile = contactMessage;
   }
 
   return errors;
@@ -1381,6 +1329,90 @@ function RegisterCandidateDestinationDialog({
   );
 }
 
+function CandidateIntakeReviewQueue({ reviewQueue = [], loading = false }) {
+  const navigate = useNavigate();
+
+  if (loading || reviewQueue.length === 0) {
+    return null;
+  }
+
+  return (
+    <Card
+      elevation={0}
+      sx={{
+        borderRadius: 3,
+        border: 1,
+        borderColor: "divider",
+        boxShadow: (theme) => theme.tokens.shadows.mid
+      }}
+    >
+      <Box sx={{ p: 2 }}>
+        <Stack spacing={1.25}>
+          <Typography variant="h6" fontWeight={700}>
+            Ready for Review
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Draft candidates from Candidate Portal and other intake channels awaiting recruiter registration.
+          </Typography>
+          <Stack spacing={1}>
+            {reviewQueue.map((row) => {
+              const candidateName = [row.first_name, row.last_name]
+                .filter(Boolean)
+                .join(" ")
+                .trim();
+              const sourceLabel =
+                row.source_name ||
+                (row.source_code === "PORTAL" ? "Career Portal" : row.source_code) ||
+                "Candidate Intake";
+
+              return (
+                <Stack
+                  key={`${row.intake_id}-${row.candidate_id}`}
+                  direction={{ xs: "column", sm: "row" }}
+                  spacing={1}
+                  alignItems={{ xs: "flex-start", sm: "center" }}
+                  justifyContent="space-between"
+                  sx={{
+                    p: 1.25,
+                    borderRadius: 2,
+                    border: 1,
+                    borderColor: "divider"
+                  }}
+                >
+                  <Box sx={{ minWidth: 0 }}>
+                    <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                      <Typography variant="body2" fontWeight={700}>
+                        {candidateName || row.email_id}
+                      </Typography>
+                      <Chip
+                        size="small"
+                        label={sourceLabel}
+                        variant="outlined"
+                        sx={{ height: 22 }}
+                      />
+                    </Stack>
+                    <Typography variant="caption" color="text.secondary">
+                      {row.email_id} · {Math.round(Number(row.profile_completion || 0))}% complete
+                    </Typography>
+                  </Box>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    onClick={() => navigate(`/candidates/${row.candidate_id}`)}
+                    sx={{ textTransform: "none", fontWeight: 600 }}
+                  >
+                    Review
+                  </Button>
+                </Stack>
+              );
+            })}
+          </Stack>
+        </Stack>
+      </Box>
+    </Card>
+  );
+}
+
 function CandidateIntakePage() {
   const [selectedSource, setSelectedSource] = useState("");
   const [resumeFile, setResumeFile] = useState(null);
@@ -1395,6 +1427,7 @@ function CandidateIntakePage() {
   const [intakeSessionKey, setIntakeSessionKey] = useState(0);
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const [dashboard, setDashboard] = useState(EMPTY_DASHBOARD);
+  const [reviewQueue, setReviewQueue] = useState([]);
   const [createValidationErrors, setCreateValidationErrors] = useState({});
   const [registerCandidateMessage, setRegisterCandidateMessage] = useState("");
   const [registerSuccessOpen, setRegisterSuccessOpen] = useState(false);
@@ -1427,8 +1460,10 @@ function CandidateIntakePage() {
         pending_review: dashboardData.pending_review ?? 0,
         candidate_created: dashboardData.candidate_created ?? 0
       });
+      setReviewQueue(Array.isArray(dashboardData.review_queue) ? dashboardData.review_queue : []);
     } catch {
       setDashboard(EMPTY_DASHBOARD);
+      setReviewQueue([]);
     } finally {
       setDashboardLoading(false);
     }
@@ -1695,6 +1730,12 @@ function CandidateIntakePage() {
 
   return (
     <>
+      <Box sx={{ px: 2, pb: 2 }}>
+        <CandidateIntakeReviewQueue
+          reviewQueue={reviewQueue}
+          loading={dashboardLoading}
+        />
+      </Box>
       <EnterpriseWorkbench
         header={
           <EnterpriseWorkspaceHeader

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Alert,
   Box,
@@ -34,6 +34,8 @@ import {
   StatusChip
 } from "../../components/enterprise";
 import MyApprovalsService from "../../services/myApprovalsService";
+import workforcePlanningClient from "@/api/clients/workforcePlanningClient";
+import ClarificationTimeline from "../../components/workforce-planning/ClarificationTimeline";
 import useEnterpriseStore from "../../store/enterpriseStore";
 import { formatCurrency } from "@/utils/formatCurrency";
 import {
@@ -43,6 +45,8 @@ import {
   readCommercialValue
 } from "@/utils/offerCommercialUtils";
 import { matchesApprovalSearch } from "@/utils/myApprovalsSearch";
+import { dispatchApprovalNotificationsUpdated } from "@/utils/enterpriseNotificationEvents";
+import RequisitionWorkflowStepCell from "../../components/approvals/RequisitionWorkflowStepCell";
 
 function resolveEnterpriseNavRail(user) {
   let workspace = {};
@@ -80,6 +84,31 @@ function resolveDocumentTypeKey(row) {
   return String(row?.document_type || row?.workflow_type || "")
     .trim()
     .toUpperCase();
+}
+
+function isRequisitionDocument(row) {
+  const documentType = resolveDocumentTypeKey(row);
+
+  return (
+    documentType === "REQUISITION"
+    || Boolean(row?.requisition_code)
+    || String(row?.instance_id || "").startsWith("WF-RM-")
+    || /^REQ-/i.test(String(row?.document_number || ""))
+  );
+}
+
+function resolveRequisitionDocumentCode(row) {
+  const documentNumber = String(row?.document_number || "").trim();
+
+  if (row?.requisition_code) {
+    return row.requisition_code;
+  }
+
+  if (/^REQ-/i.test(documentNumber)) {
+    return documentNumber;
+  }
+
+  return null;
 }
 
 function formatDocumentType(row) {
@@ -144,6 +173,7 @@ function GridEllipsisCell({ value }) {
 
 function MyApprovalsPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const refreshWorkforce = useEnterpriseStore((state) => state.refreshWorkforce);
   const refreshOffers = useEnterpriseStore((state) => state.refreshOffers);
   const loggedInUser = useMemo(() => {
@@ -166,6 +196,16 @@ function MyApprovalsPage() {
   });
   const [actionComments, setActionComments] = useState("");
   const [isActing, setIsActing] = useState(false);
+  const [approvalInspectorDetail, setApprovalInspectorDetail] = useState(null);
+  const [clarificationResponse, setClarificationResponse] = useState("");
+  const [clarificationResponseTouched, setClarificationResponseTouched] =
+    useState(false);
+
+  const isClarificationInspectorTask =
+    String(inspectorRow?.task_type || "").toLowerCase() === "clarification"
+    || approvalInspectorDetail?.can_resubmit === true
+    || Boolean(approvalInspectorDetail?.clarification_pending);
+  const clarificationResponseValid = Boolean(clarificationResponse.trim());
 
   const loadApprovals = useCallback(async () => {
     setIsLoading(true);
@@ -188,6 +228,72 @@ function MyApprovalsPage() {
   useEffect(() => {
     loadApprovals();
   }, [loadApprovals]);
+
+  useEffect(() => {
+    const taskId = location.state?.taskId;
+    if (!taskId || isLoading || !rows.length) {
+      return;
+    }
+
+    const match = rows.find(
+      (row) => String(row.task_id) === String(taskId)
+    );
+
+    if (match) {
+      setInspectorRow(match);
+    }
+  }, [rows, isLoading, location.state?.taskId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadApprovalInspectorDetail() {
+      if (!inspectorRow) {
+        setApprovalInspectorDetail(null);
+        return;
+      }
+
+      const documentType = resolveDocumentTypeKey(inspectorRow);
+      const documentId =
+        inspectorRow.document_number || inspectorRow.requisition_code || null;
+
+      if (!documentId) {
+        setApprovalInspectorDetail(null);
+        return;
+      }
+
+      try {
+        let detail = null;
+
+        if (documentType === "BUDGET") {
+          detail = await workforcePlanningClient.getBudgetActionContext(documentId);
+        } else if (
+          documentType === "REQUISITION"
+          || isRequisitionDocument(inspectorRow)
+        ) {
+          detail = await workforcePlanningClient.getRequisitionActionContext(documentId);
+        }
+
+        if (!cancelled) {
+          setApprovalInspectorDetail(detail);
+        }
+      } catch {
+        if (!cancelled) {
+          setApprovalInspectorDetail(null);
+        }
+      }
+    }
+
+    loadApprovalInspectorDetail();
+    return () => {
+      cancelled = true;
+    };
+  }, [inspectorRow]);
+
+  useEffect(() => {
+    setClarificationResponse("");
+    setClarificationResponseTouched(false);
+  }, [inspectorRow?.task_id]);
 
   const filteredRows = useMemo(() => {
     const matched = rows.filter((row) =>
@@ -215,6 +321,14 @@ function MyApprovalsPage() {
     if (isActing) return;
     setActionDialog({ open: false, type: null, row: null });
     setActionComments("");
+  };
+
+  const handleResubmitClick = () => {
+    setClarificationResponseTouched(true);
+    if (!clarificationResponse.trim() || !inspectorRow) {
+      return;
+    }
+    setActionDialog({ open: true, type: "resubmit", row: inspectorRow });
   };
 
   const handleConfirmAction = async () => {
@@ -248,9 +362,15 @@ function MyApprovalsPage() {
           severity: "success"
         });
       } else if (type === "resubmit") {
+        const comments = clarificationResponse.trim();
+        if (!comments) {
+          setClarificationResponseTouched(true);
+          setIsActing(false);
+          return;
+        }
         await MyApprovalsService.submitClarification(
           row.instance_id,
-          actionComments.trim()
+          comments
         );
         setToast({
           message: "Clarification submitted. Workflow resumed.",
@@ -260,7 +380,10 @@ function MyApprovalsPage() {
 
       setActionDialog({ open: false, type: null, row: null });
       setActionComments("");
+      setClarificationResponse("");
+      setClarificationResponseTouched(false);
       setInspectorRow(null);
+      dispatchApprovalNotificationsUpdated();
       await Promise.all([
         loadApprovals(),
         refreshWorkforce?.().catch(() => null),
@@ -292,6 +415,17 @@ function MyApprovalsPage() {
 
   const handleOpenDocumentByType = (row) => {
     const documentType = resolveDocumentTypeKey(row);
+    const requisitionCode =
+      resolveRequisitionDocumentCode(row)
+      || approvalInspectorDetail?.requisition_code
+      || null;
+    const shouldOpenRequisitionClarificationQueue =
+      Boolean(requisitionCode)
+      && (
+        isClarificationInspectorTask
+        || approvalInspectorDetail?.can_resubmit === true
+        || Boolean(approvalInspectorDetail?.clarification_pending)
+      );
 
     if (documentType === "BUDGET") {
       navigate("/workforce-planning/approvals", {
@@ -307,7 +441,14 @@ function MyApprovalsPage() {
       return;
     }
 
-    if (documentType === "REQUISITION" || row?.requisition_code) {
+    if (shouldOpenRequisitionClarificationQueue) {
+      navigate("/requisition-queues/clarification", {
+        state: { requisitionCode }
+      });
+      return;
+    }
+
+    if (isRequisitionDocument(row)) {
       handleOpenInTalentDemand(row);
     }
   };
@@ -386,7 +527,21 @@ function MyApprovalsPage() {
       field: "current_approval_step",
       headerName: "Current Step",
       flex: 1.2,
-      minWidth: 150
+      minWidth: 150,
+      renderCell: (params) => {
+        const documentType = resolveDocumentTypeKey(params.row);
+
+        if (documentType === "BUDGET" || isRequisitionDocument(params.row)) {
+          return (
+            <RequisitionWorkflowStepCell
+              row={params.row}
+              value={params.value}
+            />
+          );
+        }
+
+        return <GridEllipsisCell value={params.value} />;
+      }
     },
     {
       field: "submitted_date",
@@ -448,11 +603,11 @@ function MyApprovalsPage() {
                 variant="text"
                 onClick={(event) => {
                   event.stopPropagation();
-                  openAction("resubmit", params.row);
+                  handleOpenDocument(params.row);
                 }}
                 sx={{ textTransform: "none", fontWeight: 600, minWidth: 0, px: 0.75 }}
               >
-                Resubmit
+                Respond
               </Button>
             ) : (
               <>
@@ -713,6 +868,84 @@ function MyApprovalsPage() {
               value={inspectorRow.hiring_manager || "—"}
             />
 
+            {["BUDGET", "REQUISITION"].includes(resolveDocumentTypeKey(inspectorRow)) ? (
+              <ClarificationTimeline
+                rounds={(approvalInspectorDetail?.clarification_rounds || []).filter(
+                  (round) => !round.pending
+                )}
+                workflowTimeline={[]}
+                requestorName={
+                  approvalInspectorDetail?.requestor_name || inspectorRow.requestor
+                }
+              />
+            ) : null}
+
+            {isClarificationInspectorTask ? (
+              <Box
+                sx={{
+                  p: 1.5,
+                  borderRadius: 2,
+                  bgcolor: "action.hover",
+                  border: 1,
+                  borderColor: "warning.main"
+                }}
+              >
+                <Typography variant="body2" fontWeight={700} sx={{ fontSize: 14, mb: 1 }}>
+                  Clarification required
+                </Typography>
+
+                {approvalInspectorDetail?.clarification_pending?.request_comments ? (
+                  <Box sx={{ mb: 1.5 }}>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ fontSize: 11, fontWeight: 600 }}
+                    >
+                      Approver&apos;s clarification
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontSize: 13, mt: 0.25 }}>
+                      {approvalInspectorDetail.clarification_pending.request_comments}
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ fontSize: 11, display: "block", mt: 0.5 }}
+                    >
+                      {approvalInspectorDetail.clarification_pending.requested_by || "Approver"}
+                      {approvalInspectorDetail.clarification_pending.requested_on
+                        ? ` · ${formatDateTime(approvalInspectorDetail.clarification_pending.requested_on)}`
+                        : ""}
+                    </Typography>
+                  </Box>
+                ) : null}
+
+                <TextField
+                  fullWidth
+                  required
+                  multiline
+                  minRows={3}
+                  size="small"
+                  label="Your response"
+                  placeholder="Enter your clarification response for the approver…"
+                  value={clarificationResponse}
+                  onChange={(event) => {
+                    setClarificationResponse(event.target.value);
+                    if (clarificationResponseTouched) {
+                      setClarificationResponseTouched(true);
+                    }
+                  }}
+                  onBlur={() => setClarificationResponseTouched(true)}
+                  disabled={isActing}
+                  error={clarificationResponseTouched && !clarificationResponseValid}
+                  helperText={
+                    clarificationResponseTouched && !clarificationResponseValid
+                      ? "Please provide a response to the clarification request."
+                      : "Required: Please provide a response to the clarification request."
+                  }
+                />
+              </Box>
+            ) : null}
+
             <Divider sx={{ my: 0.5 }} />
 
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
@@ -727,12 +960,13 @@ function MyApprovalsPage() {
                   Open document
                 </Button>
               ) : null}
-              {String(inspectorRow.task_type || "").toLowerCase() === "clarification" ? (
+              {isClarificationInspectorTask ? (
                 <Button
                   size="small"
                   color="primary"
                   variant="contained"
-                  onClick={() => openAction("resubmit", inspectorRow)}
+                  disabled={!clarificationResponseValid || isActing}
+                  onClick={handleResubmitClick}
                   sx={{ textTransform: "none", fontWeight: 600 }}
                 >
                   Resubmit
@@ -800,6 +1034,25 @@ function MyApprovalsPage() {
             disabled={isActing}
             sx={{ mt: 1.5 }}
           />
+        ) : actionDialog.type === "resubmit" && clarificationResponse.trim() ? (
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1.25 }}>
+            Your response will be submitted to the approver:
+          </Typography>
+        ) : null}
+        {actionDialog.type === "resubmit" && clarificationResponse.trim() ? (
+          <Typography
+            variant="body2"
+            sx={{
+              mt: 1,
+              p: 1.25,
+              borderRadius: 1.5,
+              bgcolor: "action.hover",
+              fontSize: 13,
+              whiteSpace: "pre-wrap"
+            }}
+          >
+            {clarificationResponse.trim()}
+          </Typography>
         ) : null}
       </EnterpriseConfirmationDialog>
 

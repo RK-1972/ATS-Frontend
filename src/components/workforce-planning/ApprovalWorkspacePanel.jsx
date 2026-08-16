@@ -16,8 +16,15 @@ import EnterpriseConfirmationDialog from "@/components/enterprise/EnterpriseConf
 import WorkforceStatusChip from "./WorkforceStatusChip";
 import ApprovalTimeline from "./ApprovalTimeline";
 import ApprovalHistory from "./ApprovalHistory";
+import ClarificationTimeline from "./ClarificationTimeline";
 import useEnterpriseAudit from "../../hooks/useEnterpriseAudit";
 import workforcePlanningClient from "@/api/clients/workforcePlanningClient";
+import { dispatchApprovalNotificationsUpdated } from "@/utils/enterpriseNotificationEvents";
+import {
+  mapWorkflowTimelineToHistoryEntries,
+  sortApprovalHistoryLatestFirst,
+  sortTimelineLatestFirst
+} from "@/utils/budgetApprovalHistoryUtils";
 
 function mapAuditToHistoryEntry(record) {
   const actionMap = {
@@ -85,6 +92,12 @@ function ApprovalWorkspacePanel({
       return [];
     }
 
+    if (actionContext?.workflow_timeline?.length) {
+      return sortApprovalHistoryLatestFirst(
+        mapWorkflowTimelineToHistoryEntries(actionContext.workflow_timeline)
+      );
+    }
+
     const auditHistory = auditEvents
       .filter(
         (record) =>
@@ -93,8 +106,26 @@ function ApprovalWorkspacePanel({
       )
       .map(mapAuditToHistoryEntry);
 
-    return auditHistory.length ? auditHistory : request.history;
-  }, [auditEvents, request]);
+    const fallback = auditHistory.length ? auditHistory : request.history || [];
+    return sortApprovalHistoryLatestFirst(fallback);
+  }, [actionContext?.workflow_timeline, auditEvents, request]);
+
+  const timelineEvents = useMemo(() => {
+    const mapped = actionContext?.workflow_timeline?.length
+      ? actionContext.workflow_timeline.map((event) => ({
+          step: event.event,
+          actor: event.actor,
+          date: event.recorded_on,
+          comment: event.comment,
+          history_id: event.history_id
+        }))
+      : (request?.timeline || []).map((event, index) => ({
+          ...event,
+          history_id: index
+        }));
+
+    return sortTimelineLatestFirst(mapped);
+  }, [actionContext?.workflow_timeline, request?.timeline]);
 
   if (!request) {
     return (
@@ -162,6 +193,7 @@ function ApprovalWorkspacePanel({
       }
       setComment("");
       setDialog({ open: false, type: null });
+      dispatchApprovalNotificationsUpdated();
     } finally {
       setActing(false);
     }
@@ -259,7 +291,12 @@ function ApprovalWorkspacePanel({
         </Box>
       </ConfigSurface>
 
-      <ApprovalTimeline events={request.timeline} />
+      <ApprovalTimeline events={timelineEvents} />
+      <ClarificationTimeline
+        rounds={actionContext?.clarification_rounds || []}
+        workflowTimeline={actionContext?.workflow_timeline || []}
+        requestorName={actionContext?.requestor_name || request.submitted_by}
+      />
       <ApprovalHistory entries={historyEntries} />
 
       {(canAct || canResubmit) && (

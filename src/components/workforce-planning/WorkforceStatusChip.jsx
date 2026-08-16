@@ -4,6 +4,7 @@ const STATUS_MAP = {
   Draft: "default",
   Approved: "success",
   Active: "success",
+  Open: "default",
   "Pending Level-1 Approval": "warning",
   "Pending Level-2 Approval": "warning",
   "Clarification Requested": "warning",

@@ -9,13 +9,349 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableRow
+  TableRow,
+  CircularProgress
 } from "@mui/material";
 
 import EnterpriseTabs from "@/components/enterprise/EnterpriseTabs";
-import { mapDisplayStatus } from "./EnterpriseProcessTimeline";
+import {
+  formatOptalynxDateTime,
+  formatOptalynxDateTimeValue,
+  formatOptalynxMaybeDateTime
+} from "@/utils/formatDateTime";
+import { mapDisplayStatus } from "./lifecycleTimelinePresentation";
 import BusinessRuleDetailDialog from "./BusinessRuleDetailDialog";
 import StageApprovalPanel from "./StageApprovalPanel";
+
+function InspectorShell({ children, header = null }) {
+
+  return (
+
+    <Box
+      sx={{
+        border: 1,
+        borderColor: "divider",
+        borderRadius: 2,
+        bgcolor: "background.paper",
+        width: "100%",
+        minWidth: 0,
+        maxWidth: "100%",
+        height: "100%",
+        minHeight: 0,
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden"
+      }}
+    >
+
+      {header ? (
+        <Box
+          sx={{
+            flexShrink: 0,
+            bgcolor: "background.paper",
+            zIndex: 1
+          }}
+        >
+          {header}
+        </Box>
+      ) : null}
+
+      <Box
+        sx={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: "auto",
+          overflowX: "hidden",
+          px: 1.5,
+          py: 1,
+          "&::-webkit-scrollbar": { width: 6 },
+          "&::-webkit-scrollbar-thumb": {
+            bgcolor: "divider",
+            borderRadius: 1
+          }
+        }}
+      >
+        {children}
+      </Box>
+
+    </Box>
+
+  );
+
+}
+
+function LiveInspectorSection({ title, children }) {
+
+  if (!children) {
+    return null;
+  }
+
+  return (
+    <Box mb={1.5}>
+      <Typography variant="caption" fontWeight={700} color="text.secondary" display="block" mb={0.5}>
+        {title}
+      </Typography>
+      {children}
+    </Box>
+  );
+
+}
+
+const INSPECTOR_DATE_FIELD_KEYS = new Set([
+  "assigned_on",
+  "applied_on",
+  "modified_on",
+  "accepted_on",
+  "declined_on",
+  "recorded_on",
+  "action_on",
+  "due_at",
+  "created_on",
+  "submitted_on"
+]);
+
+function formatInspectorRows(items = []) {
+  return items.map((item) => {
+    const formattedValue = formatOptalynxMaybeDateTime(item.value);
+
+    return {
+      label: item.label,
+      value: item.availability && item.availability !== "real"
+        ? `${formattedValue} (${item.availability})`
+        : formattedValue
+    };
+  });
+}
+
+function formatRelatedRecordObject(record) {
+  if (!record || typeof record !== "object") {
+    return String(record ?? "—");
+  }
+
+  return Object.entries(record)
+    .filter(([key]) => key !== "availability")
+    .map(([key, val]) => {
+      const display = INSPECTOR_DATE_FIELD_KEYS.has(key)
+        ? formatOptalynxDateTimeValue(val)
+        : String(val ?? "—");
+
+      return `${key.replace(/_/g, " ")}: ${display}`;
+    })
+    .join(" · ");
+}
+
+function LiveStageInspectorContent({ data }) {
+
+  const { sections = {}, metadata = {} } = data;
+  const hasContent = Boolean(
+    sections.key_metrics?.length
+    || sections.details?.length
+    || sections.workflow
+    || (sections.related_records && Object.keys(sections.related_records).length)
+    || sections.history?.length
+  );
+
+  if (!hasContent) {
+    return (
+      <Typography variant="body2" color="text.secondary">
+        No additional details are available for this stage.
+      </Typography>
+    );
+  }
+
+  return (
+
+    <>
+
+      <LiveInspectorSection title="Key metrics">
+        {sections.key_metrics?.length ? (
+          <PropertyGrid rows={formatInspectorRows(sections.key_metrics.map((item) => ({
+            label: item.label,
+            value: item.value,
+            availability: item.availability
+          })))} />
+        ) : null}
+      </LiveInspectorSection>
+
+      <LiveInspectorSection title="Details">
+        {sections.details?.length ? (
+          <PropertyGrid rows={formatInspectorRows(sections.details)} />
+        ) : null}
+      </LiveInspectorSection>
+
+      <LiveInspectorSection title="Workflow">
+        {sections.workflow ? (
+          <Stack spacing={0.75}>
+            <PropertyGrid
+              rows={[
+                { label: "Workflow code", value: sections.workflow.workflow_code || "—" },
+                { label: "Status", value: sections.workflow.status || "—" },
+                {
+                  label: "Pending task",
+                  value: sections.workflow.pending_task?.title || "—"
+                }
+              ]}
+            />
+            {sections.workflow.approval_steps?.length ? (
+              <Typography variant="caption" color="text.secondary">
+                {sections.workflow.approval_steps.length} approval step(s)
+              </Typography>
+            ) : null}
+          </Stack>
+        ) : null}
+      </LiveInspectorSection>
+
+      <LiveInspectorSection title="Related records">
+        {sections.related_records ? (
+          <Stack spacing={0.75}>
+            {Object.entries(sections.related_records)
+              .filter(([key, value]) => !key.endsWith("_truncated") && value != null)
+              .map(([key, value]) => (
+                <Box key={key}>
+                  <Typography variant="caption" fontWeight={700} display="block" mb={0.25}>
+                    {key.replace(/_/g, " ")}
+                  </Typography>
+                  {Array.isArray(value) ? (
+                    <Typography variant="caption" color="text.secondary">
+                      {value.length} record(s)
+                      {sections.related_records[`${key}_truncated`] ? " · truncated" : ""}
+                    </Typography>
+                  ) : (
+                    <Typography variant="caption" color="text.secondary">
+                      {formatRelatedRecordObject(value)}
+                    </Typography>
+                  )}
+                </Box>
+              ))}
+          </Stack>
+        ) : null}
+      </LiveInspectorSection>
+
+      <LiveInspectorSection title="History">
+        {sections.history?.length ? (
+          <Stack spacing={0.75}>
+            {sections.history.slice(0, 8).map((event, index) => (
+              <Box key={`${event.recorded_on || event.action}-${index}`}>
+                <Typography variant="caption" fontWeight={700}>
+                  {formatOptalynxDateTime(event.recorded_on)}
+                  {event.actor ? ` · ${event.actor}` : ""}
+                </Typography>
+                <Typography variant="caption" display="block">
+                  {event.action || event.event_type || "Event"}
+                </Typography>
+              </Box>
+            ))}
+            {sections.history_truncated ? (
+              <Typography variant="caption" color="text.secondary">
+                Additional history truncated.
+              </Typography>
+            ) : null}
+          </Stack>
+        ) : null}
+      </LiveInspectorSection>
+
+      {metadata.unsupported_fields?.length ? (
+        <Typography variant="caption" color="text.secondary" display="block" mt={1}>
+          Unsupported in V1: {metadata.unsupported_fields.slice(0, 4).join(", ")}
+          {metadata.unsupported_fields.length > 4 ? "…" : ""}
+        </Typography>
+      ) : null}
+
+    </>
+
+  );
+
+}
+
+function LiveStageInspectorPanel({
+
+  lifecycleSelectedKey,
+  stageInspectorData,
+  stageInspectorLoading,
+  stageInspectorError
+
+}) {
+
+  if (!lifecycleSelectedKey) {
+    return (
+      <InspectorShell>
+        <Typography variant="body2" color="text.secondary">
+          Select a workflow stage to inspect details.
+        </Typography>
+      </InspectorShell>
+    );
+  }
+
+  if (stageInspectorLoading) {
+    return (
+      <InspectorShell>
+        <Stack direction="row" spacing={1} alignItems="center">
+          <CircularProgress size={16} />
+          <Typography variant="body2" color="text.secondary">
+            Loading stage details…
+          </Typography>
+        </Stack>
+      </InspectorShell>
+    );
+  }
+
+  if (stageInspectorError) {
+    return (
+      <InspectorShell>
+        <Typography variant="body2" color="error.main">
+          Stage details could not be loaded.
+        </Typography>
+        <Typography variant="caption" color="text.secondary" display="block" mt={0.5}>
+          {stageInspectorError}
+        </Typography>
+      </InspectorShell>
+    );
+  }
+
+  if (!stageInspectorData?.milestone) {
+    return (
+      <InspectorShell>
+        <Typography variant="body2" color="text.secondary">
+          No additional details are available for this stage.
+        </Typography>
+      </InspectorShell>
+    );
+  }
+
+  const display = mapDisplayStatus(stageInspectorData.milestone.status);
+
+  return (
+
+    <InspectorShell
+      header={(
+        <Box sx={{ px: 1.5, py: 1, borderBottom: 1, borderColor: "divider" }}>
+          <Typography variant="caption" fontWeight={700} color="primary.main">
+            Inspector
+          </Typography>
+          <Typography variant="body2" fontWeight={700} lineHeight={1.2}>
+            {stageInspectorData.milestone.label}
+          </Typography>
+          <Chip
+            label={display.label}
+            size="small"
+            color={display.color}
+            variant="outlined"
+            sx={{
+              mt: 0.5,
+              height: 22,
+              fontSize: 10,
+              fontWeight: 700
+            }}
+          />
+        </Box>
+      )}
+    >
+      <LiveStageInspectorContent data={stageInspectorData} />
+    </InspectorShell>
+
+  );
+
+}
 
 function PropertyGrid({ rows }) {
 
@@ -64,6 +400,11 @@ function PropertyGrid({ rows }) {
 
 function StageInspectorPanel({
 
+  liveModeEnabled = false,
+  lifecycleSelectedKey,
+  stageInspectorData,
+  stageInspectorLoading,
+  stageInspectorError,
   stage,
   stageNotifications,
   stageTimeline,
@@ -85,6 +426,17 @@ function StageInspectorPanel({
   const [tab, setTab] = useState(0);
   const [selectedRule, setSelectedRule] = useState(null);
 
+  if (liveModeEnabled) {
+    return (
+      <LiveStageInspectorPanel
+        lifecycleSelectedKey={lifecycleSelectedKey}
+        stageInspectorData={stageInspectorData}
+        stageInspectorLoading={stageInspectorLoading}
+        stageInspectorError={stageInspectorError}
+      />
+    );
+  }
+
   if (!stage) {
 
     return (
@@ -96,10 +448,10 @@ function StageInspectorPanel({
           borderRadius: 2,
           bgcolor: "background.paper",
           width: "100%",
-          minWidth: 340,
-          maxWidth: 360,
+          minWidth: 0,
+          maxWidth: "100%",
           height: "100%",
-          minHeight: 380,
+          minHeight: 0,
           display: "flex",
           flexDirection: "column",
           overflow: "hidden"
@@ -138,17 +490,17 @@ function StageInspectorPanel({
         borderRadius: 2,
         bgcolor: "background.paper",
         width: "100%",
-        minWidth: 340,
-        maxWidth: 360,
+        minWidth: 0,
+        maxWidth: "100%",
         height: "100%",
-        minHeight: 380,
+        minHeight: 0,
         display: "flex",
         flexDirection: "column",
         overflow: "hidden"
       }}
     >
 
-      <Box sx={{ px: 1.5, py: 1, borderBottom: 1, borderColor: "divider" }}>
+      <Box sx={{ flexShrink: 0, px: 1.5, py: 1, borderBottom: 1, borderColor: "divider" }}>
 
         <Typography variant="caption" fontWeight={700} color="primary.main">
           Inspector
@@ -180,6 +532,7 @@ function StageInspectorPanel({
         scrollButtons="auto"
         allowScrollButtonsMobile
         sx={{
+          flexShrink: 0,
           minHeight: 40,
           borderBottom: 1,
           borderColor: "divider",
@@ -207,7 +560,21 @@ function StageInspectorPanel({
 
       </EnterpriseTabs>
 
-      <Box sx={{ flex: 1, overflow: "auto", px: 1.5, py: 1 }}>
+      <Box
+        sx={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: "auto",
+          overflowX: "hidden",
+          px: 1.5,
+          py: 1,
+          "&::-webkit-scrollbar": { width: 6 },
+          "&::-webkit-scrollbar-thumb": {
+            bgcolor: "divider",
+            borderRadius: 1
+          }
+        }}
+      >
 
         {tab === 0 && (
           <PropertyGrid
@@ -349,12 +716,7 @@ function StageInspectorPanel({
               {stageTimeline.map((event) => (
                 <Box key={event.id}>
                   <Typography variant="caption" fontWeight={700}>
-                    {new Date(event.time).toLocaleString(undefined, {
-                      month: "short",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit"
-                    })}
+                    {formatOptalynxDateTime(event.time)}
                     {" · "}{event.actor}
                   </Typography>
                   <Typography variant="caption" display="block">
