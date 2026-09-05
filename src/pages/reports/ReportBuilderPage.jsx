@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
 
 import { Box, Divider, Skeleton, Stack } from "@mui/material";
 
@@ -15,14 +16,18 @@ import ReportSelectedFields from "../../components/reports/ReportSelectedFields"
 import ReportFilterBuilder from "../../components/reports/ReportFilterBuilder";
 import ReportSortBuilder from "../../components/reports/ReportSortBuilder";
 import ReportGroupBuilder from "../../components/reports/ReportGroupBuilder";
+import ReportSemanticBuilder from "../../components/reports/ReportSemanticBuilder";
 import ReportBuilderToolbar from "../../components/reports/ReportBuilderToolbar";
 import ReportResults from "../../components/reports/ReportResults";
+import ReportVisualization from "../../components/reports/ReportVisualization";
 
 function ReportBuilderPage() {
+  const location = useLocation();
   const { setCurrentPage } = useCopilotContext();
   const configSectionRef = useRef(null);
+  const prefill = location.state?.prefill || null;
 
-  const builder = useReportBuilder();
+  const builder = useReportBuilder({ initialPrefill: prefill });
 
   useEffect(() => {
     setCurrentPage("Report Builder");
@@ -133,12 +138,30 @@ function ReportBuilderPage() {
                 />
               ) : (
                 <Stack spacing={2} sx={{ minWidth: 0, maxWidth: "100%", width: "100%", alignItems: "stretch" }}>
-                  <ReportSelectedFields
-                    fields={builder.metadata?.fields || []}
-                    selectedFieldCodes={builder.selectedFieldCodes}
-                    onRemoveField={builder.handleRemoveField}
-                    onAddField={builder.handleAddField}
+                  <ReportSemanticBuilder
+                    resultMode={builder.resultMode}
+                    onResultModeChange={builder.setResultMode}
+                    dimensions={builder.dimensions}
+                    measures={builder.measures}
+                    dimensionFields={builder.dimensionFields}
+                    measureFields={builder.measureFields}
+                    dateGrains={builder.dateGrains}
+                    onAddDimension={builder.handleAddDimension}
+                    onUpdateDimension={builder.handleUpdateDimension}
+                    onRemoveDimension={builder.handleRemoveDimension}
+                    onAddMeasure={builder.handleAddMeasure}
+                    onUpdateMeasure={builder.handleUpdateMeasure}
+                    onRemoveMeasure={builder.handleRemoveMeasure}
                   />
+
+                  {builder.resultMode === "detail" ? (
+                    <ReportSelectedFields
+                      fields={builder.metadata?.fields || []}
+                      selectedFieldCodes={builder.selectedFieldCodes}
+                      onRemoveField={builder.handleRemoveField}
+                      onAddField={builder.handleAddField}
+                    />
+                  ) : null}
 
                   <Divider />
 
@@ -161,7 +184,7 @@ function ReportBuilderPage() {
                     onRemoveSort={builder.handleRemoveSort}
                   />
 
-                  {builder.groupableFields.length > 0 ? (
+                  {builder.resultMode === "detail" && builder.groupableFields.length > 0 ? (
                     <>
                       <Divider />
                       <ReportGroupBuilder
@@ -179,7 +202,14 @@ function ReportBuilderPage() {
               onGenerate={handleGenerate}
               onReset={builder.resetBuilder}
               generating={builder.generating}
-              disableGenerate={builder.metadataLoading || !builder.selectedFieldCodes.length}
+              disableGenerate={
+                builder.metadataLoading ||
+                (builder.resultMode === "detail"
+                  ? !builder.selectedFieldCodes.length
+                  : !builder.measures.some(
+                      (measure) => measure.fieldCode && measure.aggregation
+                    ))
+              }
             />
           </Stack>
         </EnterpriseSurface>
@@ -190,6 +220,21 @@ function ReportBuilderPage() {
             message={builder.generateError}
             onRetry={handleGenerate}
           />
+        ) : null}
+
+        {builder.resultMode === "aggregate" && builder.hasGenerated ? (
+          <EnterpriseSurface sx={{ p: 2 }}>
+            <ReportVisualization
+              config={{
+                type: "bar",
+                category_field: builder.results?.visualization?.category_field,
+                value_field: builder.results?.visualization?.value_field,
+                title: "Aggregate Preview"
+              }}
+              results={builder.results}
+              loading={builder.generating}
+            />
+          </EnterpriseSurface>
         ) : null}
 
         <ReportResults

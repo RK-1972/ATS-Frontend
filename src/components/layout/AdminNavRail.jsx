@@ -146,7 +146,7 @@ const ADMIN_NAV_ITEMS = [
   },
   {
     label: "Reports & Analytics",
-    path: "/reports/builder",
+    path: "/reports",
     icon: BarChartOutlinedIcon
   }
 ];

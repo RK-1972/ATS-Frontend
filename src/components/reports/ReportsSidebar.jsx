@@ -10,9 +10,17 @@ import {
   Typography
 } from "@mui/material";
 
+import AssessmentOutlinedIcon from "@mui/icons-material/AssessmentOutlined";
 import TableChartOutlinedIcon from "@mui/icons-material/TableChartOutlined";
 
 const REPORTS_SECTIONS = [
+  {
+    key: "center",
+    label: "Report Center",
+    path: "/reports",
+    icon: AssessmentOutlinedIcon,
+    exact: true
+  },
   {
     key: "builder",
     label: "Report Builder",
@@ -24,6 +32,14 @@ const REPORTS_SECTIONS = [
 function ReportsSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
+
+  const isActive = (section) => {
+    if (section.exact) {
+      return location.pathname === section.path;
+    }
+
+    return location.pathname.startsWith(section.path);
+  };
 
   return (
     <Box
@@ -52,7 +68,7 @@ function ReportsSidebar() {
           Reports
         </Typography>
         <Typography variant="body2" fontWeight={700} color="primary.main" mt={0.25}>
-          Report Builder
+          Reports & Analytics
         </Typography>
       </Box>
 
@@ -61,7 +77,7 @@ function ReportsSidebar() {
       <List sx={{ px: 1, py: 0.5 }}>
         {REPORTS_SECTIONS.map((section) => {
           const Icon = section.icon;
-          const active = location.pathname.startsWith(section.path);
+          const active = isActive(section);
 
           return (
             <ListItemButton

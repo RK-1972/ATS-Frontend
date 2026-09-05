@@ -146,6 +146,12 @@ const ReportsLayout = lazy(
 const ReportBuilderPage = lazy(
   () => import("./pages/reports/ReportBuilderPage")
 );
+const ReportCenterPage = lazy(
+  () => import("./pages/reports/ReportCenterPage")
+);
+const StandardReportPage = lazy(
+  () => import("./pages/reports/StandardReportPage")
+);
 
 const MasterDataLayout = lazy(
   () => import("./components/master-data/MasterDataLayout")
@@ -628,7 +634,19 @@ function App() {
         >
           <Route
             index
-            element={<ReportsAnalyticsPage embedded />}
+            element={
+              <LazyRoute>
+                <ReportCenterPage />
+              </LazyRoute>
+            }
+          />
+          <Route
+            path="standard/:reportCode"
+            element={
+              <LazyRoute>
+                <StandardReportPage />
+              </LazyRoute>
+            }
           />
           <Route
             path="builder"

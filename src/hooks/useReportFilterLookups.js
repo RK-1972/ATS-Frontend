@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import API from "../api/axios";
 import masterDataClient from "../api/clients/masterDataClient";
+import reportsClient from "../api/clients/reportsClient";
 import { getPublishedRecords } from "../enterprise/masterDataHelpers";
-import recruitmentRepository from "../repositories/recruitmentRepository";
 import { FILTER_VALUE_SOURCE } from "../components/reports/reportFilterValueSources";
 
 function mapMasterNameOptions(records) {
@@ -37,10 +36,9 @@ function mapRecruiterOptions(rows) {
 function mapHiringManagerOptions(rows) {
   return (rows || []).map((row) => {
     const name = row.hiring_manager_name || "";
-    const client = row.client_name ? ` · ${row.client_name}` : "";
     return {
       value: name,
-      label: name ? `${name}${client}` : String(row.hiring_manager_code || "—"),
+      label: name || String(row.hiring_manager_code || "—"),
       hiringManagerId: row.hiring_manager_id,
       hiringManagerCode: row.hiring_manager_code
     };
@@ -97,10 +95,16 @@ export function useReportFilterLookups() {
       );
 
       tasks.push(
-        recruitmentRepository
-          .listFormRecruiters()
-          .then((rows) => {
-            nextOptions[FILTER_VALUE_SOURCE.API_RECRUITERS] = mapRecruiterOptions(rows);
+        reportsClient
+          .listFilterRecruiters()
+          .then((response) => {
+            if (!response?.success) {
+              throw new Error(response?.message || "Unable to load recruiters.");
+            }
+
+            nextOptions[FILTER_VALUE_SOURCE.API_RECRUITERS] = mapRecruiterOptions(
+              response?.data?.recruiters
+            );
           })
           .catch((loadError) => {
             nextSourceErrors[FILTER_VALUE_SOURCE.API_RECRUITERS] =
@@ -111,10 +115,15 @@ export function useReportFilterLookups() {
       );
 
       tasks.push(
-        API.get("/all-hiring-managers")
+        reportsClient
+          .listFilterHiringManagers()
           .then((response) => {
+            if (!response?.success) {
+              throw new Error(response?.message || "Unable to load hiring managers.");
+            }
+
             nextOptions[FILTER_VALUE_SOURCE.API_HIRING_MANAGERS] = mapHiringManagerOptions(
-              response?.data?.data
+              response?.data?.hiring_managers
             );
           })
           .catch((loadError) => {

@@ -100,6 +100,34 @@ const reportsClient = {
     );
   },
 
+  listStandardReports() {
+    return httpGet(
+      `${ENDPOINTS.reports}/standard-reports`,
+      () => liveRequiredResponse("Live API required for standard reports.")
+    );
+  },
+
+  getStandardReportDefinition(reportCode) {
+    return httpGet(
+      `${ENDPOINTS.reports}/standard-reports/${encodeURIComponent(reportCode)}`,
+      () => liveRequiredResponse("Live API required for standard report definition.")
+    );
+  },
+
+  listFilterRecruiters() {
+    return httpGet(
+      `${ENDPOINTS.reports}/filter-options/recruiters`,
+      () => liveRequiredResponse("Live API required for report recruiter filter options.")
+    );
+  },
+
+  listFilterHiringManagers() {
+    return httpGet(
+      `${ENDPOINTS.reports}/filter-options/hiring-managers`,
+      () => liveRequiredResponse("Live API required for report hiring manager filter options.")
+    );
+  },
+
   async exportReport(payload) {
     try {
       const response = await API.post(`${ENDPOINTS.reports}/export`, payload, {

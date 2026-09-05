@@ -76,7 +76,67 @@ function isFilterComplete(filterRow, fieldMeta, operator) {
   return filterRow.value !== "" && filterRow.value !== null && filterRow.value !== undefined;
 }
 
-export function useReportBuilder() {
+function createFilterRowFromApi(filter) {
+  const operator = filter.operator || "equals";
+  const isBetween = operator === "between";
+  const isIn = operator === "in";
+
+  return {
+    id: `filter-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    fieldCode: filter.field,
+    operator,
+    value: isBetween
+      ? filter.value?.[0] ?? ""
+      : isIn
+        ? filter.value || []
+        : filter.value ?? "",
+    valueEnd: isBetween ? filter.value?.[1] ?? "" : ""
+  };
+}
+
+function createSortRowFromApi(sortItem) {
+  return {
+    id: `sort-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    fieldCode: sortItem.field,
+    direction: sortItem.direction || "asc"
+  };
+}
+
+function createDimensionRowFromApi(dimension) {
+  return {
+    id: `dimension-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    fieldCode: dimension.field,
+    grain: dimension.grain || ""
+  };
+}
+
+function createMeasureRowFromApi(measure) {
+  return {
+    id: `measure-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    fieldCode: measure.field,
+    aggregation: measure.aggregation || "",
+    alias: measure.alias || ""
+  };
+}
+
+function createDimensionRow() {
+  return {
+    id: `dimension-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    fieldCode: "",
+    grain: ""
+  };
+}
+
+function createMeasureRow() {
+  return {
+    id: `measure-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    fieldCode: "",
+    aggregation: "",
+    alias: ""
+  };
+}
+
+export function useReportBuilder(options = {}) {
   const [datasets, setDatasets] = useState([]);
   const [datasetsLoading, setDatasetsLoading] = useState(true);
   const [datasetsError, setDatasetsError] = useState(null);
@@ -90,6 +150,9 @@ export function useReportBuilder() {
   const [filters, setFilters] = useState([]);
   const [sortRules, setSortRules] = useState([]);
   const [groupByCodes, setGroupByCodes] = useState([]);
+  const [resultMode, setResultMode] = useState("detail");
+  const [dimensions, setDimensions] = useState([]);
+  const [measures, setMeasures] = useState([]);
 
   const [results, setResults] = useState(null);
   const [generating, setGenerating] = useState(false);
@@ -105,6 +168,8 @@ export function useReportBuilder() {
   });
 
   const builderConfigRef = useRef(null);
+  const initialPrefillRef = useRef(options.initialPrefill || null);
+  const prefillAppliedRef = useRef(false);
 
   const fieldMap = useMemo(() => {
     const map = new Map();
@@ -128,6 +193,21 @@ export function useReportBuilder() {
     [metadata]
   );
 
+  const dimensionFields = useMemo(
+    () => (metadata?.fields || []).filter((field) => field.dimension_eligible),
+    [metadata]
+  );
+
+  const measureFields = useMemo(
+    () => (metadata?.fields || []).filter((field) => field.measure_eligible),
+    [metadata]
+  );
+
+  const dateGrains = useMemo(
+    () => metadata?.semantic?.date_grains || ["DAY", "WEEK", "MONTH", "QUARTER", "YEAR"],
+    [metadata]
+  );
+
   const selectedDataset = useMemo(
     () => datasets.find((dataset) => dataset.code === selectedDatasetCode) || null,
     [datasets, selectedDatasetCode]
@@ -138,12 +218,40 @@ export function useReportBuilder() {
     setFilters([]);
     setSortRules([]);
     setGroupByCodes([]);
+    setResultMode("detail");
+    setDimensions([]);
+    setMeasures([]);
     setResults(null);
     setGenerateError(null);
     setHasGenerated(false);
     setPagination({ page: 1, pageSize: DEFAULT_PAGE_SIZE, totalCount: 0 });
     builderConfigRef.current = null;
   }, []);
+
+  const applyConfiguration = useCallback((config, nextMetadata) => {
+    if (!config?.dataset) {
+      applyDefaultConfiguration(nextMetadata);
+      return;
+    }
+
+    setSelectedDatasetCode(config.dataset);
+    setResultMode(config.result_mode === "aggregate" ? "aggregate" : "detail");
+    setSelectedFieldCodes(Array.isArray(config.fields) ? config.fields : []);
+    setDimensions(
+      Array.isArray(config.dimensions) ? config.dimensions.map(createDimensionRowFromApi) : []
+    );
+    setMeasures(Array.isArray(config.measures) ? config.measures.map(createMeasureRowFromApi) : []);
+    setFilters(
+      Array.isArray(config.filters) ? config.filters.map(createFilterRowFromApi) : []
+    );
+    setSortRules(Array.isArray(config.sort) ? config.sort.map(createSortRowFromApi) : []);
+    setGroupByCodes(Array.isArray(config.groupBy) ? config.groupBy : []);
+    setResults(null);
+    setGenerateError(null);
+    setHasGenerated(false);
+    setPagination({ page: 1, pageSize: DEFAULT_PAGE_SIZE, totalCount: 0 });
+    builderConfigRef.current = null;
+  }, [applyDefaultConfiguration]);
 
   const loadDatasets = useCallback(async () => {
     setDatasetsLoading(true);
@@ -213,7 +321,11 @@ export function useReportBuilder() {
         setDatasets(nextDatasets);
 
         if (nextDatasets.length > 0) {
-          const initialCode = nextDatasets[0].code;
+          const prefill = initialPrefillRef.current;
+          const initialCode =
+            prefill?.dataset && nextDatasets.some((item) => item.code === prefill.dataset)
+              ? prefill.dataset
+              : nextDatasets[0].code;
           setSelectedDatasetCode(initialCode);
 
           const metadataResponse = await fetchReportDatasetMetadata(initialCode);
@@ -222,7 +334,13 @@ export function useReportBuilder() {
           }
 
           setMetadata(metadataResponse);
-          applyDefaultConfiguration(metadataResponse);
+
+          if (prefill && !prefillAppliedRef.current) {
+            prefillAppliedRef.current = true;
+            applyConfiguration(prefill, metadataResponse);
+          } else {
+            applyDefaultConfiguration(metadataResponse);
+          }
         }
       } catch (error) {
         if (!cancelled) {
@@ -241,7 +359,7 @@ export function useReportBuilder() {
     return () => {
       cancelled = true;
     };
-  }, [applyDefaultConfiguration]);
+  }, [applyDefaultConfiguration, applyConfiguration]);
 
   const handleDatasetChange = useCallback(
     async (datasetCode) => {
@@ -298,51 +416,112 @@ export function useReportBuilder() {
     );
   }, []);
 
+  const handleAddDimension = useCallback(() => {
+    setDimensions((current) => [...current, createDimensionRow()]);
+  }, []);
+
+  const handleUpdateDimension = useCallback((dimensionId, updates) => {
+    setDimensions((current) =>
+      current.map((dimension) =>
+        dimension.id === dimensionId ? { ...dimension, ...updates } : dimension
+      )
+    );
+  }, []);
+
+  const handleRemoveDimension = useCallback((dimensionId) => {
+    setDimensions((current) => current.filter((dimension) => dimension.id !== dimensionId));
+  }, []);
+
+  const handleAddMeasure = useCallback(() => {
+    setMeasures((current) => [...current, createMeasureRow()]);
+  }, []);
+
+  const handleUpdateMeasure = useCallback((measureId, updates) => {
+    setMeasures((current) =>
+      current.map((measure) => (measure.id === measureId ? { ...measure, ...updates } : measure))
+    );
+  }, []);
+
+  const handleRemoveMeasure = useCallback((measureId) => {
+    setMeasures((current) => current.filter((measure) => measure.id !== measureId));
+  }, []);
+
+  const buildFilterPayload = useCallback(
+    () =>
+      filters
+        .map((filterRow) => {
+          const filterMeta = filterMetaMap.get(filterRow.fieldCode);
+          const fieldMeta = fieldMap.get(filterRow.fieldCode);
+          const operator = filterRow.operator;
+
+          if (!filterMeta || !fieldMeta || !isFilterComplete(filterRow, fieldMeta, operator)) {
+            return null;
+          }
+
+          return {
+            field: filterRow.fieldCode,
+            operator,
+            value: buildFilterValue(filterRow, fieldMeta, operator)
+          };
+        })
+        .filter(Boolean),
+    [filters, filterMetaMap, fieldMap]
+  );
+
   const buildQueryPayload = useCallback(
     (page = pagination.page, pageSize = pagination.pageSize) => {
-      const payload = {
+      const filterPayload = buildFilterPayload();
+      const sortPayload = sortRules
+        .filter((sort) => sort.fieldCode)
+        .map((sort) => ({
+          field: sort.fieldCode,
+          direction: sort.direction
+        }));
+
+      if (resultMode === "aggregate") {
+        return {
+          dataset: selectedDatasetCode,
+          dimensions: dimensions
+            .filter((dimension) => dimension.fieldCode)
+            .map((dimension) => ({
+              field: dimension.fieldCode,
+              ...(dimension.grain ? { grain: dimension.grain } : {})
+            })),
+          measures: measures
+            .filter((measure) => measure.fieldCode && measure.aggregation)
+            .map((measure) => ({
+              field: measure.fieldCode,
+              aggregation: measure.aggregation,
+              ...(measure.alias ? { alias: measure.alias } : {})
+            })),
+          filters: filterPayload,
+          sort: sortPayload,
+          page,
+          pageSize
+        };
+      }
+
+      return {
         dataset: selectedDatasetCode,
         fields: selectedFieldCodes,
-        filters: filters
-          .map((filterRow) => {
-            const filterMeta = filterMetaMap.get(filterRow.fieldCode);
-            const fieldMeta = fieldMap.get(filterRow.fieldCode);
-            const operator = filterRow.operator;
-
-            if (!filterMeta || !fieldMeta || !isFilterComplete(filterRow, fieldMeta, operator)) {
-              return null;
-            }
-
-            return {
-              field: filterRow.fieldCode,
-              operator,
-              value: buildFilterValue(filterRow, fieldMeta, operator)
-            };
-          })
-          .filter(Boolean),
-        sort: sortRules
-          .filter((sort) => sort.fieldCode)
-          .map((sort) => ({
-            field: sort.fieldCode,
-            direction: sort.direction
-          })),
+        filters: filterPayload,
+        sort: sortPayload,
         groupBy: groupByCodes,
         page,
         pageSize
       };
-
-      return payload;
     },
     [
+      resultMode,
       selectedDatasetCode,
       selectedFieldCodes,
-      filters,
+      dimensions,
+      measures,
+      buildFilterPayload,
       sortRules,
       groupByCodes,
       pagination.page,
-      pagination.pageSize,
-      filterMetaMap,
-      fieldMap
+      pagination.pageSize
     ]
   );
 
@@ -351,7 +530,37 @@ export function useReportBuilder() {
       return "Select a dataset to generate a report.";
     }
 
-    if (selectedFieldCodes.length === 0) {
+    if (resultMode === "aggregate") {
+      if (measures.filter((measure) => measure.fieldCode && measure.aggregation).length === 0) {
+        return "Select at least one measure.";
+      }
+
+      for (const measure of measures) {
+        if (!measure.fieldCode && !measure.aggregation) {
+          continue;
+        }
+
+        const fieldMeta = fieldMap.get(measure.fieldCode);
+        if (!fieldMeta || !fieldMeta.measure_eligible) {
+          return "One or more measures use invalid fields.";
+        }
+
+        if (!measure.aggregation) {
+          return "Select an aggregation for each measure.";
+        }
+      }
+
+      for (const dimension of dimensions) {
+        if (!dimension.fieldCode) {
+          continue;
+        }
+
+        const fieldMeta = fieldMap.get(dimension.fieldCode);
+        if (!fieldMeta || !fieldMeta.dimension_eligible) {
+          return "One or more dimensions use invalid fields.";
+        }
+      }
+    } else if (selectedFieldCodes.length === 0) {
       return "Select at least one field.";
     }
 
@@ -376,7 +585,7 @@ export function useReportBuilder() {
       }
     }
 
-    if (groupByCodes.length > 0) {
+    if (resultMode === "detail" && groupByCodes.length > 0) {
       for (const fieldCode of selectedFieldCodes) {
         if (!groupByCodes.includes(fieldCode)) {
           return "All selected fields must be included in group by when grouping is enabled.";
@@ -385,7 +594,17 @@ export function useReportBuilder() {
     }
 
     return null;
-  }, [selectedDatasetCode, selectedFieldCodes, filters, fieldMap, filterMetaMap, groupByCodes]);
+  }, [
+    selectedDatasetCode,
+    resultMode,
+    selectedFieldCodes,
+    measures,
+    dimensions,
+    filters,
+    fieldMap,
+    filterMetaMap,
+    groupByCodes
+  ]);
 
   const generateReport = useCallback(
     async (nextPage, nextPageSize) => {
@@ -443,6 +662,17 @@ export function useReportBuilder() {
     (format) => {
       const queryPayload = buildQueryPayload(1, pagination.pageSize);
 
+      if (resultMode === "aggregate") {
+        return {
+          format,
+          dataset: queryPayload.dataset,
+          dimensions: queryPayload.dimensions,
+          measures: queryPayload.measures,
+          filters: queryPayload.filters,
+          sort: queryPayload.sort
+        };
+      }
+
       return {
         format,
         dataset: queryPayload.dataset,
@@ -452,7 +682,7 @@ export function useReportBuilder() {
         groupBy: queryPayload.groupBy
       };
     },
-    [buildQueryPayload, pagination.pageSize]
+    [buildQueryPayload, pagination.pageSize, resultMode]
   );
 
   const exportReport = useCallback(
@@ -506,6 +736,12 @@ export function useReportBuilder() {
     filters,
     sortRules,
     groupByCodes,
+    resultMode,
+    dimensions,
+    measures,
+    dimensionFields,
+    measureFields,
+    dateGrains,
     results,
     generating,
     generateError,
@@ -528,6 +764,13 @@ export function useReportBuilder() {
     handleUpdateSort,
     handleRemoveSort,
     handleToggleGroupField,
+    setResultMode,
+    handleAddDimension,
+    handleUpdateDimension,
+    handleRemoveDimension,
+    handleAddMeasure,
+    handleUpdateMeasure,
+    handleRemoveMeasure,
     generateReport,
     exportReport,
     handlePageChange,
