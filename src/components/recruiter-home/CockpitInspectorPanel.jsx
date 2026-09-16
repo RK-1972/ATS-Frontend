@@ -9,13 +9,13 @@ import {
 import { MdPerson, MdOpenInNew } from "react-icons/md";
 import EnterpriseModuleIcon from "@/components/enterprise/EnterpriseModuleIcon";
 import { DESIGN, PANEL_HEADER, PANEL_SHELL } from "./recruiterHomeTokens";
-import { candidateInitials, resolveTodaysNextAction } from "./recruiterHomeUiHelpers";
+import { candidateInitials, resolveTodaysNextAction, recruiterRequisitionPath, resolveActionNavigation } from "./recruiterHomeUiHelpers";
 
 function PropertyRow({ label, value, valueSx = {} }) {
   return (
-    <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1, py: 0.55, borderBottom: `1px solid ${DESIGN.border}` }}>
-      <Typography sx={{ fontSize: 12, color: DESIGN.textSecondary }}>{label}</Typography>
-      <Typography sx={{ fontSize: 12, fontWeight: 500, color: DESIGN.textPrimary, textAlign: "right", ...valueSx }}>
+    <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1.5, py: 0.7, borderBottom: `1px solid ${DESIGN.border}` }}>
+      <Typography sx={{ fontSize: 12, color: DESIGN.textSecondary, flexShrink: 0 }}>{label}</Typography>
+      <Typography sx={{ fontSize: 12, fontWeight: 500, color: DESIGN.textPrimary, textAlign: "right", lineHeight: 1.35, ...valueSx }}>
         {value}
       </Typography>
     </Box>
@@ -36,17 +36,18 @@ function resolveContext({ requisition, actionItem, selectedCandidate, enrichedPr
       properties: [
         { label: "Requisition", value: requisition.code },
         { label: "Hiring Manager", value: requisition.hiringManager },
-        { label: "Open / Target", value: `${requisition.funnelCurrent} / ${requisition.funnelTarget}` },
+        { label: "Open / Target", value: `${requisition.openPositions} / ${requisition.headcount}` },
         { label: "Status", value: requisition.displayStatus },
         { label: "Next Action", value: requisition.nextAction }
       ],
-      primaryRoute: "/requisitions",
+      primaryRoute: recruiterRequisitionPath(requisition.code),
       primaryLabel: "Open Requisition",
       todaysNextAction: requisition.nextAction
     };
   }
 
   if (actionItem) {
+    const actionNav = resolveActionNavigation(actionItem);
     return {
       mode: "action",
       name: actionItem.title,
@@ -58,7 +59,8 @@ function resolveContext({ requisition, actionItem, selectedCandidate, enrichedPr
         { label: "Priority", value: actionItem.slaBadge || actionItem.priorityLabel },
         { label: "Detail", value: actionItem.slaDetail || "—" }
       ],
-      primaryRoute: actionItem.route || "/candidates",
+      primaryRoute: actionNav.path,
+      primaryState: actionNav.state,
       primaryLabel: "Take Action",
       todaysNextAction: resolveTodaysNextAction({ mode: "action", actionItem }),
       slaStatus: actionItem.slaBadge,
@@ -116,8 +118,8 @@ function CockpitInspectorPanel({
   const ctx = resolveContext({ requisition, actionItem, selectedCandidate, enrichedPriority, priorityCandidate });
 
   return (
-    <Box sx={{ ...PANEL_SHELL, display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
-      <Box sx={{ ...PANEL_HEADER, display: "flex", alignItems: "center", gap: 0.75 }}>
+    <Box sx={{ ...PANEL_SHELL, display: "flex", flexDirection: "column", height: "100%", minHeight: 0, overflow: "hidden" }}>
+      <Box sx={{ ...PANEL_HEADER, display: "flex", alignItems: "center", gap: 0.75, flexShrink: 0 }}>
         <EnterpriseModuleIcon
           icon={MdPerson}
           module="candidates"
@@ -130,7 +132,7 @@ function CockpitInspectorPanel({
         </Typography>
       </Box>
 
-      <Box sx={{ px: 1.5, py: 1.25, borderBottom: `1px solid ${DESIGN.border}` }}>
+      <Box sx={{ px: 1.5, py: 1.25, borderBottom: `1px solid ${DESIGN.border}`, flexShrink: 0 }}>
         <Stack direction="row" spacing={1.25} alignItems="flex-start">
           <Avatar sx={{ width: 40, height: 40, bgcolor: DESIGN.blueBg, color: DESIGN.blue, fontSize: 13, fontWeight: 700 }}>
             {ctx.initials}
@@ -176,12 +178,18 @@ function CockpitInspectorPanel({
         )}
       </Box>
 
-      <Box sx={{ px: 1.5, pb: 1.5, pt: 0 }}>
+      <Box sx={{ px: 1.5, pb: 1.5, pt: 0, flexShrink: 0 }}>
         <Button
           fullWidth
           variant="contained"
           endIcon={<MdOpenInNew size={16} />}
-          onClick={() => onNavigate?.(ctx.primaryRoute)}
+          onClick={() => {
+            if (ctx.primaryState) {
+              onNavigate?.(ctx.primaryRoute, ctx.primaryState);
+              return;
+            }
+            onNavigate?.(ctx.primaryRoute);
+          }}
           sx={{
             textTransform: "none",
             fontWeight: 600,

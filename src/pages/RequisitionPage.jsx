@@ -24,6 +24,8 @@ import RecruiterNavRail from "../components/layout/RecruiterNavRail";
 import EnterpriseCard from "../components/enterprise/framework/EnterpriseCard";
 import EnterpriseWorkspaceHeader from "../components/enterprise/framework/EnterpriseWorkspaceHeader";
 import RecruiterAssignmentPanel from "../components/requisitions/RecruiterAssignmentPanel";
+import RequisitionHeadcountChangePanel from "../components/requisitions/RequisitionHeadcountChangePanel";
+import RequisitionBudgetChangePanel from "../components/requisitions/RequisitionBudgetChangePanel";
 import useApprovalRoutes from "../hooks/useApprovalRoutes";
 import useRequisitionManagement from "../hooks/useRequisitionManagement";
 import AuthorizationService from "../services/authorizationService";
@@ -33,6 +35,8 @@ import recruitmentRepository from "../repositories/recruitmentRepository";
 import { REQUISITION_STATUS } from "../constants/requisitionStatus";
 import { useCopilotContext } from "../components/copilot/CopilotContext";
 import { dispatchApprovalNotificationsUpdated } from "@/utils/enterpriseNotificationEvents";
+import useEnterpriseStore from "@/store/enterpriseStore";
+import RequisitionSkillMultiSelect from "../components/requisitions/RequisitionSkillMultiSelect";
 
 function resolveEnterpriseNavRail(user) {
   let workspace = {};
@@ -136,7 +140,7 @@ function mapRequisitionToFormData(requisition, loggedInUser) {
     job_title: requisition.position_title || "",
     job_description: "",
     primary_skill: requisition.primary_skill || "",
-    secondary_skill: "",
+    secondary_skill: requisition.secondary_skill || "",
     experience_min: "",
     experience_max: "",
     openings_count: requisition.headcount ?? 1,
@@ -150,6 +154,7 @@ function mapRequisitionToFormData(requisition, loggedInUser) {
     target_date: "",
     route_id: toFormValue(requisition.approval_route_id),
     approved_position_id: toFormValue(requisition.approved_position_id),
+    budget_approved: requisition.budget_approved ?? "",
     created_by: requisition.created_by || loggedInUser?.full_name || ""
   };
 }
@@ -187,10 +192,15 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
     loadRequisitionFormHiringManagers,
     loadAssignedRecruiters,
     assignRecruiterOnRequisition,
-    removeRecruiterFromRequisition
+    removeRecruiterFromRequisition,
+    publishRequisitionToCandidatePortal,
+    unpublishRequisitionFromCandidatePortal,
+    closeRequisitionAsFilled,
+    closeRequisitionAsCancelled
   } = useRequisitionManagement();
 
   const { approvalRoutes, loadApprovalRoutes } = useApprovalRoutes();
+  const masterData = useEnterpriseStore((state) => state.masterData);
 
   const [authorizationDialogOpen, setAuthorizationDialogOpen] = useState(false);
   const [isCheckingAuthorization, setIsCheckingAuthorization] = useState(false);
@@ -214,8 +224,14 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
     String(draftStatus || "").toUpperCase() === "SUBMITTED";
   /** Existing operational requisition opened for edit (not a blank NEW create). */
   const isEditMode = Boolean(resultRequisitionCode);
+  const isApprovedRequisition =
+    String(formData.req_status || "").trim() === REQUISITION_STATUS.APPROVED;
   const draftActionsDisabled =
-    isSavingDraft || isSubmittingDraft || isLoadingDraft || isDraftSubmitted;
+    isSavingDraft ||
+    isSubmittingDraft ||
+    isLoadingDraft ||
+    isDraftSubmitted ||
+    isApprovedRequisition;
   const loggedInEmployeeCode = loggedInUser?.employee_code ?? null;
 
   const [formData, setFormData] = useState({
@@ -240,6 +256,7 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
     target_date: "",
     route_id: "",
     approved_position_id: "",
+    budget_approved: "",
     created_by: loggedInUser?.full_name || ""
   });
 
@@ -812,6 +829,10 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
             loadAssignedRecruiters={loadAssignedRecruiters}
             assignRecruiterOnRequisition={assignRecruiterOnRequisition}
             removeRecruiterFromRequisition={removeRecruiterFromRequisition}
+            publishRequisitionToCandidatePortal={publishRequisitionToCandidatePortal}
+            unpublishRequisitionFromCandidatePortal={unpublishRequisitionFromCandidatePortal}
+            closeRequisitionAsFilled={closeRequisitionAsFilled}
+            closeRequisitionAsCancelled={closeRequisitionAsCancelled}
           />
         </Box>
 
@@ -1016,6 +1037,12 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
                 style={styles.input}
                 value={formData.openings_count}
                 onChange={handleChange}
+                disabled={isApprovedRequisition}
+                title={
+                  isApprovedRequisition
+                    ? "Approved requisitions require a governed headcount change request."
+                    : undefined
+                }
               />
             </div>
 
@@ -1040,6 +1067,30 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
             </div>
 
             <div style={styles.row}>
+              <input
+                name="budget_approved_display"
+                placeholder="Approved Budget"
+                style={styles.input}
+                value={
+                  formData.budget_approved === "" || formData.budget_approved == null
+                    ? ""
+                    : new Intl.NumberFormat("en-IN", {
+                        style: "currency",
+                        currency: "INR",
+                        maximumFractionDigits: 0
+                      }).format(Number(formData.budget_approved))
+                }
+                readOnly
+                disabled
+                title={
+                  isApprovedRequisition
+                    ? "Approved requisitions require a governed budget change request."
+                    : "Budget is inherited from the approved WFP position."
+                }
+              />
+            </div>
+
+            <div style={styles.row}>
               <textarea
                 name="job_description"
                 placeholder="Job Description"
@@ -1050,27 +1101,63 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
             </div>
           </EnterpriseCard>
 
+          {isEditMode && isApprovedRequisition && resultRequisitionCode ? (
+            <EnterpriseCard
+              title="Budget Change"
+              subtitle="Governed post-approval budget adjustments"
+            >
+              <RequisitionBudgetChangePanel
+                requisitionCode={resultRequisitionCode}
+                reqStatus={formData.req_status}
+              />
+            </EnterpriseCard>
+          ) : null}
+
+          {isEditMode && isApprovedRequisition && resultRequisitionCode ? (
+            <EnterpriseCard
+              title="Headcount Change"
+              subtitle="Governed post-approval headcount adjustments"
+            >
+              <RequisitionHeadcountChangePanel
+                requisitionCode={resultRequisitionCode}
+                reqStatus={formData.req_status}
+              />
+            </EnterpriseCard>
+          ) : null}
+
           <EnterpriseCard
             title="Skills"
             subtitle="Primary and secondary skill requirements"
           >
-            <div style={styles.row}>
-              <input
-                name="primary_skill"
-                placeholder="Primary Skill *"
-                style={styles.input}
+            <Stack spacing={2}>
+              <RequisitionSkillMultiSelect
+                label="Primary Skills"
                 value={formData.primary_skill}
-                onChange={handleChange}
+                masterData={masterData}
+                required
+                disabled={draftActionsDisabled}
+                placeholder="Select primary skills"
+                onChange={(nextValue) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    primary_skill: nextValue
+                  }))
+                }
               />
-
-              <input
-                name="secondary_skill"
-                placeholder="Secondary Skill"
-                style={styles.input}
+              <RequisitionSkillMultiSelect
+                label="Secondary Skills"
                 value={formData.secondary_skill}
-                onChange={handleChange}
+                masterData={masterData}
+                disabled={draftActionsDisabled}
+                placeholder="Select secondary skills"
+                onChange={(nextValue) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    secondary_skill: nextValue
+                  }))
+                }
               />
-            </div>
+            </Stack>
           </EnterpriseCard>
 
           <EnterpriseCard
@@ -1268,6 +1355,15 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
                   sx={{ textTransform: "none", fontWeight: 600 }}
                 >
                   Submitted
+                </Button>
+              ) : isApprovedRequisition ? (
+                <Button
+                  variant="outlined"
+                  size="small"
+                  disabled
+                  sx={{ textTransform: "none", fontWeight: 600 }}
+                >
+                  Approved — use governed changes
                 </Button>
               ) : (
                 <Button

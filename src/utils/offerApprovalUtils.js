@@ -73,6 +73,58 @@ export function buildGeneratedLettersList(bundle) {
   return cloneAwaitingLetters(bundle?.generatedLetters || []);
 }
 
+function resolveCreatorIdentity(user = {}) {
+  return String(user.full_name || user.email_id || "").trim();
+}
+
+function isOfferOwnedByUser(offer, user = {}) {
+  const creator = resolveCreatorIdentity(user);
+  const employeeCode = String(user.employee_code || "").trim();
+  const createdBy = String(offer.createdBy || offer.created_by || "").trim();
+  const recruiterId = String(offer.recruiterId || offer.recruiter_id || "").trim();
+
+  return (
+    (creator && (createdBy === creator || recruiterId === creator))
+    || (employeeCode && (recruiterId === employeeCode || createdBy === employeeCode))
+  );
+}
+
+function enrichOfferWithApprovals(bundle, offer) {
+  return {
+    ...offer,
+    approvalSteps: normalizeApprovals(bundle?.approvals, offer.offerId)
+  };
+}
+
+export function buildMyOfferRequestsList(bundle, user) {
+  return (bundle?.offers || [])
+    .filter((offer) => isOfferOwnedByUser(offer, user))
+    .map((offer) => enrichOfferWithApprovals(bundle, offer))
+    .sort((a, b) => {
+      const aTime = new Date(a.modifiedOn || a.createdOn || 0).getTime();
+      const bTime = new Date(b.modifiedOn || b.createdOn || 0).getTime();
+      return bTime - aTime;
+    });
+}
+
+export function buildRejectedOffersList(bundle) {
+  return (bundle?.offers || [])
+    .filter((offer) => String(resolveOfferStatus(offer)) === "Declined")
+    .map((offer) => enrichOfferWithApprovals(bundle, offer));
+}
+
+export function buildWithdrawnOffersList(bundle) {
+  return (bundle?.offers || [])
+    .filter((offer) => String(resolveOfferStatus(offer)) === "Withdrawn")
+    .map((offer) => enrichOfferWithApprovals(bundle, offer));
+}
+
+export function buildReleasedOffersList(bundle) {
+  return (bundle?.offers || [])
+    .filter((offer) => String(resolveOfferStatus(offer)) === "Released")
+    .map((offer) => enrichOfferWithApprovals(bundle, offer));
+}
+
 function cloneAwaitingLetters(items) {
   return items.map((item) => ({ ...item }));
 }

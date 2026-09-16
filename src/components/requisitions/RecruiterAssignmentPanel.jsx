@@ -1,7 +1,13 @@
-import { useState } from "react";
-import { Box, TextField } from "@mui/material";
+import { useEffect, useState } from "react";
+import { Box, Button, Stack, TextField } from "@mui/material";
 
 import EnterpriseCard from "../enterprise/framework/EnterpriseCard";
+import RequisitionClosureDialog from "./RequisitionClosureDialog";
+import { resolveFulfillment } from "./requisitionFulfillmentUtils";
+import RequisitionFulfillmentChip from "./RequisitionFulfillmentChip";
+import { isClosedRequisitionStatus, REQUISITION_STATUS } from "@/constants/requisitionStatus";
+import useEnterpriseStore from "@/store/enterpriseStore";
+import { formatRequisitionSkillDisplay } from "@/utils/requisitionSkillUtils";
 
 const styles = {
   table: {
@@ -48,7 +54,21 @@ function matchesRequisitionSearch(req, rawQuery) {
  * Recruiter Assignment presentation — Approved requisitions grid,
  * Manage action, Assign Recruiter modal, and client-side search.
  */
+function formatPortalPublishedAt(value) {
+  if (!value) {
+    return null;
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return parsed.toLocaleString();
+}
+
 function RecruiterAssignmentPanel({
+  initialSearchQuery = "",
   requisitions,
   recruiters,
   assignedRecruiters,
@@ -58,9 +78,23 @@ function RecruiterAssignmentPanel({
   setRequisitionManagementUi,
   loadAssignedRecruiters,
   assignRecruiterOnRequisition,
-  removeRecruiterFromRequisition
+  removeRecruiterFromRequisition,
+  publishRequisitionToCandidatePortal,
+  unpublishRequisitionFromCandidatePortal,
+  closeRequisitionAsFilled,
+  closeRequisitionAsCancelled
 }) {
-  const [searchQuery, setSearchQuery] = useState("");
+  const masterData = useEnterpriseStore((state) => state.masterData);
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
+
+  useEffect(() => {
+    if (initialSearchQuery) {
+      setSearchQuery(initialSearchQuery);
+    }
+  }, [initialSearchQuery]);
+  const [portalActionCode, setPortalActionCode] = useState("");
+  const [closureDialog, setClosureDialog] = useState({ open: false, mode: null, requisition: null });
+  const [closureSubmitting, setClosureSubmitting] = useState(false);
 
   const filteredRequisitions = (requisitions || []).filter((req) =>
     matchesRequisitionSearch(req, searchQuery)
@@ -103,6 +137,111 @@ function RecruiterAssignmentPanel({
     loadAssignedRecruiters(reqId);
   };
 
+  const resolveRequisitionCode = (req) =>
+    req.requisition_code || req.req_code;
+
+  const isApprovedOpen = (req) =>
+    req.req_status === REQUISITION_STATUS.APPROVED
+    && !isClosedRequisitionStatus(req.req_status);
+
+  const openClosureDialog = (req, mode) => {
+    setClosureDialog({ open: true, mode, requisition: req });
+  };
+
+  const closeClosureDialog = () => {
+    setClosureDialog({ open: false, mode: null, requisition: null });
+  };
+
+  const handleConfirmCloseFilled = async (requisitionCode) => {
+    setClosureSubmitting(true);
+    try {
+      await closeRequisitionAsFilled(requisitionCode);
+      alert("Requisition closed as filled.");
+      closeClosureDialog();
+    } catch (error) {
+      alert(
+        error.response?.data?.message || "Failed to close requisition as filled."
+      );
+    } finally {
+      setClosureSubmitting(false);
+    }
+  };
+
+  const handleConfirmCloseCancelled = async (requisitionCode, reason) => {
+    setClosureSubmitting(true);
+    try {
+      await closeRequisitionAsCancelled(requisitionCode, reason);
+      alert("Requisition closed as cancelled.");
+      closeClosureDialog();
+    } catch (error) {
+      alert(
+        error.response?.data?.message || "Failed to close requisition as cancelled."
+      );
+    } finally {
+      setClosureSubmitting(false);
+    }
+  };
+
+  const handlePublishToPortal = async (req) => {
+    const requisitionCode = resolveRequisitionCode(req);
+
+    if (!requisitionCode) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Publish ${requisitionCode} to the Candidate Portal?\n\nCandidates will be able to view and apply to this requisition.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setPortalActionCode(requisitionCode);
+
+    try {
+      await publishRequisitionToCandidatePortal(requisitionCode);
+      alert("Requisition published to the Candidate Portal.");
+    } catch (error) {
+      alert(
+        error.response?.data?.message ||
+        "Failed to publish requisition to the Candidate Portal."
+      );
+    } finally {
+      setPortalActionCode("");
+    }
+  };
+
+  const handleUnpublishFromPortal = async (req) => {
+    const requisitionCode = resolveRequisitionCode(req);
+
+    if (!requisitionCode) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Unpublish ${requisitionCode} from the Candidate Portal?\n\nNew applications will be blocked. Existing applications will remain unchanged.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setPortalActionCode(requisitionCode);
+
+    try {
+      await unpublishRequisitionFromCandidatePortal(requisitionCode);
+      alert("Requisition unpublished from the Candidate Portal.");
+    } catch (error) {
+      alert(
+        error.response?.data?.message ||
+        "Failed to unpublish requisition from the Candidate Portal."
+      );
+    } finally {
+      setPortalActionCode("");
+    }
+  };
+
   return (
     <>
       <EnterpriseCard
@@ -126,16 +265,26 @@ function RecruiterAssignmentPanel({
                 <th style={styles.th}>Client</th>
                 <th style={styles.th}>Job Title</th>
                 <th style={styles.th}>Skills</th>
-                <th style={styles.th}>Openings</th>
+                <th style={styles.th}>Required</th>
+                <th style={styles.th}>Reserved</th>
+                <th style={styles.th}>Filled</th>
+                <th style={styles.th}>Remaining</th>
+                <th style={styles.th}>Closure</th>
                 <th style={styles.th}>Priority</th>
                 <th style={styles.th}>Status</th>
+                <th style={styles.th}>Candidate Portal</th>
                 <th style={styles.th}>Location</th>
                 <th style={styles.th}>Recruiters</th>
               </tr>
             </thead>
             <tbody>
               {
-                filteredRequisitions.map((req) => (
+                filteredRequisitions.map((req) => {
+                  const metrics = resolveFulfillment(req);
+                  const requisitionCode = resolveRequisitionCode(req);
+                  const closed = isClosedRequisitionStatus(req.req_status);
+
+                  return (
                   <tr key={req.req_id ?? req.req_code ?? req.requisition_code}>
                     <td style={styles.td}>
                       {req.req_code}
@@ -147,10 +296,25 @@ function RecruiterAssignmentPanel({
                       {req.job_title}
                     </td>
                     <td style={styles.td}>
-                      {req.primary_skill}
+                      {formatRequisitionSkillDisplay(req.primary_skill, masterData)}
                     </td>
                     <td style={styles.td}>
-                      {req.openings_count}
+                      {metrics.required}
+                    </td>
+                    <td style={styles.td}>
+                      {metrics.reserved}
+                    </td>
+                    <td style={styles.td}>
+                      {metrics.filled}
+                    </td>
+                    <td style={styles.td}>
+                      {metrics.remaining}
+                    </td>
+                    <td style={styles.td}>
+                      <RequisitionFulfillmentChip
+                        fulfillment={req.fulfillment || req}
+                        reqStatus={req.req_status}
+                      />
                     </td>
                     <td style={styles.td}>
                       {req.priority_level}
@@ -159,27 +323,124 @@ function RecruiterAssignmentPanel({
                       {req.req_status}
                     </td>
                     <td style={styles.td}>
+                      <div>
+                        {req.candidate_portal_published ? "Published" : "Not published"}
+                      </div>
+                      {req.candidate_portal_published && formatPortalPublishedAt(
+                        req.candidate_portal_published_at
+                      ) ? (
+                        <div style={{ color: "#6b7280", fontSize: "11px" }}>
+                          {formatPortalPublishedAt(req.candidate_portal_published_at)}
+                        </div>
+                      ) : null}
+                      {!closed ? (
+                        <div style={{ marginTop: "6px" }}>
+                          {req.candidate_portal_published ? (
+                            <button
+                              type="button"
+                              onClick={() => handleUnpublishFromPortal(req)}
+                              disabled={portalActionCode === requisitionCode}
+                              style={{
+                                background: "#fff",
+                                color: "#b45309",
+                                border: "1px solid #f59e0b",
+                                padding: "4px 8px",
+                                borderRadius: "6px",
+                                cursor: "pointer",
+                                fontSize: "11px",
+                                fontWeight: 600
+                              }}
+                            >
+                              Unpublish from Candidate Portal
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handlePublishToPortal(req)}
+                              disabled={
+                                portalActionCode === requisitionCode
+                                || !isApprovedOpen(req)
+                              }
+                              style={{
+                                background: "#1f3b63",
+                                color: "#fff",
+                                border: "none",
+                                padding: "4px 8px",
+                                borderRadius: "6px",
+                                cursor: "pointer",
+                                fontSize: "11px",
+                                fontWeight: 600
+                              }}
+                            >
+                              Publish to Candidate Portal
+                            </button>
+                          )}
+                        </div>
+                      ) : null}
+                    </td>
+                    <td style={styles.td}>
                       {req.work_location}
                     </td>
                     <td style={styles.td}>
-                      <span
-                        onClick={() => openAssignModal(req.req_id)}
-                        style={{
-                          color: "#2563eb",
-                          cursor: "pointer",
-                          fontWeight: "600"
-                        }}
-                      >
-                        Manage
-                      </span>
+                      <Stack spacing={0.75}>
+                        {!closed ? (
+                          <span
+                            onClick={() => openAssignModal(req.req_id)}
+                            style={{
+                              color: "#2563eb",
+                              cursor: "pointer",
+                              fontWeight: "600"
+                            }}
+                          >
+                            Manage
+                          </span>
+                        ) : (
+                          <span style={{ color: "#6b7280", fontSize: "11px" }}>
+                            Closed
+                          </span>
+                        )}
+                        {isApprovedOpen(req) ? (
+                          <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              disabled={!metrics.closureEligible}
+                              onClick={() => openClosureDialog(req, "filled")}
+                              sx={{ fontSize: "10px", py: 0.25, px: 0.75, minWidth: 0 }}
+                            >
+                              Close Filled
+                            </Button>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              color="warning"
+                              onClick={() => openClosureDialog(req, "cancelled")}
+                              sx={{ fontSize: "10px", py: 0.25, px: 0.75, minWidth: 0 }}
+                            >
+                              Close Cancelled
+                            </Button>
+                          </Stack>
+                        ) : null}
+                      </Stack>
                     </td>
                   </tr>
-                ))
+                  );
+                })
               }
             </tbody>
           </table>
         </Box>
       </EnterpriseCard>
+
+      <RequisitionClosureDialog
+        open={closureDialog.open}
+        mode={closureDialog.mode}
+        requisition={closureDialog.requisition}
+        onClose={closeClosureDialog}
+        onConfirmFilled={handleConfirmCloseFilled}
+        onConfirmCancelled={handleConfirmCloseCancelled}
+        isSubmitting={closureSubmitting}
+      />
 
       {showAssignModal && (
         <div

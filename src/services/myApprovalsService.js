@@ -35,6 +35,16 @@ async function listMyBudgetApprovalNotifications() {
   return rows.filter((row) => resolveDocumentTypeKey(row) === "BUDGET");
 }
 
+/**
+ * Active offer approvals for the logged-in user (bell notifications).
+ * Reuses GET /api/v1/workflows/my-approvals — same source as My Approvals.
+ */
+async function listMyOfferApprovalNotifications() {
+  const response = await listMyActiveApprovals();
+  const rows = Array.isArray(response?.data) ? response.data : [];
+  return rows.filter((row) => resolveDocumentTypeKey(row) === "OFFER");
+}
+
 function resolveApprovalSortTimestamp(row) {
   return row?.assigned_on || row?.submitted_date || null;
 }
@@ -64,6 +74,24 @@ function mapBudgetApprovalNotification(row) {
     budgetNumber,
     title: "Budget Approval Required",
     message: `Budget Request ${budgetNumber} requires your approval.`,
+    assigned_on: row?.assigned_on || null,
+    submitted_date: row?.submitted_date || null,
+    sortTimestamp: resolveApprovalSortTimestamp(row)
+  };
+}
+
+function mapOfferApprovalNotification(row) {
+  const offerNumber = row?.document_number || row?.offer_id || "—";
+  const candidateName = String(row?.candidateName || row?.candidate_name || "").trim();
+  const candidateLabel = candidateName ? ` for ${candidateName}` : "";
+
+  return {
+    taskId: row?.task_id,
+    assignmentId: row?.assignment_id,
+    offerNumber,
+    document_number: offerNumber,
+    title: "Offer Approval Required",
+    message: `Offer ${offerNumber}${candidateLabel} requires your approval.`,
     assigned_on: row?.assigned_on || null,
     submitted_date: row?.submitted_date || null,
     sortTimestamp: resolveApprovalSortTimestamp(row)
@@ -145,8 +173,10 @@ const MyApprovalsService = {
   listMyActiveApprovals,
   listMyRequisitionApprovalNotifications,
   listMyBudgetApprovalNotifications,
+  listMyOfferApprovalNotifications,
   mapRequisitionApprovalNotification,
   mapBudgetApprovalNotification,
+  mapOfferApprovalNotification,
   mapOwnershipNotification,
   approveApproval,
   rejectApproval,

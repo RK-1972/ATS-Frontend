@@ -1,14 +1,11 @@
 import { useEffect } from "react";
-import { useOutletContext } from "react-router-dom";
 
-import { Box, Button, Stack } from "@mui/material";
-import OpenInNewOutlinedIcon from "@mui/icons-material/OpenInNewOutlined";
+import { Box, Stack } from "@mui/material";
 
 import { EmptyState, WorkspaceHeader } from "@/components/enterprise";
 import { useCopilotContext } from "@/components/copilot/CopilotContext";
 
 function CandidateWorkspaceListPage() {
-  const workspace = useOutletContext();
   const { setCurrentPage } = useCopilotContext();
 
   useEffect(() => {
@@ -26,16 +23,6 @@ function CandidateWorkspaceListPage() {
           { label: "Candidates" },
           { label: "Candidate Workspace" }
         ]}
-        actions={
-          <Button
-            size="small"
-            variant="outlined"
-            startIcon={<OpenInNewOutlinedIcon />}
-            href="/candidates/classic"
-          >
-            Classic View
-          </Button>
-        }
       />
 
       <Stack flex={1} justifyContent="center">

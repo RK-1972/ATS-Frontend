@@ -1,3 +1,6 @@
+import { buildPipelineMetrics, getPipelineStageLabels } from "@/enterprise/atsStageCatalogUtils";
+
+// Preserved for disabled Wave 2 paths only. Active Enterprise UI uses rm_ats_stage_catalog.
 const PIPELINE_STAGES = [
   "Applied",
   "Screening",
@@ -32,7 +35,8 @@ export function buildRecruiterWorkspaceData({
   recruitment,
   taskInbox,
   interviews,
-  filter = ""
+  filter = "",
+  catalogStages = []
 }) {
   const requisitions = recruitment?.requisitions || [];
   const pipeline = recruitment?.pipeline || [];
@@ -58,17 +62,8 @@ export function buildRecruiterWorkspaceData({
     ], search)
   );
 
-  const stageCounts = PIPELINE_STAGES.reduce((acc, stage) => {
-    acc[stage] = 0;
-    return acc;
-  }, {});
-
-  pipeline.forEach((row) => {
-    const stage = normalizeStage(row.stage_name);
-    if (stageCounts[stage] !== undefined) {
-      stageCounts[stage] += 1;
-    }
-  });
+  const pipelineStages = getPipelineStageLabels(catalogStages);
+  const pipelineMetrics = buildPipelineMetrics(catalogStages, pipeline);
 
   const today = new Date().toISOString().slice(0, 10);
 
@@ -103,15 +98,10 @@ export function buildRecruiterWorkspaceData({
     }
   ];
 
-  const pipelineMetrics = PIPELINE_STAGES.map((stage) => ({
-    key: stage,
-    label: stage,
-    value: stageCounts[stage]
-  }));
-
   return {
     executiveMetrics,
     pipelineMetrics,
+    pipelineStages,
     requisitions: filteredRequisitions,
     pipeline: filteredPipeline,
     tasks: recruiterTasks,

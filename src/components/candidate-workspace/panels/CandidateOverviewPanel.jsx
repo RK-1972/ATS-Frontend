@@ -3,6 +3,7 @@ import { useTheme } from "@mui/material/styles";
 
 import { EnterpriseSurface, MetricCell, StatusChip } from "@/components/enterprise";
 import InterviewProgressStepCell from "@/components/interviews/InterviewProgressStepCell";
+import CandidateStageControl from "@/components/candidate-workspace/CandidateStageControl";
 import { formatExperience } from "@/enterprise/candidateWorkspaceUtils";
 
 function SummaryCard({ title, children, sx = {} }) {
@@ -38,7 +39,9 @@ function CandidateOverviewPanel({
   masterLabels = {},
   profileCompletion = 0,
   profileCompletionBreakdown,
-  timelineEvents = []
+  timelineEvents = [],
+  onUpdateStage,
+  isSaving = false
 }) {
   const recentActivity = timelineEvents.filter((event) => !event.placeholder).slice(0, 3);
 
@@ -92,6 +95,12 @@ function CandidateOverviewPanel({
         </Stack>
         <FieldRow label="Requisition" value={mapping.req_id} />
         <FieldRow label="Map ID" value={mapping.map_id} />
+        <CandidateStageControl
+          key={`${mapping.map_id}-${mapping.stage_name || ""}`}
+          mapping={mapping}
+          onUpdateStage={onUpdateStage}
+          isSaving={isSaving}
+        />
       </SummaryCard>
 
       <SummaryCard title="Profile Completion">

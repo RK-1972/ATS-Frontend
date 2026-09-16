@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import useEnterpriseStore from "@/store/enterpriseStore";
 import { buildRecruiterWorkspaceData } from "@/enterprise/recruiterSelectors";
+import useAtsStageCatalog from "@/hooks/useAtsStageCatalog";
 
 function getLoggedInUser() {
   try {
@@ -12,6 +13,7 @@ function getLoggedInUser() {
 
 function useRecruiterWorkspace() {
   const user = getLoggedInUser();
+  const { stages: catalogStages } = useAtsStageCatalog();
 
   const recruitment = useEnterpriseStore((state) => state.recruitment);
   const taskInbox = useEnterpriseStore((state) => state.taskInbox);
@@ -26,13 +28,15 @@ function useRecruiterWorkspace() {
       recruitment,
       taskInbox,
       interviews,
-      filter: recruiterUi.searchQuery
+      filter: recruiterUi.searchQuery,
+      catalogStages
     }),
     [
       recruitment,
       taskInbox,
       interviews,
-      recruiterUi.searchQuery
+      recruiterUi.searchQuery,
+      catalogStages
     ]
   );
 

@@ -22,7 +22,11 @@ import {
   EmptyState,
   EnterpriseTabs
 } from "@/components/enterprise";
-import { PIPELINE_STAGES, normalizeStage } from "@/enterprise/recruiterSelectors";
+import useAtsStageCatalog from "@/hooks/useAtsStageCatalog";
+import {
+  buildStageSelectOptions,
+  resolveNextStageDisplayName
+} from "@/enterprise/atsStageCatalogUtils";
 
 function TabPanel({ active, value, children }) {
   if (active !== value) return null;
@@ -52,6 +56,9 @@ function RecruiterInspector({
   onCompleteTask,
   onAdvanceStage
 }) {
+  const { stages: catalogStages, isLoading: isCatalogLoading, error: catalogError, isEmpty: isCatalogEmpty } = useAtsStageCatalog();
+  const stageOptions = buildStageSelectOptions(catalogStages, selectedCandidate?.stage_name);
+
   const activeTab = recruiterUi.inspectorTab || "details";
 
   const title = selectedCandidate
@@ -70,12 +77,10 @@ function RecruiterInspector({
     setRecruiterUi({ inspectorTab: value });
   };
 
-  const normalizedStage = normalizeStage(selectedCandidate?.stage_name);
-  const currentStageIndex = PIPELINE_STAGES.indexOf(normalizedStage);
-
-  const nextStage = currentStageIndex >= 0 && currentStageIndex < PIPELINE_STAGES.length - 1
-    ? PIPELINE_STAGES[currentStageIndex + 1]
-    : null;
+  const nextStage = resolveNextStageDisplayName(
+    selectedCandidate?.stage_name,
+    catalogStages
+  );
 
   return (
     <InspectorDrawer
@@ -147,19 +152,37 @@ function RecruiterInspector({
         {selectedCandidate && (
           <Stack spacing={1.5} mt={selectedRequisition ? 2 : 0}>
             <DetailRow label="Stage" value={selectedCandidate.stage_name} />
+            {catalogError ? (
+              <Typography variant="caption" color="warning.main">
+                {catalogError}
+              </Typography>
+            ) : null}
+            {isCatalogEmpty ? (
+              <Typography variant="caption" color="text.secondary">
+                No active ATS stages are available.
+              </Typography>
+            ) : null}
             <FormControl fullWidth size="small" sx={{ mt: 1 }}>
               <InputLabel id="inspector-stage-select">Set stage</InputLabel>
               <Select
                 labelId="inspector-stage-select"
                 label="Set stage"
-                value={selectedCandidate.stage_name || "Applied"}
+                value={selectedCandidate.stage_name || ""}
                 onChange={(event) => onAdvanceStage(
                   selectedCandidate.mapping_id || selectedCandidate.map_id,
                   event.target.value
                 )}
+                disabled={isCatalogLoading || isCatalogEmpty}
               >
-                {PIPELINE_STAGES.map((stage) => (
-                  <MenuItem key={stage} value={stage}>{stage}</MenuItem>
+                {isCatalogLoading ? (
+                  <MenuItem value="" disabled>
+                    Loading stages...
+                  </MenuItem>
+                ) : null}
+                {stageOptions.map((option) => (
+                  <MenuItem key={option.value} value={option.value} disabled={option.disabled}>
+                    {option.label}
+                  </MenuItem>
                 ))}
               </Select>
             </FormControl>

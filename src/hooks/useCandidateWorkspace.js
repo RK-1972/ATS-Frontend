@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import useEnterpriseStore from "@/store/enterpriseStore";
 import candidateRepository from "@/repositories/candidateRepository";
-import { executeLegacyCandidateRegistration } from "@/pages/CandidatePage";
+import { executeLegacyCandidateRegistration } from "@/utils/legacyCandidateRegistration";
 import { getPublishedRecords } from "@/enterprise/masterDataHelpers";
 import { useNavigationFilters } from "@/copilot/core/useNavigationFilters";
 import {
@@ -49,6 +49,7 @@ function useCandidateWorkspace() {
   const [localEducation, setLocalEducation] = useState([]);
   const [ownership, setOwnership] = useState(null);
   const [ownerDisplayName, setOwnerDisplayName] = useState("");
+  const [pipelineHistory, setPipelineHistory] = useState([]);
   const resumeInputRef = useRef(null);
   const candidateIdRef = useRef(candidateId);
   candidateIdRef.current = candidateId;
@@ -106,20 +107,24 @@ function useCandidateWorkspace() {
     setError("");
 
     try {
-      const [nextProfile, ownershipData, experienceRecords] =
-        await Promise.all([
-          candidateRepository.loadCandidateProfile(id),
-          candidateRepository.getCandidateOwnership(id),
-          candidateRepository.listExperience(id)
-        ]);
+      const [nextProfile, ownershipData] = await Promise.all([
+        candidateRepository.loadCandidateProfile(id),
+        candidateRepository.getCandidateOwnership(id)
+      ]);
 
-      setProfile({
-        ...nextProfile,
-        children: {
-          ...nextProfile.children,
-          experience: experienceRecords
+      setProfile(nextProfile);
+
+      const mapId = nextProfile.mapping?.map_id;
+      if (mapId) {
+        try {
+          const historyRows = await candidateRepository.loadPipelineHistory(mapId);
+          setPipelineHistory(historyRows);
+        } catch {
+          setPipelineHistory([]);
         }
-      });
+      } else {
+        setPipelineHistory([]);
+      }
 
       setOwnership(ownershipData);
 
@@ -160,7 +165,7 @@ function useCandidateWorkspace() {
   );
   const profileCompletion = profileCompletionBreakdown.total;
   const skillChips = parseSkillChips(candidate, skills);
-  const timelineEvents = buildTimelineEvents(candidate, mapping);
+  const timelineEvents = buildTimelineEvents(candidate, mapping, pipelineHistory);
 
   const filteredCandidates = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -448,6 +453,32 @@ const mapCandidateToRequisition = useCallback(
 
 );
 
+const updateCandidateStage = useCallback(
+  async (mapId, stageName, remarks = "") => {
+    setIsSaving(true);
+
+    try {
+      await candidateRepository.updateCandidateStage(mapId, stageName, remarks);
+
+      if (candidateId) {
+        await loadProfile(candidateId);
+      }
+
+      await loadCandidates({ preserveSelection: true });
+      showToast("Pipeline stage updated successfully.");
+    } catch (stageError) {
+      showToast(
+        stageError.message || "Failed to update pipeline stage.",
+        "error"
+      );
+      throw stageError;
+    } finally {
+      setIsSaving(false);
+    }
+  },
+  [candidateId, loadCandidates, loadProfile, showToast]
+);
+
 // ======================================================
 
 
@@ -493,6 +524,7 @@ const mapCandidateToRequisition = useCallback(
     setSkills,
     saveSkills,
     timelineEvents,
+    pipelineHistory,
     masterLabels,
     candidateId,
     activeTab,
@@ -520,6 +552,7 @@ const mapCandidateToRequisition = useCallback(
     registerCandidate,
     saveCandidate,
     mapCandidateToRequisition,
+    updateCandidateStage,
     localNotes,
     setLocalNotes,
     localEducation,

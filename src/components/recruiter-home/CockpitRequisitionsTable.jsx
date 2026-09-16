@@ -87,7 +87,7 @@ function CockpitRequisitionsTable({ rows = [], selectedId, onSelect, onViewAll }
                       )}
                     </TableCell>
                     <TableCell sx={{ ...tdSx, color: DESIGN.textSecondary }}>{row.hiringManager || "—"}</TableCell>
-                    <TableCell sx={tdSx} align="center">{row.funnelCurrent} / {row.funnelTarget}</TableCell>
+                    <TableCell sx={tdSx} align="center">{row.openPositions} / {row.headcount}</TableCell>
                     <TableCell sx={tdSx}>
                       <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
                         <LinearProgress variant="determinate" value={row.progress} sx={{ flex: 1, height: 6, borderRadius: 1, bgcolor: "#EAECF0", "& .MuiLinearProgress-bar": { bgcolor: DESIGN.blue, borderRadius: 1 } }} />

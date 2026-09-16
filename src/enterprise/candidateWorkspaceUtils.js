@@ -181,9 +181,73 @@ export function resolveMasterLabel(masterData, entityType, code) {
   return record?.name || code;
 }
 
-export function buildTimelineEvents(candidate = {}, mapping = {}) {
+export function mapPipelineHistoryToTimelineEvents(historyRows = []) {
+  const EVENT_LABELS = {
+    CandidateMapped: "Mapped to Requisition",
+    StageChanged: "Pipeline Stage Updated",
+    CandidateRejected: "Candidate Rejected",
+    CandidateShortlisted: "Candidate Shortlisted",
+    CandidateReleased: "Released from Requisition",
+    ReturnedToTalentPool: "Returned to Talent Pool"
+  };
+
+  const EVENT_ICONS = {
+    CandidateMapped: "link",
+    StageChanged: "timeline",
+    CandidateRejected: "timeline",
+    CandidateShortlisted: "timeline",
+    CandidateReleased: "link",
+    ReturnedToTalentPool: "link"
+  };
+
+  const EVENT_TONES = {
+    CandidateMapped: "success",
+    StageChanged: "warning",
+    CandidateRejected: "warning",
+    CandidateShortlisted: "success",
+    CandidateReleased: "info",
+    ReturnedToTalentPool: "info"
+  };
+
+  return historyRows.map((row) => {
+    const eventType = row.event_type || "StageChanged";
+    const toStage = row.to_stage || "";
+    const fromStage = row.from_stage || "";
+    let description = row.comments || "";
+
+    if (eventType === "CandidateMapped") {
+      description =
+        description ||
+        `Requisition ${row.requisition_code || "—"} · Stage ${toStage || "Applied"}`;
+    } else if (fromStage && toStage) {
+      description = description || `${fromStage} → ${toStage}`;
+    } else if (toStage) {
+      description = description || toStage;
+    } else if (!description) {
+      description = EVENT_LABELS[eventType] || eventType;
+    }
+
+    return {
+      id: `history-${row.history_id}`,
+      type: EVENT_LABELS[eventType] || eventType,
+      description,
+      date: row.created_on,
+      tone: EVENT_TONES[eventType] || "info",
+      icon: EVENT_ICONS[eventType] || "timeline",
+      user: row.actor || "System",
+      source: "pipeline_history"
+    };
+  });
+}
+
+export function buildTimelineEvents(
+  candidate = {},
+  mapping = {},
+  pipelineHistory = []
+) {
   const events = [];
   const actor = candidate.created_by || candidate.recruiter_id || "System";
+  const hasPipelineHistory = Array.isArray(pipelineHistory) && pipelineHistory.length > 0;
 
   if (candidate.created_on) {
     events.push({
@@ -209,28 +273,32 @@ export function buildTimelineEvents(candidate = {}, mapping = {}) {
     });
   }
 
-  if (mapping?.map_id || mapping?.req_id) {
-    events.push({
-      id: "mapped",
-      type: "Mapped to Requisition",
-      description: `Requisition ${mapping.req_id || "—"} · Stage ${mapping.stage_name || "Applied"}`,
-      date: mapping.applied_date || candidate.updated_on || candidate.created_on,
-      tone: "success",
-      icon: "link",
-      user: mapping.recruiter_id || actor
-    });
-  }
+  if (hasPipelineHistory) {
+    events.push(...mapPipelineHistoryToTimelineEvents(pipelineHistory));
+  } else {
+    if (mapping?.map_id || mapping?.req_id) {
+      events.push({
+        id: "mapped",
+        type: "Mapped to Requisition",
+        description: `Requisition ${mapping.req_id || "—"} · Stage ${mapping.stage_name || "Applied"}`,
+        date: mapping.applied_date || candidate.updated_on || candidate.created_on,
+        tone: "success",
+        icon: "link",
+        user: mapping.recruiter_id || actor
+      });
+    }
 
-  if (mapping?.stage_name && mapping.stage_name !== "Applied") {
-    events.push({
-      id: "stage",
-      type: "Pipeline Stage Updated",
-      description: mapping.stage_name,
-      date: candidate.updated_on || candidate.created_on,
-      tone: "warning",
-      icon: "timeline",
-      user: actor
-    });
+    if (mapping?.stage_name && mapping.stage_name !== "Applied") {
+      events.push({
+        id: "stage",
+        type: "Pipeline Stage Updated",
+        description: mapping.stage_name,
+        date: candidate.updated_on || candidate.created_on,
+        tone: "warning",
+        icon: "timeline",
+        user: actor
+      });
+    }
   }
 
   if (candidate.updated_on && candidate.updated_on !== candidate.created_on) {
@@ -289,6 +357,7 @@ export default {
   parseSkillsFromCandidate,
   skillsToPrimaryString,
   resolveMasterLabel,
+  mapPipelineHistoryToTimelineEvents,
   buildTimelineEvents,
   formatExperience,
   WORKSPACE_TABS

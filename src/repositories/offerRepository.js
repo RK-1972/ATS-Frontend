@@ -126,6 +126,34 @@ async function acceptOffer(offers, offerId) {
   };
 }
 
+async function negotiateOffer(offers, offerId, payload) {
+  if (!isLiveMode()) {
+    return { offers, toastMessage: "Negotiation recorded." };
+  }
+
+  const result = await offerClient.negotiateOffer(offerId, payload);
+  const bundle = await getAll();
+
+  return {
+    offers: bundle,
+    toastMessage: result.toastMessage
+  };
+}
+
+async function reviseOffer(offers, offerId, payload) {
+  if (!isLiveMode()) {
+    return { offers, toastMessage: "Offer revised." };
+  }
+
+  const result = await offerClient.reviseOffer(offerId, payload);
+  const bundle = await getAll();
+
+  return {
+    offers: bundle,
+    toastMessage: result.toastMessage
+  };
+}
+
 async function generateOfferLetter(offerId, payload) {
   const response = await offerLetterClient.generate(offerId, payload);
 
@@ -150,6 +178,8 @@ const offerRepository = {
   approveOffer,
   releaseOffer,
   acceptOffer,
+  negotiateOffer,
+  reviseOffer,
   generateOfferLetter
 };
 

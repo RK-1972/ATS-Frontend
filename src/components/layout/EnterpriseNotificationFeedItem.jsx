@@ -8,6 +8,7 @@ import BusinessCenterOutlinedIcon from "@mui/icons-material/BusinessCenterOutlin
 import PeopleOutlinedIcon from "@mui/icons-material/PeopleOutlined";
 import EventOutlinedIcon from "@mui/icons-material/EventOutlined";
 import PersonAddOutlinedIcon from "@mui/icons-material/PersonAddOutlined";
+import LocalOfferOutlinedIcon from "@mui/icons-material/LocalOfferOutlined";
 
 import { formatNotificationRelativeTime } from "@/utils/formatNotificationRelativeTime";
 
@@ -19,6 +20,10 @@ const CATEGORY_VISUALS = {
   resourceRequisition: {
     Icon: BusinessCenterOutlinedIcon,
     accentKey: "warning"
+  },
+  offer: {
+    Icon: LocalOfferOutlinedIcon,
+    accentKey: "error"
   },
   candidateOwnership: {
     Icon: PeopleOutlinedIcon,

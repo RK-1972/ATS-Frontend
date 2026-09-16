@@ -197,7 +197,7 @@ function AdminNavRail() {
       return true;
     }
 
-    // Recruiter Assignment: REQUISITION_ASSIGNER Work Assignment only.
+    // Recruiter Assignment: Admin or active REQUISITION_ASSIGNER Work Assignment.
     if (item.path === RECRUITER_ASSIGNMENT_PATH) {
       return canAssignRecruiters;
     }
@@ -226,6 +226,10 @@ function AdminNavRail() {
 
     if (item.path === OFFER_WORKSPACE_PATH || item.requiresOfferWorkspace) {
       return Boolean(workspace.showOfferWorkspace);
+    }
+
+    if (item.path === "/users") {
+      return Boolean(workspace.showUserAdministrationWorkspace);
     }
 
     return false;

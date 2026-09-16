@@ -5,6 +5,7 @@ import {
   MdLocalOffer,
   MdWarningAmber
 } from "react-icons/md";
+import { formatLegacyInterviewDisplayDate } from "@/pages/recruiter-home/recruiterHomeDateFilter";
 
 /**
  * Attention / action row meta — glyph + semantic module colour role.
@@ -78,6 +79,76 @@ const ACTION_TYPE_NEXT = {
   "Offer approval": "Ready to Create Offer",
   "Candidate overdue": "Follow Up on Overdue Candidate"
 };
+
+const PLACEHOLDER_HIRING_MANAGER = "hiring manager";
+
+export function recruiterRequisitionPath(requisitionCode) {
+  if (!requisitionCode) {
+    return "/recruiter/my-requisitions";
+  }
+  return `/recruiter/my-requisitions/${encodeURIComponent(requisitionCode)}`;
+}
+
+export function resolveHiringManagerDisplay(req = {}) {
+  const fromMaster = String(req.hiring_manager_name || req.hiringManagerName || "").trim();
+  const fromField = String(req.hiring_manager || req.hiringManager || "").trim();
+  if (fromMaster) return fromMaster;
+  if (fromField && fromField.toLowerCase() !== PLACEHOLDER_HIRING_MANAGER) return fromField;
+  return "—";
+}
+
+export function resolveHiringManagerEmail(req = {}) {
+  const email = String(req.hiring_manager_email || req.hiringManagerEmail || "").trim();
+  return email || null;
+}
+
+export function resolveRequisitionSidebarNote(req = {}) {
+  const jobDescription = String(req.job_description || req.jobDescription || "").trim();
+  const primarySkill = String(req.primary_skill || req.primarySkill || "").trim();
+  if (jobDescription) {
+    return { label: "Job Description", text: jobDescription };
+  }
+  if (primarySkill) {
+    return { label: "Primary Skill", text: primarySkill };
+  }
+  return { label: null, text: "" };
+}
+
+export function resolveActionNavigation(actionItem) {
+  if (!actionItem) {
+    return { path: "/candidates" };
+  }
+
+  const reqCode = String(actionItem.detail || "").trim();
+  const isReqCode = /^REQ/i.test(reqCode);
+
+  if (actionItem.type === "Interview today") {
+    return {
+      path: "/interview-schedule",
+      state: { filters: { search: formatLegacyInterviewDisplayDate(new Date()) } }
+    };
+  }
+
+  if (actionItem.type === "Interview feedback") {
+    return {
+      path: "/interview-schedule",
+      state: isReqCode ? { filters: { search: reqCode } } : undefined
+    };
+  }
+
+  if (actionItem.type === "Offer approval") {
+    return { path: isReqCode ? recruiterRequisitionPath(reqCode) : "/candidates" };
+  }
+
+  if (actionItem.type === "Candidate overdue") {
+    if (isReqCode) {
+      return { path: recruiterRequisitionPath(reqCode) };
+    }
+    return { path: "/candidates" };
+  }
+
+  return { path: actionItem.route || "/candidates" };
+}
 
 export function resolveTodaysNextAction({ mode, candidate, actionItem, requisition }) {
   if (actionItem?.type) {

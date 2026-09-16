@@ -1,9 +1,16 @@
 import API from "../api/axios";
+import {
+  getProvisionableRolesForAdmin,
+  getProvisionableRolesForUserAdministrator,
+  PLATFORM_ADMIN_ROLE
+} from "../constants/employeeRoles";
 
 const REQUISITION_REQUESTOR_CODE = "REQUISITION_REQUESTOR";
 const REQUISITION_ASSIGNER_CODE = "REQUISITION_ASSIGNER";
+const TA_LEAD_ROLES = ["TA Lead", "TA Leader"];
 const RAISE_BUDGET_REQUEST_CODE = "RAISE_BUDGET_REQUEST";
 const BUDGET_REQUESTOR_CODE = "BUDGET_REQUESTOR";
+const USER_ADMINISTRATOR_CODE = "USER_ADMINISTRATOR";
 
 function getLoggedInUser() {
   try {
@@ -120,15 +127,31 @@ async function canRaiseBudgetRequest() {
   }
 }
 
+function isTaLeadRole(user) {
+  return TA_LEAD_ROLES.includes(String(user?.role_name || "").trim());
+}
+
+function readWorkspaceFlags() {
+  try {
+    return JSON.parse(localStorage.getItem("workspace") || "{}") || {};
+  } catch {
+    return {};
+  }
+}
+
 /**
  * Returns whether the logged-in user may access Recruiter Assignment.
- * Requires an active REQUISITION_ASSIGNER Work Assignment only.
+ * Admin, TA Lead / TA Leader, or active REQUISITION_ASSIGNER assignment.
  */
 async function canAssignRecruiters() {
   const user = getLoggedInUser();
 
   if (!user) {
     return false;
+  }
+
+  if (user.role_name === "Admin" || isTaLeadRole(user)) {
+    return true;
   }
 
   const employeeCode = user.employee_code;
@@ -145,11 +168,81 @@ async function canAssignRecruiters() {
   }
 }
 
+/**
+ * Returns whether the logged-in user may open the TA Lead workspace.
+ */
+async function canAccessTaLeadWorkspace() {
+  const user = getLoggedInUser();
+
+  if (!user) {
+    return false;
+  }
+
+  const workspace = readWorkspaceFlags();
+
+  if (workspace.showTaLeadWorkspace) {
+    return true;
+  }
+
+  return canAssignRecruiters();
+}
+
+/**
+ * Returns whether the logged-in user may access User Administration (/users).
+ * Platform Admins or active USER_ADMINISTRATOR assignment.
+ */
+async function canAccessUserAdministration() {
+  const user = getLoggedInUser();
+
+  if (!user) {
+    return false;
+  }
+
+  if (user.role_name === "Admin") {
+    return true;
+  }
+
+  const employeeCode = user.employee_code;
+
+  if (!employeeCode) {
+    return false;
+  }
+
+  try {
+    const assignments = await fetchEmployeeWorkAssignments(employeeCode);
+    return hasActiveWorkAssignment(assignments, USER_ADMINISTRATOR_CODE);
+  } catch {
+    return false;
+  }
+}
+
+function getProvisionableRoles() {
+  const user = getLoggedInUser();
+
+  if (user?.role_name === PLATFORM_ADMIN_ROLE) {
+    return getProvisionableRolesForAdmin();
+  }
+
+  return getProvisionableRolesForUserAdministrator();
+}
+
 const AuthorizationService = {
   canRaiseRequisition,
   canRaiseBudgetRequest,
-  canAssignRecruiters
+  canAssignRecruiters,
+  canAccessTaLeadWorkspace,
+  canAccessUserAdministration,
+  getProvisionableRoles
 };
 
-export { canRaiseRequisition, canRaiseBudgetRequest, canAssignRecruiters };
+export {
+  canRaiseRequisition,
+  canRaiseBudgetRequest,
+  canAssignRecruiters,
+  canAccessTaLeadWorkspace,
+  canAccessUserAdministration,
+  getProvisionableRoles,
+  USER_ADMINISTRATOR_CODE,
+  TA_LEAD_ROLES
+};
 export default AuthorizationService;

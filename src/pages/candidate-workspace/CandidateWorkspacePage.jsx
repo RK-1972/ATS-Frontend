@@ -35,6 +35,7 @@ import CandidateOwnershipCard from "@/components/candidate-workspace/CandidateOw
 import CandidateOwnershipDialog from "@/components/candidate-workspace/CandidateOwnershipDialog";
 import EnterpriseConfirmationDialog from "@/components/enterprise/EnterpriseConfirmationDialog";
 import CandidateDraftRegisterPanel from "@/components/candidate-workspace/CandidateDraftRegisterPanel";
+import candidateRepository from "@/repositories/candidateRepository";
 
 function CandidateWorkspacePage() {
   const navigate = useNavigate();
@@ -72,6 +73,8 @@ function CandidateWorkspacePage() {
     error,
     showToast,
     saveCandidate,
+    mapCandidateToRequisition,
+    updateCandidateStage,
     localNotes,
     setLocalNotes,
     triggerResumeUpload,
@@ -389,6 +392,8 @@ if (
             profileCompletion={profileCompletion}
             profileCompletionBreakdown={profileCompletionBreakdown}
             timelineEvents={timelineEvents}
+            onUpdateStage={updateCandidateStage}
+            isSaving={isSaving}
           />
         );
     }

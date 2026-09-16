@@ -37,12 +37,14 @@ import {
   StatusChip
 } from "../../components/enterprise";
 import InterviewProgressStepCell from "../../components/interviews/InterviewProgressStepCell";
-import {
-  PIPELINE_STAGES,
-  normalizeStage
-} from "../../enterprise/recruiterSelectors";
+import { normalizeStage } from "@/enterprise/recruiterSelectors";
+import { buildPipelineMetrics } from "../../enterprise/atsStageCatalogUtils";
+import useAtsStageCatalog from "../../hooks/useAtsStageCatalog";
 import recruitmentClient from "../../api/clients/recruitmentClient";
 import candidateRepository from "../../repositories/candidateRepository";
+import useEnterpriseStore from "@/store/enterpriseStore";
+import { formatRequisitionSkillDisplay } from "@/utils/requisitionSkillUtils";
+import SuggestedMatchesPanel from "../../components/requisitions/SuggestedMatchesPanel";
 
 const PIPELINE_STAGE_ICONS = {
   Applied: PersonAddAltOutlinedIcon,
@@ -184,6 +186,7 @@ function HeroAttribute({ icon: Icon, module = "recruitment", caption, primary, s
 }
 
 function RequisitionSummaryHero({ requisition }) {
+  const masterData = useEnterpriseStore((state) => state.masterData);
   const hiringManager = resolveHiringManagerLines(requisition);
   const recruiter = resolveRecruiterLines(requisition);
 
@@ -230,7 +233,14 @@ function RequisitionSummaryHero({ requisition }) {
     }
   ];
 
-  const primarySkill = requisition.primary_skill;
+  const primarySkill = formatRequisitionSkillDisplay(
+    requisition.primary_skill,
+    masterData
+  );
+  const secondarySkill = formatRequisitionSkillDisplay(
+    requisition.secondary_skill,
+    masterData
+  );
 
   return (
     <Paper
@@ -309,13 +319,24 @@ function RequisitionSummaryHero({ requisition }) {
         </Box>
 
         <Stack direction="row" flexWrap="wrap" gap={0.75} sx={{ mt: 1.5 }}>
-          <Chip
-            label={displayValue(primarySkill)}
-            size="small"
-            color="primary"
-            variant="outlined"
-            sx={{ fontWeight: 600 }}
-          />
+          {primarySkill ? (
+            <Chip
+              label={displayValue(primarySkill)}
+              size="small"
+              color="primary"
+              variant="outlined"
+              sx={{ fontWeight: 600 }}
+            />
+          ) : null}
+          {secondarySkill ? (
+            <Chip
+              label={displayValue(secondarySkill)}
+              size="small"
+              color="default"
+              variant="outlined"
+              sx={{ fontWeight: 600 }}
+            />
+          ) : null}
         </Stack>
       </Box>
     </Paper>
@@ -398,6 +419,7 @@ function RecruiterRequisitionDetailsPage() {
   const navigate = useNavigate();
   const { reqCode: routeReqCode } = useParams();
   const reqCode = decodeURIComponent(routeReqCode || "");
+  const { stages: catalogStages } = useAtsStageCatalog();
 
   const [requisition, setRequisition] = useState(null);
   const [candidates, setCandidates] = useState([]);
@@ -490,25 +512,10 @@ function RecruiterRequisitionDetailsPage() {
     loadDetails();
   }, [loadDetails]);
 
-  const pipelineMetrics = useMemo(() => {
-    const counts = PIPELINE_STAGES.reduce((acc, stage) => {
-      acc[stage] = 0;
-      return acc;
-    }, {});
-
-    candidates.forEach((row) => {
-      const stage = normalizeStage(row.stage_name);
-      if (counts[stage] !== undefined) {
-        counts[stage] += 1;
-      }
-    });
-
-    return PIPELINE_STAGES.map((stage) => ({
-      key: stage,
-      label: stage,
-      value: counts[stage]
-    }));
-  }, [candidates]);
+  const pipelineMetrics = useMemo(
+    () => buildPipelineMetrics(catalogStages, candidates),
+    [catalogStages, candidates]
+  );
 
   const filteredCandidates = useMemo(() => {
     const query = String(search || "").trim().toLowerCase();
@@ -655,6 +662,11 @@ function RecruiterRequisitionDetailsPage() {
           >
             <PipelineStageMetricCards metrics={pipelineMetrics} />
           </EnterpriseCard>
+
+          <SuggestedMatchesPanel
+            requisitionCode={requisition.req_code || reqCode}
+            onCandidateMapped={() => loadDetails()}
+          />
 
           <EnterpriseCard
             title="Assigned Candidates"

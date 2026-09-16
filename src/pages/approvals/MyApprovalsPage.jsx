@@ -21,6 +21,7 @@ import HighlightOffOutlinedIcon from "@mui/icons-material/HighlightOffOutlined";
 import WorkspaceLayout from "../../components/enterprise/WorkspaceLayout";
 import AdminNavRail from "../../components/layout/AdminNavRail";
 import RecruiterNavRail from "../../components/layout/RecruiterNavRail";
+import TALeadNavRail from "../../components/layout/TALeadNavRail";
 import EnterpriseCard from "../../components/enterprise/framework/EnterpriseCard";
 import EnterpriseWorkspaceHeader from "../../components/enterprise/framework/EnterpriseWorkspaceHeader";
 import EnterpriseConfirmationDialog from "../../components/enterprise/EnterpriseConfirmationDialog";
@@ -58,6 +59,10 @@ function resolveEnterpriseNavRail(user) {
 
   if (workspace.showRecruitmentWorkspace || workspace.showInterviewWorkspace) {
     return <RecruiterNavRail loggedInUser={user} />;
+  }
+
+  if (workspace.showTaLeadWorkspace) {
+    return <TALeadNavRail />;
   }
 
   return <AdminNavRail />;

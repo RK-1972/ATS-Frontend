@@ -25,6 +25,26 @@ const candidatePortalClient = {
       .then((response) => response.data);
   },
 
+  listOpenRequisitions() {
+    return candidateAPI
+      .get("/candidate-portal/open-requisitions")
+      .then((response) => response.data);
+  },
+
+  listApplications() {
+    return candidateAPI
+      .get("/candidate-portal/applications")
+      .then((response) => response.data);
+  },
+
+  applyToRequisition(requisitionCode) {
+    return candidateAPI
+      .post("/candidate-portal/applications", {
+        requisition_code: requisitionCode
+      })
+      .then((response) => response.data);
+  },
+
   getProfile() {
     return candidateAPI
       .get("/candidate-portal/profile")

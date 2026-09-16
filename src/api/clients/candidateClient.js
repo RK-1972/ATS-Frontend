@@ -6,7 +6,9 @@ const candidateClient = {
   },
 
   listMyCandidates() {
-    return API.get("/my-candidates-list").then((response) => response.data);
+    return API
+      .get("/api/v1/recruitment/candidates?view=pipeline")
+      .then((response) => response.data);
   },
 
   listAvailableCandidates() {

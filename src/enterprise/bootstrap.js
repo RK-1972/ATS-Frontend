@@ -10,10 +10,19 @@ import taskRepository from "@/repositories/taskRepository";
 import interviewRepository from "@/repositories/interviewRepository";
 import offerRepository from "@/repositories/offerRepository";
 import hiringControlTowerRepository from "@/repositories/hiringControlTowerRepository";
+import auditRepository from "@/repositories/auditRepository";
 import useEnterpriseStore from "@/store/enterpriseStore";
 
 function settledValue(result, fallback) {
   return result.status === "fulfilled" ? result.value : fallback;
+}
+
+function getBootstrapUser() {
+  try {
+    return JSON.parse(localStorage.getItem("user") || "null");
+  } catch {
+    return null;
+  }
 }
 
 export async function bootstrapEnterpriseData() {
@@ -112,6 +121,20 @@ export async function bootstrapEnterpriseData() {
     }
   }
 
+  let auditEvents = auditRepository.getInitialState();
+
+  if (hasValidSession && getBootstrapUser()?.role_name === "Admin") {
+    try {
+      auditEvents = await auditRepository.getAll({ page: 1, limit: 200 });
+      console.info("[bootstrap] Audit events loaded", { count: auditEvents.length });
+    } catch (error) {
+      console.warn(
+        "[bootstrap] Failed to load audit events:",
+        error?.response?.data?.message || error.message
+      );
+    }
+  }
+
   useEnterpriseStore.setState({
     masterData,
     platformConfig: platformBundle.config,
@@ -144,7 +167,8 @@ export async function bootstrapEnterpriseData() {
       ),
       toastMessage: ""
     },
-    hiringProcess
+    hiringProcess,
+    auditEvents
   });
 }
 

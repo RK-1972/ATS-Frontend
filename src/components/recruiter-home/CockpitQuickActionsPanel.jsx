@@ -13,15 +13,26 @@ import { DESIGN, PANEL_HEADER, PANEL_SHELL, ROW_INTERACTIVE } from "./recruiterH
 import EnterpriseModuleIcon from "@/components/enterprise/EnterpriseModuleIcon";
 
 const ACTIONS = [
-  { key: "schedule", label: "Schedule Interview", icon: MdSchedule, route: "/interview-schedule" },
-  { key: "today", label: "My Interviews Today", icon: MdEvent, toggle: true },
+  { key: "schedule", label: "Schedule Interview", icon: MdSchedule },
+  { key: "today", label: "My Interviews Today", icon: MdEvent },
   { key: "candidate", label: "Open Candidate", icon: MdPerson, route: "/candidates" },
-  { key: "requisition", label: "Open Requisition", icon: MdWorkOutline, route: "/requisitions" },
+  { key: "requisition", label: "Open Requisition", icon: MdWorkOutline },
   { key: "advance", label: "Advance Candidate", icon: MdForward, route: "/candidates" },
   { key: "search", label: "Search Candidate", icon: MdSearch, route: "/candidates" }
 ];
 
-function CockpitQuickActionsPanel({ onNavigate, onShowInterviewsToday, interviewsTodayActive = false }) {
+function CockpitQuickActionsPanel({ onNavigate, onQuickAction }) {
+  const handleClick = (action) => {
+    if (action.key === "schedule" || action.key === "today" || action.key === "requisition") {
+      onQuickAction?.(action.key);
+      return;
+    }
+
+    if (action.route) {
+      onNavigate?.(action.route);
+    }
+  };
+
   return (
     <Box sx={{ ...PANEL_SHELL, display: "flex", flexDirection: "column", height: "100%" }}>
       <Box sx={{ ...PANEL_HEADER, display: "flex", alignItems: "center", gap: 0.75 }}>
@@ -38,16 +49,14 @@ function CockpitQuickActionsPanel({ onNavigate, onShowInterviewsToday, interview
       </Box>
 
       <List dense disablePadding sx={{ py: 0.5 }}>
-        {ACTIONS.map(({ key, label, icon: Icon, route, toggle }) => (
+        {ACTIONS.map(({ key, label, icon: Icon }) => (
           <ListItemButton
             key={key}
-            onClick={() => (toggle ? onShowInterviewsToday?.() : onNavigate?.(route))}
-            selected={toggle && interviewsTodayActive}
+            onClick={() => handleClick({ key, label, icon: Icon })}
             sx={{
               ...ROW_INTERACTIVE,
               py: 0.65,
-              px: 1.5,
-              "&.Mui-selected": { bgcolor: "#EFF8FF" }
+              px: 1.5
             }}
           >
             <ListItemIcon sx={{ minWidth: 32 }}>

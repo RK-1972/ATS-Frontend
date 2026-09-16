@@ -16,6 +16,7 @@ import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined
 import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
 import FactCheckOutlinedIcon from "@mui/icons-material/FactCheckOutlined";
 import UploadFileOutlinedIcon from "@mui/icons-material/UploadFileOutlined";
+import WorkOutlineOutlinedIcon from "@mui/icons-material/WorkOutlineOutlined";
 
 import AppHeader from "../../components/layout/AppHeader";
 import OptalynxLoader from "../../components/OptalynxLoader";
@@ -24,7 +25,10 @@ import {
   clearCandidateAuthStorage,
   getStoredCandidateUser
 } from "../../utils/candidateSessionAuth";
-import { getCandidatePortalStatusDescription } from "../../utils/candidatePortalStatusUtils";
+import {
+  getCandidatePortalStatusDescription,
+  getMyApplicationsWorkspaceCardContent
+} from "../../utils/candidatePortalStatusUtils";
 
 function WorkspaceCard({
   title,
@@ -103,6 +107,7 @@ function CandidatePortalWorkspacePage() {
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [workspace, setWorkspace] = useState(null);
+  const [applications, setApplications] = useState([]);
 
   useEffect(() => {
     let active = true;
@@ -112,10 +117,20 @@ function CandidatePortalWorkspacePage() {
       setErrorMessage("");
 
       try {
-        const response = await candidatePortalClient.getWorkspace();
+        const [workspaceResponse, applicationsResponse] = await Promise.all([
+          candidatePortalClient.getWorkspace(),
+          candidatePortalClient.listApplications().catch(() => ({
+            data: { applications: [] }
+          }))
+        ]);
 
         if (active) {
-          setWorkspace(response.data);
+          setWorkspace(workspaceResponse.data);
+          setApplications(
+            Array.isArray(applicationsResponse.data?.applications)
+              ? applicationsResponse.data.applications
+              : []
+          );
         }
       } catch (error) {
         if (active) {
@@ -151,6 +166,8 @@ function CandidatePortalWorkspacePage() {
     workspace?.full_name ||
     storedUser?.full_name ||
     "Candidate";
+
+  const myApplicationsCard = getMyApplicationsWorkspaceCardContent(applications);
 
   if (loading) {
     return (
@@ -234,11 +251,21 @@ function CandidatePortalWorkspacePage() {
 
             <Grid size={{ xs: 12, md: 6 }}>
               <WorkspaceCard
+                title="Browse Jobs"
+                description="Explore open opportunities and apply to available roles."
+                actionLabel="Browse Jobs"
+                onAction={() => navigate("/candidate/jobs")}
+                icon={WorkOutlineOutlinedIcon}
+              />
+            </Grid>
+
+            <Grid size={{ xs: 12, md: 6 }}>
+              <WorkspaceCard
                 title="My Applications"
-                description="No applications yet."
+                chipLabel={myApplicationsCard.chipLabel}
+                description={myApplicationsCard.description}
                 actionLabel="View Applications"
-                onAction={() => {}}
-                disabled
+                onAction={() => navigate("/candidate/applications")}
                 icon={AssignmentOutlinedIcon}
               />
             </Grid>

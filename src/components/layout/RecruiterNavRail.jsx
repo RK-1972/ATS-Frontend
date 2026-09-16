@@ -20,6 +20,7 @@ import RateReviewOutlinedIcon from "@mui/icons-material/RateReviewOutlined";
 import WorkOutlineOutlinedIcon from "@mui/icons-material/WorkOutlineOutlined";
 import PersonAddAlt1OutlinedIcon from "@mui/icons-material/PersonAddAlt1Outlined";
 import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
+import InboxOutlinedIcon from "@mui/icons-material/InboxOutlined";
 import LocalOfferOutlinedIcon from "@mui/icons-material/LocalOfferOutlined";
 
 import AuthorizationService from "@/services/authorizationService";
@@ -45,6 +46,11 @@ const RECRUITER_NAV_ITEMS = [
     label: "My Assigned Requisitions",
     path: MY_ASSIGNED_REQUISITIONS_PATH,
     icon: AssignmentOutlinedIcon
+  },
+  {
+    label: "Pending Applications",
+    path: "/recruiter/pending-applications",
+    icon: InboxOutlinedIcon
   },
   {
     label: "Talent Management",

@@ -21,6 +21,8 @@ import ApprovalTimeline from "../workforce-planning/ApprovalTimeline";
 import ClarificationTimeline from "../workforce-planning/ClarificationTimeline";
 import WorkforceRequisitionQueueService from "@/services/workforceRequisitionQueueService";
 import { formatCurrency } from "@/utils/formatCurrency";
+import useEnterpriseStore from "@/store/enterpriseStore";
+import { formatRequisitionSkillDisplay } from "@/utils/requisitionSkillUtils";
 
 function DetailRow({ label, value }) {
   return (
@@ -75,6 +77,7 @@ function SectionHeading({ children }) {
 }
 
 function RequisitionInspectorDrawer({ open, requisitionCode, onClose, onSubmitted }) {
+  const masterData = useEnterpriseStore((state) => state.masterData);
   const [detail, setDetail] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState("");
@@ -323,7 +326,20 @@ function RequisitionInspectorDrawer({ open, requisitionCode, onClose, onSubmitte
                 value={<WorkforceStatusChip status={requisition.req_status || "—"} />}
               />
               <DetailRow label="Grade" value={requisition.grade} />
-              <DetailRow label="Primary Skill" value={requisition.primary_skill} />
+              <DetailRow
+                label="Primary Skill"
+                value={formatRequisitionSkillDisplay(
+                  requisition.primary_skill,
+                  masterData
+                )}
+              />
+              <DetailRow
+                label="Secondary Skill"
+                value={formatRequisitionSkillDisplay(
+                  requisition.secondary_skill,
+                  masterData
+                )}
+              />
               <DetailRow
                 label="Approved Position"
                 value={requisition.approved_position_id}

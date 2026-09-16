@@ -11,7 +11,6 @@ import { Box, CircularProgress } from "@mui/material";
 
 import Home from "./pages/Home";
 import UITestPage from "./pages/UITestPage";
-import CandidatePage from "./pages/CandidatePage";
 import LoginPage from "./pages/LoginPage";
 import CandidatePortalPlaceholderPage from "./pages/candidate/CandidatePortalPlaceholderPage";
 import CandidateRegisterPage from "./pages/candidate/CandidateRegisterPage";
@@ -20,6 +19,9 @@ import CandidatePortalWorkspacePage from "./pages/candidate/CandidatePortalWorks
 import CandidateCompleteProfilePage from "./pages/candidate/CandidateCompleteProfilePage";
 import CandidateProfilePage from "./pages/candidate/CandidateProfilePage";
 import CandidateProfileStatusPage from "./pages/candidate/CandidateProfileStatusPage";
+import CandidateApplicationsPage from "./pages/candidate/CandidateApplicationsPage";
+import CandidateJobsPage from "./pages/candidate/CandidateJobsPage";
+import CandidateJobDetailPage from "./pages/candidate/CandidateJobDetailPage";
 import CandidateProtectedRoute from "./components/CandidateProtectedRoute";
 import RequisitionPage from "./pages/RequisitionPage";
 import MyDraftsPage from "./pages/talent-demand/MyDraftsPage";
@@ -29,6 +31,8 @@ import UserManagementPage from "./pages/UserManagementPage";
 import EmployeeWorkAssignmentPage from "./pages/EmployeeWorkAssignmentPage";
 import WorkAssignmentMasterPage from "./pages/WorkAssignmentMasterPage";
 import ProtectedRoute from "./components/ProtectedRoute";
+import TALeadProtectedRoute from "./components/TALeadProtectedRoute";
+import HmWorkspaceRoute from "./components/HmWorkspaceRoute";
 import ScrollToTop from "./components/ScrollToTop";
 import { CopilotProvider } from "./components/copilot/CopilotContext";
 import MasterManagementPage from "./pages/MasterManagementPage";
@@ -175,11 +179,26 @@ const OwnershipInboxPage = lazy(
 const MyAssignedRequisitionsPage = lazy(
   () => import("./pages/recruiter/MyAssignedRequisitionsPage")
 );
+const PendingApplicationsPage = lazy(
+  () => import("./pages/recruiter/PendingApplicationsPage")
+);
 const RecruiterRequisitionDetailsPage = lazy(
   () => import("./pages/recruiter/RecruiterRequisitionDetailsPage")
 );
+const TALeadWorkspacePage = lazy(
+  () => import("./pages/ta-lead/TALeadWorkspacePage")
+);
+const TaLeadRecruiterOversightPage = lazy(
+  () => import("./pages/ta-lead/TaLeadRecruiterOversightPage")
+);
 const WorkspacePickerPage = lazy(
   () => import("./pages/workspaces/WorkspacePickerPage")
+);
+const HiringManagerWorkspaceLayout = lazy(
+  () => import("./components/hiring-manager/HiringManagerWorkspaceLayout")
+);
+const HiringManagerWorkspacePage = lazy(
+  () => import("./pages/hiring-manager/HiringManagerWorkspacePage")
 );
 
 const OfferWorkspaceLayout = lazy(
@@ -324,6 +343,33 @@ function App() {
 />
 
 <Route
+  path="/candidate/applications"
+  element={
+    <CandidateProtectedRoute>
+      <CandidateApplicationsPage />
+    </CandidateProtectedRoute>
+  }
+/>
+
+<Route
+  path="/candidate/jobs"
+  element={
+    <CandidateProtectedRoute>
+      <CandidateJobsPage />
+    </CandidateProtectedRoute>
+  }
+/>
+
+<Route
+  path="/candidate/jobs/:requisitionCode"
+  element={
+    <CandidateProtectedRoute>
+      <CandidateJobDetailPage />
+    </CandidateProtectedRoute>
+  }
+/>
+
+<Route
   path="/candidate/activate"
   element={<CandidatePortalPlaceholderPage mode="activate" />}
 />
@@ -366,7 +412,7 @@ function App() {
           path="/candidates/classic"
           element={
             <ProtectedRoute>
-              <CandidatePage />
+              <Navigate to="/candidates" replace />
             </ProtectedRoute>
           }
         />
@@ -516,6 +562,32 @@ function App() {
 
           }
 
+        />
+
+        <Route
+          path="/ta-lead"
+          element={
+            <ProtectedRoute>
+              <TALeadProtectedRoute>
+                <LazyRoute>
+                  <TALeadWorkspacePage />
+                </LazyRoute>
+              </TALeadProtectedRoute>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/ta-lead/recruiters/:recruiterCode"
+          element={
+            <ProtectedRoute>
+              <TALeadProtectedRoute>
+                <LazyRoute>
+                  <TaLeadRecruiterOversightPage />
+                </LazyRoute>
+              </TALeadProtectedRoute>
+            </ProtectedRoute>
+          }
         />
 
 {/* =====================================
@@ -716,6 +788,30 @@ function App() {
 />
 
 {/* =====================================
+    Hiring Manager Workspace (read-only)
+===================================== */}
+
+<Route
+  path="/hiring-manager"
+  element={
+    <HmWorkspaceRoute>
+      <LazyRoute>
+        <HiringManagerWorkspaceLayout />
+      </LazyRoute>
+    </HmWorkspaceRoute>
+  }
+>
+  <Route
+    index
+    element={
+      <LazyRoute>
+        <HiringManagerWorkspacePage />
+      </LazyRoute>
+    }
+  />
+</Route>
+
+{/* =====================================
     Recruiter Workspace (Wave 1)
 ===================================== */}
 
@@ -750,6 +846,14 @@ function App() {
     element={
       <LazyRoute>
         <OwnershipInboxPage />
+      </LazyRoute>
+    }
+  />
+  <Route
+    path="pending-applications"
+    element={
+      <LazyRoute>
+        <PendingApplicationsPage />
       </LazyRoute>
     }
   />

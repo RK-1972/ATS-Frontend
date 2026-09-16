@@ -34,7 +34,8 @@ const WORKSPACE_FLAG_OPTIONS = [
   { value: "showApprovalWorkspace", label: "showApprovalWorkspace" },
   { value: "showInterviewWorkspace", label: "showInterviewWorkspace" },
   { value: "showRequestWorkspace", label: "showRequestWorkspace" },
-  { value: "showOfferWorkspace", label: "showOfferWorkspace" }
+  { value: "showOfferWorkspace", label: "showOfferWorkspace" },
+  { value: "showTaLeadWorkspace", label: "showTaLeadWorkspace" }
 ];
 
 const WORKSPACE_ICON_OPTIONS = [
@@ -43,7 +44,8 @@ const WORKSPACE_ICON_OPTIONS = [
   { value: "DashboardOutlined", label: "DashboardOutlined" },
   { value: "FactCheckOutlined", label: "FactCheckOutlined" },
   { value: "DescriptionOutlined", label: "DescriptionOutlined" },
-  { value: "LocalOfferOutlined", label: "LocalOfferOutlined" }
+  { value: "LocalOfferOutlined", label: "LocalOfferOutlined" },
+  { value: "SupervisorAccountOutlined", label: "SupervisorAccountOutlined" }
 ];
 
 const emptyForm = {

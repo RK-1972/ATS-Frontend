@@ -62,3 +62,33 @@ export function getCandidatePortalStatusDescription({
 
   return "Complete your profile by uploading your resume and filling in your professional details.";
 }
+
+export function getLatestApplication(applications) {
+  if (!Array.isArray(applications) || applications.length === 0) {
+    return null;
+  }
+
+  return applications[0];
+}
+
+export function getMyApplicationsWorkspaceCardContent(applications) {
+  const latestApplication = getLatestApplication(applications);
+
+  if (!latestApplication) {
+    return {
+      chipLabel: null,
+      description: "Track the status of your job applications."
+    };
+  }
+
+  const title =
+    latestApplication.title || latestApplication.requisition_code || "your application";
+  const stageName = latestApplication.stage_name;
+
+  return {
+    chipLabel: stageName || null,
+    description: stageName
+      ? `Latest application: ${title}. Current stage: ${stageName}.`
+      : `Latest application: ${title}.`
+  };
+}

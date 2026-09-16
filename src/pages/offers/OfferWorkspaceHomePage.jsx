@@ -6,6 +6,8 @@ import PendingActionsOutlinedIcon from "@mui/icons-material/PendingActionsOutlin
 import VerifiedOutlinedIcon from "@mui/icons-material/VerifiedOutlined";
 import HighlightOffOutlinedIcon from "@mui/icons-material/HighlightOffOutlined";
 import UndoOutlinedIcon from "@mui/icons-material/UndoOutlined";
+import MailOutlineOutlinedIcon from "@mui/icons-material/MailOutlineOutlined";
+import MarkEmailReadOutlinedIcon from "@mui/icons-material/MarkEmailReadOutlined";
 
 import {
   EnterpriseModuleCard,
@@ -61,6 +63,22 @@ const OFFER_HUB_CARDS = [
     path: "/offers/withdrawn",
     icon: UndoOutlinedIcon,
     module: "administration"
+  },
+  {
+    key: "awaiting-letters",
+    title: "Awaiting Letters",
+    description: "Generate offer letters for approved offers.",
+    path: "/offers/awaiting-letters",
+    icon: MailOutlineOutlinedIcon,
+    module: "offers"
+  },
+  {
+    key: "generated-letters",
+    title: "Generated Letters",
+    description: "View generated offer letters.",
+    path: "/offers/generated-letters",
+    icon: MarkEmailReadOutlinedIcon,
+    module: "offers"
   }
 ];
 

@@ -122,6 +122,7 @@ function AppHeader({
   const [ownershipNotifications, setOwnershipNotifications] = useState([]);
   const [budgetNotifications, setBudgetNotifications] = useState([]);
   const [requisitionNotifications, setRequisitionNotifications] = useState([]);
+  const [offerNotifications, setOfferNotifications] = useState([]);
   const [menuAnchor, setMenuAnchor] = useState(null);
 
   const notificationFeed = useMemo(
@@ -129,11 +130,17 @@ function AppHeader({
       buildNotificationFeed({
         budget: budgetNotifications,
         resourceRequisition: requisitionNotifications,
+        offer: offerNotifications,
         candidateOwnership: ownershipNotifications,
         interviewScheduled: [],
         assignedRequisition: []
       }),
-    [budgetNotifications, requisitionNotifications, ownershipNotifications]
+    [
+      budgetNotifications,
+      requisitionNotifications,
+      offerNotifications,
+      ownershipNotifications
+    ]
   );
 
   const pendingCount = countNotifications(notificationFeed);
@@ -142,9 +149,10 @@ function AppHeader({
     Promise.all([
       candidateRepository.getMyOwnershipRequests(),
       MyApprovalsService.listMyBudgetApprovalNotifications(),
-      MyApprovalsService.listMyRequisitionApprovalNotifications()
+      MyApprovalsService.listMyRequisitionApprovalNotifications(),
+      MyApprovalsService.listMyOfferApprovalNotifications()
     ])
-      .then(([ownershipRequests, budgetRows, requisitionRows]) => {
+      .then(([ownershipRequests, budgetRows, requisitionRows, offerRows]) => {
         setOwnershipNotifications(
           (Array.isArray(ownershipRequests) ? ownershipRequests : []).map(
             MyApprovalsService.mapOwnershipNotification
@@ -160,11 +168,17 @@ function AppHeader({
             MyApprovalsService.mapRequisitionApprovalNotification
           )
         );
+        setOfferNotifications(
+          (Array.isArray(offerRows) ? offerRows : []).map(
+            MyApprovalsService.mapOfferApprovalNotification
+          )
+        );
       })
       .catch(() => {
         setOwnershipNotifications([]);
         setBudgetNotifications([]);
         setRequisitionNotifications([]);
+        setOfferNotifications([]);
       });
   };
 
@@ -239,6 +253,11 @@ function AppHeader({
       return;
     }
 
+    if (categoryKey === "offer") {
+      handleOfferApprovalClick(notification.taskId, notification);
+      return;
+    }
+
     if (categoryKey === "candidateOwnership") {
       handleReviewOwnership();
     }
@@ -251,6 +270,10 @@ function AppHeader({
 
     if (categoryKey === "resourceRequisition") {
       return `requisition-${notification.taskId}`;
+    }
+
+    if (categoryKey === "offer") {
+      return `offer-${notification.taskId}`;
     }
 
     if (categoryKey === "candidateOwnership") {
@@ -266,6 +289,29 @@ function AppHeader({
 
   const handleBudgetApprovalClick = (taskId) => {
     handleMenuClose();
+    navigate("/my-approvals", { state: { taskId } });
+  };
+
+  const handleOfferApprovalClick = (taskId, notification = null) => {
+    handleMenuClose();
+
+    let workspace = {};
+    try {
+      workspace = JSON.parse(localStorage.getItem("workspace") || "{}") || {};
+    } catch (_error) {
+      workspace = {};
+    }
+
+    if (workspace.showOfferWorkspace) {
+      navigate("/offers/pending-approvals", {
+        state: {
+          offerId: notification?.document_number || notification?.offerId || null,
+          taskId
+        }
+      });
+      return;
+    }
+
     navigate("/my-approvals", { state: { taskId } });
   };
 

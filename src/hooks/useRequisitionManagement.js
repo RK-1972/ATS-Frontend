@@ -47,6 +47,18 @@ function useRequisitionManagement() {
   const removeRecruiterFromRequisition = useEnterpriseStore(
     (state) => state.removeRecruiterFromRequisition
   );
+  const publishRequisitionToCandidatePortal = useEnterpriseStore(
+    (state) => state.publishRequisitionToCandidatePortal
+  );
+  const unpublishRequisitionFromCandidatePortal = useEnterpriseStore(
+    (state) => state.unpublishRequisitionFromCandidatePortal
+  );
+  const closeRequisitionAsFilled = useEnterpriseStore(
+    (state) => state.closeRequisitionAsFilled
+  );
+  const closeRequisitionAsCancelled = useEnterpriseStore(
+    (state) => state.closeRequisitionAsCancelled
+  );
 
   useEffect(() => {
     loadRequisitionManagementPage();
@@ -70,7 +82,11 @@ function useRequisitionManagement() {
     loadAssignedRecruiters,
     createRequisitionFromForm,
     assignRecruiterOnRequisition,
-    removeRecruiterFromRequisition
+    removeRecruiterFromRequisition,
+    publishRequisitionToCandidatePortal,
+    unpublishRequisitionFromCandidatePortal,
+    closeRequisitionAsFilled,
+    closeRequisitionAsCancelled
   };
 }
 

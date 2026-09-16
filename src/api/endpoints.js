@@ -20,7 +20,8 @@ export const ENDPOINTS = {
   adminCommandCenter: `${V1}/admin/command-center`,
   notifications: `${V1}/notifications`,
   audit: `${V1}/audit`,
-  reports: `${V1}/reports`
+  reports: `${V1}/reports`,
+  taLead: `${V1}/ta-lead`
 };
 
 export function masterEntityEndpoint(entityType) {

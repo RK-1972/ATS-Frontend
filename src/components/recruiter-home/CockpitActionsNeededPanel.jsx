@@ -26,8 +26,8 @@ function CockpitActionsNeededPanel({ items = [], selectedId, onSelect, criticalC
   const visible = expanded ? items : items.slice(0, 4);
 
   return (
-    <Box sx={{ ...PANEL_SHELL, display: "flex", flexDirection: "column", height: "100%", minHeight: 0 }}>
-      <Box sx={{ ...PANEL_HEADER, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+    <Box sx={{ ...PANEL_SHELL, display: "flex", flexDirection: "column", height: "100%", minHeight: 0, overflow: "hidden" }}>
+      <Box sx={{ ...PANEL_HEADER, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
           <EnterpriseModuleIcon
             icon={MdWarningAmber}
@@ -46,63 +46,77 @@ function CockpitActionsNeededPanel({ items = [], selectedId, onSelect, criticalC
       </Box>
 
       {visible.length === 0 ? (
-        <Box sx={{ px: 1.5, py: 2 }}>
-          <Typography sx={{ fontSize: 13, color: DESIGN.textSecondary }}>No actions required for this period.</Typography>
+        <Box
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            px: 1.5,
+            py: 2
+          }}
+        >
+          <Typography sx={{ fontSize: 13, color: DESIGN.textSecondary, textAlign: "center", lineHeight: 1.45 }}>
+            No actions required for this period.
+          </Typography>
         </Box>
       ) : (
-        visible.map((item, index) => {
-          const meta = getAttentionItemMeta(item.type);
-          const Icon = meta.icon;
-          const isSelected = selectedId === item.id;
-          return (
-            <Box
-              key={item.id}
-              component="button"
-              type="button"
-              onClick={() => onSelect?.(item)}
-              sx={{
-                ...ROW_INTERACTIVE,
-                display: "flex",
-                width: "100%",
-                m: 0,
-                px: 1.5,
-                py: 1,
-                gap: 1,
-                border: 0,
-                borderBottom: index < visible.length - 1 ? `1px solid ${DESIGN.border}` : 0,
-                bgcolor: isSelected ? "#EFF8FF" : "transparent",
-                textAlign: "left",
-                font: "inherit",
-                color: "inherit",
-                alignItems: "flex-start"
-              }}
-            >
-              <EnterpriseModuleIcon
-                icon={Icon}
-                module={meta.module}
-                density="sm"
-                size={32}
-                iconSize={16}
-              />
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography sx={{ fontSize: 13, fontWeight: 600, color: DESIGN.textPrimary, lineHeight: 1.3 }}>
-                  {item.displayType || meta.displayType}
-                </Typography>
-                <Typography sx={{ fontSize: 11, color: DESIGN.textSecondary, mt: 0.25 }} noWrap>
-                  {item.roleLine}
-                </Typography>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mt: 0.5 }}>
-                  <SlaBadge label={item.slaBadge} tone={item.slaTone} />
-                  <Typography sx={{ fontSize: 10, color: DESIGN.textMuted }}>{item.slaDetail}</Typography>
+        <Box sx={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+          {visible.map((item, index) => {
+            const meta = getAttentionItemMeta(item.type);
+            const Icon = meta.icon;
+            const isSelected = selectedId === item.id;
+            return (
+              <Box
+                key={item.id}
+                component="button"
+                type="button"
+                onClick={() => onSelect?.(item)}
+                sx={{
+                  ...ROW_INTERACTIVE,
+                  display: "flex",
+                  width: "100%",
+                  m: 0,
+                  px: 1.5,
+                  py: 1,
+                  gap: 1,
+                  border: 0,
+                  borderBottom: index < visible.length - 1 ? `1px solid ${DESIGN.border}` : 0,
+                  bgcolor: isSelected ? "#EFF8FF" : "transparent",
+                  textAlign: "left",
+                  font: "inherit",
+                  color: "inherit",
+                  alignItems: "flex-start"
+                }}
+              >
+                <EnterpriseModuleIcon
+                  icon={Icon}
+                  module={meta.module}
+                  density="sm"
+                  size={32}
+                  iconSize={16}
+                />
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography sx={{ fontSize: 13, fontWeight: 600, color: DESIGN.textPrimary, lineHeight: 1.3 }}>
+                    {item.displayType || meta.displayType}
+                  </Typography>
+                  <Typography sx={{ fontSize: 11, color: DESIGN.textSecondary, mt: 0.25 }} noWrap>
+                    {item.roleLine}
+                  </Typography>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mt: 0.5 }}>
+                    <SlaBadge label={item.slaBadge} tone={item.slaTone} />
+                    <Typography sx={{ fontSize: 10, color: DESIGN.textMuted }}>{item.slaDetail}</Typography>
+                  </Box>
                 </Box>
               </Box>
-            </Box>
-          );
-        })
+            );
+          })}
+        </Box>
       )}
 
       {items.length > 4 && (
-        <Box sx={{ px: 1.5, py: 0.75, mt: "auto" }}>
+        <Box sx={{ px: 1.5, py: 0.75, flexShrink: 0, borderTop: visible.length > 0 ? `1px solid ${DESIGN.border}` : 0 }}>
           <Link component="button" type="button" underline="hover" onClick={onViewAll} sx={{ fontSize: 12, fontWeight: 600, color: DESIGN.blue, border: 0, bgcolor: "transparent", cursor: "pointer" }}>
             View all actions →
           </Link>

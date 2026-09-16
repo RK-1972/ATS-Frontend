@@ -18,6 +18,9 @@ export const PANEL_HEADER = {
 
 export const WORKBENCH_GAP = 0.5;
 
+/** Stable height for Actions / Quick Actions / Inspector row (not shared with table). */
+export const WORKBENCH_ROW_HEIGHT = 300;
+
 export const PIPELINE_HEIGHT = 78;
 
 export const SUMMARY_STRIP_HEIGHT = 48;

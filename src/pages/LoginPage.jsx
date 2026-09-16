@@ -489,6 +489,12 @@ function LoginPage() {
         navigate("/interviewer");
       } else if (user.role_name === "Recruiter") {
         navigate("/recruiter");
+      } else if (
+        user.role_name === "TA Lead"
+        || user.role_name === "TA Leader"
+        || workspaceFlags.showTaLeadWorkspace
+      ) {
+        navigate("/ta-lead");
       } else {
         navigate("/");
       }

@@ -1,6 +1,13 @@
-import { PIPELINE_STAGES, normalizeStage } from "@/enterprise/recruiterSelectors";
-import { getAttentionItemMeta, priorityLabelFromScore } from "@/components/recruiter-home/recruiterHomeUiHelpers";
-import { formatRangeLabel } from "./recruiterHomeDateFilter";
+import { normalizeStage } from "@/enterprise/recruiterSelectors";
+import { buildEmptyStageCounts } from "@/enterprise/atsStageCatalogUtils";
+import {
+  getAttentionItemMeta,
+  priorityLabelFromScore,
+  resolveHiringManagerDisplay,
+  resolveHiringManagerEmail,
+  resolveRequisitionSidebarNote
+} from "@/components/recruiter-home/recruiterHomeUiHelpers";
+import { formatRangeLabel, todayIso } from "./recruiterHomeDateFilter";
 
 const STAGE_PRIORITY = {
   Offer: 100,
@@ -176,7 +183,7 @@ function enrichCandidateContext(candidate, pipeline, requisitions, interviewList
     stage: candidate.stage || candidate.context,
     requisitionLabel: reqTitle ? `${reqCode} · ${reqTitle}` : reqCode,
     inspectorSubtitle: `${reqTitle || reqCode}${req?.grade ? ` · ${req.grade}` : ""}`,
-    hiringManager: req?.hiring_manager || "—",
+    hiringManager: resolveHiringManagerDisplay(req),
     interviewer: interviewRow?.interviewer_name || interviewRow?.interviewerName || interviewRow?.interviewer || "—",
     interviewDateLabel: interviewRow ? formatInterviewDateLabel(interviewRow) : "—",
     nextStep: computeReqNextAction({
@@ -262,7 +269,8 @@ export function buildRecruiterHomeModel({
   selectedStage = null,
   interviewsTodayOnly = false,
   fromDate = "",
-  toDate = ""
+  toDate = "",
+  pipelineStages = []
 } = {}) {
   const requisitions = (recruitment.requisitions || []).filter(isOpenRequisition);
   const activePipeline = recruitment.activePipeline || recruitment.pipeline || [];
@@ -270,14 +278,11 @@ export function buildRecruiterHomeModel({
   const tasks = (taskInbox.tasks || []).filter((t) => t.status === "Pending");
   const interviewList = interviews.interviews || [];
   const summary = recruitment.summary || {};
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayIso();
   const todayInRange = fromDate && toDate ? today >= fromDate && today <= toDate : false;
   const dateRangeLabel = fromDate && toDate ? formatRangeLabel(fromDate, toDate) : "";
 
-  const stageCounts = summary.pipelineStageCounts || PIPELINE_STAGES.reduce((acc, stage) => {
-    acc[stage] = 0;
-    return acc;
-  }, {});
+  const stageCounts = summary.pipelineStageCounts || buildEmptyStageCounts(pipelineStages);
 
   const requisitionRows = requisitions.map((req) => {
     const code = req.requisition_code;
@@ -300,6 +305,7 @@ export function buildRecruiterHomeModel({
     const status = req.req_status || "—";
     const risk = computeRisk({ critical, openPositions, pendingInterviews, progress: fillProgress, status });
     const reqActivePipeline = activePipeline.filter((row) => row.requisition_code === code);
+    const sidebarNote = resolveRequisitionSidebarNote(req);
 
     return {
       id: code || req.req_id,
@@ -312,7 +318,8 @@ export function buildRecruiterHomeModel({
       location: req.location || "",
       employmentType: req.employment_type || "",
       roleSubtitle: buildRoleSubtitle(req),
-      hiringManager: req.hiring_manager || "—",
+      hiringManager: resolveHiringManagerDisplay(req),
+      hiringManagerEmail: resolveHiringManagerEmail(req),
       headcount,
       filled: joinedAllTime,
       openPositions,
@@ -329,7 +336,8 @@ export function buildRecruiterHomeModel({
       nextAction: computeReqNextAction({ openPositions, candidateCount, pendingInterviews, pipeline: reqActivePipeline, code }),
       lifecycleStage: deriveLifecycleStage(reqActivePipeline),
       lifecycleStages: LIFECYCLE_STAGES,
-      briefingNote: req.primary_skill || req.remarks || "",
+      sidebarNoteLabel: sidebarNote.label,
+      sidebarNote: sidebarNote.text,
       topCandidates: buildTopCandidatesForReq(activePipeline, code)
     };
   }).sort((a, b) => {
@@ -373,7 +381,7 @@ export function buildRecruiterHomeModel({
       type: "Offer approval",
       title: row.candidate_name || row.candidate_code || "Candidate",
       detail: row.requisition_code || "",
-      route: "/candidates",
+      route: "/offers/raise",
       priority: ACTION_TYPE_PRIORITY["Offer approval"]
     });
   });
@@ -426,7 +434,7 @@ export function buildRecruiterHomeModel({
     filteredCandidates,
     selectedStageCount: selectedStage ? stageCounts[selectedStage] || 0 : null,
     stageCounts,
-    interviewsTodayCount: summary.interviewsInRange ?? interviewList.length,
+    interviewsTodayCount: summary.interviewsToday ?? 0,
     pendingFeedbackCount: summary.pendingFeedbackInRange
       ?? interviews.interviewSummary?.pendingFeedback
       ?? 0,

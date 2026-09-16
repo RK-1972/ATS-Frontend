@@ -1,4 +1,5 @@
 import candidateClient from "@/api/clients/candidateClient";
+import recruitmentClient from "@/api/clients/recruitmentClient";
 import API from "@/api/axios";
 
 const FORM_FIELDS = [
@@ -100,8 +101,8 @@ function isTalentPoolView(workspaceView = "pool") {
 
 async function listCandidates(workspaceView = "pool") {
   const response = isTalentPoolView(workspaceView)
-    ? await candidateClient.listAvailableCandidates()
-    : await candidateClient.listMyCandidates();
+    ? await recruitmentClient.listTalentPoolCandidates()
+    : await recruitmentClient.listMyPipelineCandidates();
 
   if (response?.success === false) {
     throw new Error(response.message || "Failed to load candidates");
@@ -110,13 +111,15 @@ async function listCandidates(workspaceView = "pool") {
   return response?.data || [];
 }
 async function loadCandidateProfile(candidateId) {
-  const [masterResponse, detailsResponse] = await Promise.all([
-    candidateClient.getCandidateById(candidateId),
-    candidateClient.getCandidateFullDetails(candidateId)
-  ]);
+  const response = await recruitmentClient.getCandidateWorkspaceProfile(candidateId);
 
-  const master = masterResponse?.data || masterResponse || null;
-  const mapping = detailsResponse?.data || detailsResponse || null;
+  if (response?.success === false) {
+    throw new Error(response.message || "Failed to load candidate profile");
+  }
+
+  const payload = response?.data || response;
+  const master = payload?.master || null;
+  const mapping = payload?.mapping || null;
 
   return {
     master,
@@ -134,6 +137,34 @@ async function updateCandidate(candidateId, candidate, user, resumeFile = null) 
   }
 
   return response?.data || response;
+}
+
+async function loadPipelineHistory(mapId) {
+  if (!mapId) {
+    return [];
+  }
+
+  const response = await recruitmentClient.getPipelineHistory(mapId);
+
+  if (response?.success === false) {
+    throw new Error(response.message || "Failed to load pipeline history");
+  }
+
+  return response?.data || [];
+}
+
+async function updateCandidateStage(mapId, stageName, remarks = "") {
+  const response = await recruitmentClient.updateCandidateStage(
+    mapId,
+    stageName,
+    remarks
+  );
+
+  if (response?.success === false) {
+    throw new Error(response.message || "Failed to update pipeline stage");
+  }
+
+  return response;
 }
 
 async function mapCandidateToRequisition(payload) {
@@ -166,7 +197,7 @@ async function getMyRequisitions() {
 async function getCandidateOwnership(candidateId) {
 
   const response =
-    await candidateClient.getCandidateOwnership(candidateId);
+    await recruitmentClient.getCandidateOwnership(candidateId);
 
   if (response?.success === false) {
 
@@ -493,7 +524,7 @@ function getApiErrorMessage(error, fallback) {
 
 async function listEducation(candidateId) {
   try {
-    const response = await candidateClient.listEducation(candidateId);
+    const response = await recruitmentClient.listCandidateEducation(candidateId);
 
     if (response?.success === false) {
       throw new Error(response.message || "Failed to load education records");
@@ -627,9 +658,7 @@ function buildExperiencePayload(experience = {}) {
 
 async function listExperience(candidateId) {
   try {
-    const response = (
-      await API.get(`/candidate/${candidateId}/experience`)
-    ).data;
+    const response = await recruitmentClient.listCandidateExperience(candidateId);
 
     if (response?.success === false) {
       throw new Error(
@@ -726,7 +755,9 @@ const candidateRepository = {
   getInitialProfile,
   listCandidates,
   loadCandidateProfile,
+  loadPipelineHistory,
   updateCandidate,
+  updateCandidateStage,
   mapCandidateToRequisition,
   getMyRequisitions,
   getCandidateOwnership,

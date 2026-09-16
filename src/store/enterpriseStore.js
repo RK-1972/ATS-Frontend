@@ -394,6 +394,61 @@ const useEnterpriseStore = create((set, get) => ({
       });
   },
 
+  publishRequisitionToCandidatePortal(requisitionCode) {
+    return recruitmentRepository.publishRequisitionToCandidatePortal(requisitionCode)
+      .then(async () => {
+        const requisitions = await recruitmentRepository.listManagementRequisitions();
+        set({
+          requisitionManagement: {
+            ...get().requisitionManagement,
+            requisitions
+          }
+        });
+      });
+  },
+
+  unpublishRequisitionFromCandidatePortal(requisitionCode) {
+    return recruitmentRepository.unpublishRequisitionFromCandidatePortal(requisitionCode)
+      .then(async () => {
+        const requisitions = await recruitmentRepository.listManagementRequisitions();
+        set({
+          requisitionManagement: {
+            ...get().requisitionManagement,
+            requisitions
+          }
+        });
+      });
+  },
+
+  closeRequisitionAsFilled(requisitionCode) {
+    return recruitmentRepository.closeRequisitionAsFilled(requisitionCode)
+      .then(async () => {
+        const requisitions = await recruitmentRepository.listManagementRequisitions();
+        set({
+          requisitionManagement: {
+            ...get().requisitionManagement,
+            requisitions
+          }
+        });
+      });
+  },
+
+  closeRequisitionAsCancelled(requisitionCode, cancellationReason) {
+    return recruitmentRepository.closeRequisitionAsCancelled(
+      requisitionCode,
+      cancellationReason
+    )
+      .then(async () => {
+        const requisitions = await recruitmentRepository.listManagementRequisitions();
+        set({
+          requisitionManagement: {
+            ...get().requisitionManagement,
+            requisitions
+          }
+        });
+      });
+  },
+
   setRecruiterUi(updater) {
     set((state) => ({
       recruiterUi: typeof updater === "function"
@@ -1561,14 +1616,14 @@ const useEnterpriseStore = create((set, get) => ({
 
   releaseOffer(offerId, payload = {}) {
 
-    Promise.resolve(
+    return Promise.resolve(
       offerRepository.releaseOffer(get().offers, offerId, payload)
     ).then((result) => {
 
       set({
         offers: result.offers,
-        workforceUi: {
-          ...get().workforceUi,
+        offerUi: {
+          ...get().offerUi,
           toastMessage: result.toastMessage
         }
       });
@@ -1580,20 +1635,21 @@ const useEnterpriseStore = create((set, get) => ({
         action: "Offer released to candidate"
       });
 
+      return result;
     });
 
   },
 
   acceptOffer(offerId) {
 
-    Promise.resolve(
+    return Promise.resolve(
       offerRepository.acceptOffer(get().offers, offerId)
     ).then((result) => {
 
       set({
         offers: result.offers,
-        workforceUi: {
-          ...get().workforceUi,
+        offerUi: {
+          ...get().offerUi,
           toastMessage: result.toastMessage
         }
       });
@@ -1606,8 +1662,39 @@ const useEnterpriseStore = create((set, get) => ({
         metadata: { stageKey: "joined" }
       });
 
+      return result;
     });
 
+  },
+
+  negotiateOffer(offerId, payload = {}) {
+    return Promise.resolve(
+      offerRepository.negotiateOffer(get().offers, offerId, payload)
+    ).then((result) => {
+      set({
+        offers: result.offers,
+        offerUi: {
+          ...get().offerUi,
+          toastMessage: result.toastMessage
+        }
+      });
+      return result;
+    });
+  },
+
+  reviseOffer(offerId, payload = {}) {
+    return Promise.resolve(
+      offerRepository.reviseOffer(get().offers, offerId, payload)
+    ).then((result) => {
+      set({
+        offers: result.offers,
+        offerUi: {
+          ...get().offerUi,
+          toastMessage: result.toastMessage
+        }
+      });
+      return result;
+    });
   },
 
   // ─── Hiring Control Tower ───────────────────────────────────────────────────

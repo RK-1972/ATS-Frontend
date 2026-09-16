@@ -4,6 +4,9 @@ import FactCheckOutlinedIcon from "@mui/icons-material/FactCheckOutlined";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import LocalOfferOutlinedIcon from "@mui/icons-material/LocalOfferOutlined";
 import AdminPanelSettingsOutlinedIcon from "@mui/icons-material/AdminPanelSettingsOutlined";
+import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
+import SupervisorAccountOutlinedIcon from "@mui/icons-material/SupervisorAccountOutlined";
+import ManageAccountsOutlinedIcon from "@mui/icons-material/ManageAccountsOutlined";
 
 const WORKSPACE_CATALOG = [
   {
@@ -16,12 +19,30 @@ const WORKSPACE_CATALOG = [
     module: "configuration"
   },
   {
+    id: "user-administration",
+    flag: "showUserAdministrationWorkspace",
+    title: "User Administration",
+    description: "Create employee accounts and assign operational work assignments.",
+    path: "/users",
+    icon: PeopleAltOutlinedIcon,
+    module: "configuration"
+  },
+  {
     id: "recruiter",
     flag: "showRecruitmentWorkspace",
     title: "Recruitment Workspace",
     description: "What work requires my attention today?",
     path: "/recruiter",
     icon: DashboardOutlinedIcon,
+    module: "recruitment"
+  },
+  {
+    id: "hiring-manager",
+    flag: "showHiringManagerWorkspace",
+    title: "Hiring Manager Workspace",
+    description: "Review requisitions and candidates assigned to you.",
+    path: "/hiring-manager",
+    icon: SupervisorAccountOutlinedIcon,
     module: "recruitment"
   },
   {
@@ -41,6 +62,15 @@ const WORKSPACE_CATALOG = [
     path: "/my-approvals",
     icon: FactCheckOutlinedIcon,
     module: "approvals"
+  },
+  {
+    id: "ta-lead",
+    flag: "showTaLeadWorkspace",
+    title: "TA Lead Workspace",
+    description: "Recruiting operations overview, assignments, and oversight.",
+    path: "/ta-lead",
+    icon: ManageAccountsOutlinedIcon,
+    module: "recruitment"
   },
   {
     id: "request",

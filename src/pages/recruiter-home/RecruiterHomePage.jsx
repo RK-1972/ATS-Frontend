@@ -10,19 +10,23 @@ import CockpitQuickActionsPanel from "@/components/recruiter-home/CockpitQuickAc
 import CockpitInspectorPanel from "@/components/recruiter-home/CockpitInspectorPanel";
 import CockpitRequisitionsTable from "@/components/recruiter-home/CockpitRequisitionsTable";
 import CockpitRequisitionSidebar from "@/components/recruiter-home/CockpitRequisitionSidebar";
-import { DESIGN, PANEL_SHELL, ROW_INTERACTIVE, WORKBENCH_GAP } from "@/components/recruiter-home/recruiterHomeTokens";
+import { DESIGN, PANEL_SHELL, ROW_INTERACTIVE, WORKBENCH_GAP, WORKBENCH_ROW_HEIGHT } from "@/components/recruiter-home/recruiterHomeTokens";
 import { buildRecruiterHomeModel, enrichCandidateForInspector } from "./recruiterHomeViewModel";
 import { fetchRecruiterCockpitDashboard } from "./recruiterHomeApi";
 import {
   DATE_PRESETS,
   defaultCockpitRange,
+  formatLegacyInterviewDisplayDate,
   presetToRange
 } from "./recruiterHomeDateFilter";
+import { resolveActionNavigation } from "@/components/recruiter-home/recruiterHomeUiHelpers";
 import { useCopilotContext } from "@/components/copilot/CopilotContext";
+import useAtsStageCatalog from "@/hooks/useAtsStageCatalog";
 
 function RecruiterHomePage() {
   const navigate = useNavigate();
   const { setCurrentPage } = useCopilotContext();
+  const { stageLabels } = useAtsStageCatalog();
   const initialRange = defaultCockpitRange();
 
   useEffect(() => {
@@ -40,7 +44,6 @@ function RecruiterHomePage() {
   const [selectedReqId, setSelectedReqId] = useState(null);
   const [selectedActionId, setSelectedActionId] = useState(null);
   const [selectedCandidateId, setSelectedCandidateId] = useState(null);
-  const [interviewsTodayOnly, setInterviewsTodayOnly] = useState(false);
   const [showAllActions, setShowAllActions] = useState(false);
 
   const loadDashboard = useCallback(async ({ fromDate: from, toDate: to }) => {
@@ -97,9 +100,9 @@ function RecruiterHomePage() {
       interviews,
       fromDate,
       toDate,
-      interviewsTodayOnly
+      pipelineStages: stageLabels
     }),
-    [recruitment, taskInbox, interviews, fromDate, toDate, interviewsTodayOnly]
+    [recruitment, taskInbox, interviews, fromDate, toDate, stageLabels]
   );
 
   const selectedRequisition = model.requisitionRows.find((r) => r.id === selectedReqId) || null;
@@ -129,14 +132,31 @@ function RecruiterHomePage() {
 
   const handleActionSelect = (item) => {
     setSelectedActionId(item.id);
-    setSelectedReqId(null);
     setSelectedCandidateId(null);
+
+    const reqCode = String(item.detail || "").trim();
+    if (reqCode) {
+      const matchingReq = model.requisitionRows.find(
+        (row) => row.code === reqCode || row.id === reqCode
+      );
+      if (matchingReq) {
+        setSelectedReqId(matchingReq.id);
+      }
+    }
+
     const pipelineRow = (recruitment.activePipeline || recruitment.pipeline || []).find((p) =>
       p.candidate_name === item.title || p.requisition_code === item.detail
     );
     if (pipelineRow) {
       setSelectedCandidateId(pipelineRow.mapping_id || pipelineRow.map_id);
     }
+
+    const { path, state } = resolveActionNavigation(item);
+    navigate(path, state ? { state } : undefined);
+  };
+
+  const handleInspectorNavigate = (path, state) => {
+    navigate(path, state ? { state } : undefined);
   };
 
   const handleSidebarCandidateSelect = (candidate) => {
@@ -144,11 +164,26 @@ function RecruiterHomePage() {
     setSelectedActionId(null);
   };
 
-  const handleShowInterviewsToday = () => {
-    setInterviewsTodayOnly((prev) => !prev);
-    setSelectedActionId(null);
-    setSelectedReqId(null);
-    setSelectedCandidateId(null);
+  const handleQuickAction = (actionKey) => {
+    if (actionKey === "schedule") {
+      navigate("/interview-schedule");
+      return;
+    }
+
+    if (actionKey === "today") {
+      navigate("/interview-schedule", {
+        state: {
+          filters: {
+            search: formatLegacyInterviewDisplayDate(new Date())
+          }
+        }
+      });
+      return;
+    }
+
+    if (actionKey === "requisition") {
+      navigate("/recruiter/my-requisitions");
+    }
   };
 
   useEffect(() => {
@@ -258,15 +293,16 @@ function RecruiterHomePage() {
       </Box>
 
       <Box sx={{ display: "flex", gap: WORKBENCH_GAP, flex: 1, minHeight: 0, overflow: "hidden" }}>
-        <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: WORKBENCH_GAP, overflow: "hidden" }}>
+        <Box sx={{ flex: 1, minWidth: 0, minHeight: 0, display: "flex", flexDirection: "column", gap: WORKBENCH_GAP, overflow: "hidden" }}>
           <Box
             sx={{
               display: "grid",
               gridTemplateColumns: { xs: "1fr", lg: "1.2fr 0.85fr 1fr" },
               gap: WORKBENCH_GAP,
               flexShrink: 0,
-              minHeight: 280,
-              maxHeight: 340
+              height: WORKBENCH_ROW_HEIGHT,
+              minHeight: WORKBENCH_ROW_HEIGHT,
+              maxHeight: WORKBENCH_ROW_HEIGHT
             }}
           >
             <CockpitActionsNeededPanel
@@ -279,8 +315,7 @@ function RecruiterHomePage() {
             />
             <CockpitQuickActionsPanel
               onNavigate={navigate}
-              onShowInterviewsToday={handleShowInterviewsToday}
-              interviewsTodayActive={interviewsTodayOnly}
+              onQuickAction={handleQuickAction}
             />
             <CockpitInspectorPanel
               requisition={selectedRequisition && !selectedCandidate && !selectedAction ? selectedRequisition : null}
@@ -288,7 +323,7 @@ function RecruiterHomePage() {
               selectedCandidate={enrichedCandidateForInspector}
               priorityCandidate={model.priorityCandidate}
               enrichedPriority={model.enrichedPriorityCandidate}
-              onNavigate={navigate}
+              onNavigate={handleInspectorNavigate}
             />
           </Box>
 
@@ -296,7 +331,7 @@ function RecruiterHomePage() {
             rows={model.requisitionRows}
             selectedId={selectedReqId}
             onSelect={handleReqSelect}
-            onViewAll={() => navigate("/requisitions")}
+            onViewAll={() => navigate("/recruiter/my-requisitions")}
           />
         </Box>
 

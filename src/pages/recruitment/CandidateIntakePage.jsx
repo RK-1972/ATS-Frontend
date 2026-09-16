@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import {
   Alert,
@@ -16,6 +16,7 @@ import {
   FormControl,
   Grid,
   IconButton,
+  InputAdornment,
   InputLabel,
   MenuItem,
   Select,
@@ -25,6 +26,8 @@ import {
   StepLabel,
   Stepper,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Tooltip,
   Typography
 } from "@mui/material";
@@ -60,12 +63,15 @@ import AssignmentIndOutlinedIcon from "@mui/icons-material/AssignmentIndOutlined
 import WarningAmberRoundedIcon from "@mui/icons-material/WarningAmberRounded";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import BadgeOutlinedIcon from "@mui/icons-material/BadgeOutlined";
+import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
+import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
 
 import EnterpriseWorkbench from "@/components/enterprise/framework/EnterpriseWorkbench";
 import EnterpriseWorkspaceHeader from "@/components/enterprise/framework/EnterpriseWorkspaceHeader";
 import EnterpriseCard from "@/components/enterprise/framework/EnterpriseCard";
 import EnterpriseFileUploadCard from "@/components/enterprise/EnterpriseFileUploadCard";
 import EnterpriseModuleIcon from "@/components/enterprise/EnterpriseModuleIcon";
+import CandidateIntakeBulkUploadPanel from "@/components/candidate-intake/CandidateIntakeBulkUploadPanel";
 import useCandidateIntake from "@/hooks/useCandidateIntake";
 import useCandidateSources from "@/hooks/useCandidateSources";
 import API from "@/api/axios";
@@ -73,6 +79,7 @@ import {
   buildDraftUpdatePayload,
   validateRegisterCandidate
 } from "@/utils/candidateRegistrationUtils";
+import resolveResumeViewerUrl from "@/utils/resolveResumeViewerUrl";
 
 const RegistrationStepConnector = styled(StepConnector)(({ theme }) => ({
   [`&.${stepConnectorClasses.alternativeLabel}`]: {
@@ -447,6 +454,35 @@ function buildEditableCandidate(parsedCandidate) {
   };
 }
 
+function buildEditableCandidateFromMaster(candidate = {}) {
+  return {
+    first_name: String(candidate.first_name || ""),
+    last_name: String(candidate.last_name || ""),
+    email: String(candidate.email_id || candidate.email || ""),
+    mobile: String(candidate.mobile_number || candidate.mobile || ""),
+    current_company: String(candidate.current_company || ""),
+    designation: String(candidate.current_designation || candidate.designation || ""),
+    experience:
+      candidate.total_experience != null && candidate.total_experience !== ""
+        ? String(candidate.total_experience)
+        : "",
+    skills: String(candidate.primary_skill || candidate.skills || "")
+  };
+}
+
+function buildReviewSessionFromRow(row) {
+  const candidateName = getReviewQueueCandidateName(row);
+
+  return {
+    candidateId: Number(row.candidate_id),
+    intakeId: Number(row.intake_id),
+    resumePath: String(row.resume_path || "").trim(),
+    candidateCode: row.candidate_code || "",
+    candidateName: candidateName || row.email_id || "Candidate",
+    sourceId: row.source_id != null ? String(row.source_id) : ""
+  };
+}
+
 function validateCreateIntake(selectedSource, resumeFile) {
   const errors = {};
 
@@ -663,6 +699,9 @@ function CandidateIntakeMainWorkspace({
   validationErrors = {},
   intakeStatus,
   resumeFile,
+  reviewResumeCandidateId = null,
+  reviewResumePath = "",
+  reviewResumeLabel = "",
   canShowRegisterCandidate = false,
   onRegisterCandidate,
   registerCandidateMessage = ""
@@ -675,12 +714,28 @@ function CandidateIntakeMainWorkspace({
   const uniqueRegistrationErrors = [...new Set(registrationErrors)];
   const [resumeUrl, setResumeUrl] = useState("");
 
-  const shouldShowResumePreview =
+  const remoteResumeUrl = useMemo(
+    () =>
+      resolveResumeViewerUrl({
+        candidateId: reviewResumeCandidateId,
+        resumePath: reviewResumePath
+      }),
+    [reviewResumeCandidateId, reviewResumePath]
+  );
+
+  const shouldShowLocalResumePreview =
     Boolean(resumeFile) &&
     (intakeStatus === "RESUME_UPLOADED" || intakeStatus === "COMPLETED");
 
+  const shouldShowResumePreview =
+    shouldShowLocalResumePreview || Boolean(remoteResumeUrl);
+
+  const activeResumeUrl = shouldShowLocalResumePreview ? resumeUrl : remoteResumeUrl;
+  const resumeLabel =
+    resumeFile?.name || reviewResumeLabel || "Candidate Resume";
+
   useEffect(() => {
-    if (!shouldShowResumePreview) {
+    if (!shouldShowLocalResumePreview) {
       setResumeUrl("");
       return undefined;
     }
@@ -692,14 +747,14 @@ function CandidateIntakeMainWorkspace({
     return () => {
       URL.revokeObjectURL(objectUrl);
     };
-  }, [resumeFile, shouldShowResumePreview]);
+  }, [resumeFile, shouldShowLocalResumePreview]);
 
   const handleOpenResume = () => {
-    if (!resumeUrl) {
+    if (!activeResumeUrl) {
       return;
     }
 
-    window.open(resumeUrl, "_blank", "noopener,noreferrer");
+    window.open(activeResumeUrl, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -762,7 +817,7 @@ function CandidateIntakeMainWorkspace({
                   Resume Preview
                 </Typography>
                 <Typography variant="caption" color="text.secondary" noWrap>
-                  {resumeFile?.name || "Candidate Resume"}
+                  {resumeLabel}
                 </Typography>
               </Box>
               <Stack direction="row" spacing={0.5}>
@@ -797,15 +852,15 @@ function CandidateIntakeMainWorkspace({
                 height: 360,
                 display: "flex",
                 alignItems:
-                  shouldShowResumePreview && resumeUrl ? "stretch" : "center",
+                  shouldShowResumePreview && activeResumeUrl ? "stretch" : "center",
                 justifyContent:
-                  shouldShowResumePreview && resumeUrl ? "stretch" : "center",
+                  shouldShowResumePreview && activeResumeUrl ? "stretch" : "center",
                 bgcolor: (theme) => alpha(theme.palette.primary.main, 0.03)
               }}
             >
-              {shouldShowResumePreview && resumeUrl ? (
+              {shouldShowResumePreview && activeResumeUrl ? (
                 <iframe
-                  src={`${resumeUrl}#toolbar=0&navpanes=0&scrollbar=1`}
+                  src={`${activeResumeUrl}#toolbar=0&navpanes=0&scrollbar=1`}
                   title="Resume Preview"
                   style={{
                     width: "100%",
@@ -1329,8 +1384,91 @@ function RegisterCandidateDestinationDialog({
   );
 }
 
-function CandidateIntakeReviewQueue({ reviewQueue = [], loading = false }) {
-  const navigate = useNavigate();
+function getReviewQueueSourceLabel(row) {
+  return (
+    row.source_name ||
+    (row.source_code === "PORTAL" ? "Career Portal" : row.source_code) ||
+    "Candidate Intake"
+  );
+}
+
+function getReviewQueueCandidateName(row) {
+  return [row.first_name, row.last_name].filter(Boolean).join(" ").trim();
+}
+
+function buildReviewQueueSearchHaystack(row) {
+  const candidateName = getReviewQueueCandidateName(row);
+  const sourceLabel = getReviewQueueSourceLabel(row);
+  const completion = Math.round(Number(row.profile_completion || 0));
+
+  return [
+    candidateName,
+    row.email_id,
+    row.candidate_code,
+    row.candidate_id != null ? String(row.candidate_id) : "",
+    row.source_code,
+    sourceLabel,
+    String(completion),
+    `${completion}%`,
+    `${completion}% complete`
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function filterReviewQueue(reviewQueue, searchQuery) {
+  const normalizedQuery = String(searchQuery || "").trim().toLowerCase();
+
+  if (!normalizedQuery) {
+    return reviewQueue;
+  }
+
+  const tokens = normalizedQuery.split(/\s+/).filter(Boolean);
+
+  return reviewQueue.filter((row) => {
+    const haystack = buildReviewQueueSearchHaystack(row);
+    return tokens.every((token) => haystack.includes(token));
+  });
+}
+
+function CandidateIntakeReviewQueue({
+  reviewQueue = [],
+  loading = false,
+  onReviewCandidate,
+  reviewingCandidateId = null,
+  activeReviewCandidateId = null
+}) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const listContainerRef = useRef(null);
+  const activeRowRef = useRef(null);
+
+  const filteredQueue = useMemo(
+    () => filterReviewQueue(reviewQueue, searchQuery),
+    [reviewQueue, searchQuery]
+  );
+
+  const trimmedSearch = searchQuery.trim();
+  const hasSearch = trimmedSearch.length > 0;
+  const normalizedActiveReviewCandidateId = Number(activeReviewCandidateId);
+
+  useEffect(() => {
+    if (
+      !Number.isInteger(normalizedActiveReviewCandidateId) ||
+      normalizedActiveReviewCandidateId <= 0 ||
+      !activeRowRef.current ||
+      !listContainerRef.current
+    ) {
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      activeRowRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest"
+      });
+    });
+  }, [normalizedActiveReviewCandidateId, filteredQueue]);
 
   if (loading || reviewQueue.length === 0) {
     return null;
@@ -1343,77 +1481,203 @@ function CandidateIntakeReviewQueue({ reviewQueue = [], loading = false }) {
         borderRadius: 3,
         border: 1,
         borderColor: "divider",
-        boxShadow: (theme) => theme.tokens.shadows.mid
+        boxShadow: (theme) => theme.tokens.shadows.mid,
+        display: "flex",
+        flexDirection: "column",
+        minHeight: 0,
+        overflow: "hidden"
       }}
     >
-      <Box sx={{ p: 2 }}>
-        <Stack spacing={1.25}>
-          <Typography variant="h6" fontWeight={700}>
-            Ready for Review
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Draft candidates from Candidate Portal and other intake channels awaiting recruiter registration.
-          </Typography>
+      <Box sx={{ px: 2, pt: 2, pb: 1.25, flexShrink: 0 }}>
+        <Stack
+          direction={{ xs: "column", md: "row" }}
+          spacing={1.25}
+          alignItems={{ xs: "stretch", md: "flex-start" }}
+          justifyContent="space-between"
+        >
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography variant="h6" fontWeight={700}>
+              Ready for Review
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              Draft candidates from Candidate Portal and other intake channels awaiting recruiter registration.
+            </Typography>
+          </Box>
+          <Box
+            sx={{
+              width: { xs: "100%", md: 280 },
+              flexShrink: 0
+            }}
+          >
+            <TextField
+              size="small"
+              fullWidth
+              placeholder="Search candidates"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchOutlinedIcon
+                        sx={{ fontSize: 18, color: "text.secondary" }}
+                      />
+                    </InputAdornment>
+                  ),
+                  endAdornment: hasSearch ? (
+                    <InputAdornment position="end">
+                      <IconButton
+                        size="small"
+                        aria-label="Clear search"
+                        onClick={() => setSearchQuery("")}
+                        edge="end"
+                      >
+                        <CloseRoundedIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    </InputAdornment>
+                  ) : null
+                }
+              }}
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 2,
+                  fontSize: 13
+                }
+              }}
+            />
+            {hasSearch ? (
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{
+                  display: "block",
+                  mt: 0.5,
+                  textAlign: { xs: "left", md: "right" }
+                }}
+              >
+                {filteredQueue.length} of {reviewQueue.length} shown
+              </Typography>
+            ) : null}
+          </Box>
+        </Stack>
+      </Box>
+      <Box
+        ref={listContainerRef}
+        sx={{
+          px: 2,
+          pb: 2,
+          minHeight: 0,
+          maxHeight: { xs: 220, sm: 280, md: "min(320px, 38vh)" },
+          overflowY: "auto",
+          overflowX: "hidden"
+        }}
+      >
+        {filteredQueue.length === 0 ? (
+          <Box
+            sx={{
+              py: 3,
+              px: 1,
+              textAlign: "center",
+              borderRadius: 2,
+              border: 1,
+              borderColor: "divider"
+            }}
+          >
+            <Typography variant="body2" color="text.secondary">
+              No candidates match &ldquo;{trimmedSearch}&rdquo;.
+            </Typography>
+            <Button
+              size="small"
+              onClick={() => setSearchQuery("")}
+              sx={{ mt: 1, textTransform: "none", fontWeight: 600 }}
+            >
+              Clear search
+            </Button>
+          </Box>
+        ) : (
           <Stack spacing={1}>
-            {reviewQueue.map((row) => {
-              const candidateName = [row.first_name, row.last_name]
-                .filter(Boolean)
-                .join(" ")
-                .trim();
-              const sourceLabel =
-                row.source_name ||
-                (row.source_code === "PORTAL" ? "Career Portal" : row.source_code) ||
-                "Candidate Intake";
+            {filteredQueue.map((row) => {
+            const candidateName = getReviewQueueCandidateName(row);
+            const sourceLabel = getReviewQueueSourceLabel(row);
+            const rowCandidateId = Number(row.candidate_id);
+            const isActiveReview =
+              Number.isInteger(normalizedActiveReviewCandidateId) &&
+              normalizedActiveReviewCandidateId > 0 &&
+              rowCandidateId === normalizedActiveReviewCandidateId;
+            const isLoadingReview = reviewingCandidateId === rowCandidateId;
 
-              return (
-                <Stack
-                  key={`${row.intake_id}-${row.candidate_id}`}
-                  direction={{ xs: "column", sm: "row" }}
-                  spacing={1}
-                  alignItems={{ xs: "flex-start", sm: "center" }}
-                  justifyContent="space-between"
+            return (
+              <Stack
+                key={`${row.intake_id}-${row.candidate_id}`}
+                ref={isActiveReview ? activeRowRef : undefined}
+                direction={{ xs: "column", sm: "row" }}
+                spacing={1.25}
+                alignItems={{ xs: "stretch", sm: "center" }}
+                sx={(theme) => ({
+                  p: 1.25,
+                  borderRadius: 2,
+                  border: 1,
+                  borderColor: isActiveReview
+                    ? "primary.main"
+                    : "divider",
+                  borderWidth: isActiveReview ? 2 : 1,
+                  bgcolor: isActiveReview
+                    ? alpha(theme.palette.primary.main, 0.08)
+                    : "background.paper",
+                  width: "100%",
+                  minWidth: 0,
+                  boxShadow: isActiveReview
+                    ? `inset 0 0 0 1px ${alpha(theme.palette.primary.main, 0.12)}`
+                    : "none"
+                })}
+              >
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                    <Typography variant="body2" fontWeight={700}>
+                      {candidateName || row.email_id}
+                    </Typography>
+                    <Chip
+                      size="small"
+                      label={sourceLabel}
+                      variant="outlined"
+                      sx={{ height: 22 }}
+                    />
+                  </Stack>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ display: "block", mt: 0.25 }}
+                  >
+                    {row.email_id} · {Math.round(Number(row.profile_completion || 0))}% complete
+                  </Typography>
+                </Box>
+                <Button
+                  size="small"
+                  variant="contained"
+                  disabled={!onReviewCandidate || isLoadingReview}
+                  onClick={() => onReviewCandidate?.(row)}
                   sx={{
-                    p: 1.25,
-                    borderRadius: 2,
-                    border: 1,
-                    borderColor: "divider"
+                    flexShrink: 0,
+                    alignSelf: { xs: "flex-end", sm: "center" },
+                    textTransform: "none",
+                    fontWeight: 600
                   }}
                 >
-                  <Box sx={{ minWidth: 0 }}>
-                    <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-                      <Typography variant="body2" fontWeight={700}>
-                        {candidateName || row.email_id}
-                      </Typography>
-                      <Chip
-                        size="small"
-                        label={sourceLabel}
-                        variant="outlined"
-                        sx={{ height: 22 }}
-                      />
-                    </Stack>
-                    <Typography variant="caption" color="text.secondary">
-                      {row.email_id} · {Math.round(Number(row.profile_completion || 0))}% complete
-                    </Typography>
-                  </Box>
-                  <Button
-                    size="small"
-                    variant="contained"
-                    onClick={() => navigate(`/candidates/${row.candidate_id}`)}
-                    sx={{ textTransform: "none", fontWeight: 600 }}
-                  >
-                    Review
-                  </Button>
-                </Stack>
-              );
-            })}
+                  {isLoadingReview || isActiveReview ? "Reviewing" : "Review"}
+                </Button>
+              </Stack>
+            );
+          })}
           </Stack>
-        </Stack>
+        )}
       </Box>
     </Card>
   );
 }
 
 function CandidateIntakePage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const workbenchRef = useRef(null);
   const [selectedSource, setSelectedSource] = useState("");
   const [resumeFile, setResumeFile] = useState(null);
   const [intakeId, setIntakeId] = useState(null);
@@ -1439,6 +1703,10 @@ function CandidateIntakePage() {
   // Used by Register Candidate to update the existing DRAFT via PUT /candidate/:id.
   const [draftCandidateId, setDraftCandidateId] = useState(null);
   const [duplicateCandidate, setDuplicateCandidate] = useState(null);
+  const [reviewSession, setReviewSession] = useState(null);
+  const [reviewLoadingCandidateId, setReviewLoadingCandidateId] = useState(null);
+  const [reviewAccessMessage, setReviewAccessMessage] = useState("");
+  const [leftRailMode, setLeftRailMode] = useState("single");
   const { createCandidateIntake, processResume, parseResume } = useCandidateIntake();
 
   const loadDashboard = async () => {
@@ -1510,7 +1778,7 @@ function CandidateIntakePage() {
     {
       label: "Resume Selected",
       icon: DescriptionOutlinedIcon,
-      completed: Boolean(resumeFile)
+      completed: Boolean(resumeFile) || Boolean(reviewSession)
     },
     {
       label: "Intake Created",
@@ -1545,11 +1813,167 @@ function CandidateIntakePage() {
     setParsedCandidate(null);
     setDraftCandidateId(null);
     setDuplicateCandidate(null);
+    setReviewSession(null);
+    setReviewAccessMessage("");
     setRegisterCandidateMessage("");
     setRegisterDialogOpen(false);
     setCandidateContainer("PIPELINE");
     setIntakeSessionKey((currentKey) => currentKey + 1);
   };
+
+  const clearReviewSession = useCallback(() => {
+    resetIntakeSession();
+    setSearchParams({});
+  }, [setSearchParams]);
+
+  const handleBulkBatchComplete = useCallback(async () => {
+    clearReviewSession();
+    await loadDashboard();
+  }, [clearReviewSession]);
+
+  const handleLeftRailModeChange = useCallback(
+    (_, value) => {
+      if (!value) {
+        return;
+      }
+
+      if (value === "bulk") {
+        clearReviewSession();
+      }
+
+      setLeftRailMode(value);
+    },
+    [clearReviewSession]
+  );
+
+  const openReviewCandidateSession = useCallback(
+    async (row) => {
+      const candidateId = Number(row?.candidate_id);
+      const intakeIdValue = Number(row?.intake_id);
+
+      if (!Number.isInteger(candidateId) || candidateId <= 0) {
+        setReviewAccessMessage("Candidate review record is missing a candidate id.");
+        return;
+      }
+
+      if (!Number.isInteger(intakeIdValue) || intakeIdValue <= 0) {
+        setReviewAccessMessage("Candidate review record is missing an intake id.");
+        return;
+      }
+
+      const queueRow = reviewQueue.find(
+        (item) => Number(item.candidate_id) === candidateId
+      );
+
+      if (!queueRow) {
+        setReviewAccessMessage(
+          "This candidate is not available in the Ready for Review queue."
+        );
+        setSearchParams({});
+        return;
+      }
+
+      setReviewLoadingCandidateId(candidateId);
+      setReviewAccessMessage("");
+
+      try {
+        const response = await API.get(`/candidate/${candidateId}`);
+        const candidate = response?.data?.data;
+
+        if (response?.data?.success === false || !candidate) {
+          throw new Error(
+            response?.data?.message || "Unable to load candidate for review."
+          );
+        }
+
+        const session = buildReviewSessionFromRow(queueRow);
+
+        setIntakeSessionKey((currentKey) => currentKey + 1);
+        setSelectedSource(session.sourceId);
+        setResumeFile(null);
+        setIntakeId(session.intakeId);
+        setIntakeStatus("COMPLETED");
+        setParsingStatus("COMPLETED");
+        setExtractedText("");
+        setParsedCandidate(null);
+        setDraftCandidateId(candidateId);
+        setDuplicateCandidate(null);
+        setRegisteredCandidateSummary(null);
+        setCreateValidationErrors({});
+        setRegisterCandidateMessage("");
+        setRegisterDialogOpen(false);
+        setCandidateContainer("PIPELINE");
+        setEditableCandidate(buildEditableCandidateFromMaster(candidate));
+        setReviewSession(session);
+        setSearchParams({
+          review: String(candidateId),
+          intake: String(session.intakeId)
+        });
+
+        window.requestAnimationFrame(() => {
+          workbenchRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+          });
+        });
+      } catch (error) {
+        setReviewAccessMessage(
+          error?.response?.data?.message ||
+            error?.message ||
+            "Unable to open candidate for review."
+        );
+        setSearchParams({});
+      } finally {
+        setReviewLoadingCandidateId(null);
+      }
+    },
+    [reviewQueue, setSearchParams]
+  );
+
+  useEffect(() => {
+    const reviewCandidateId = Number(searchParams.get("review"));
+    const reviewIntakeId = Number(searchParams.get("intake"));
+
+    if (
+      dashboardLoading ||
+      reviewLoadingCandidateId === reviewCandidateId ||
+      !Number.isInteger(reviewCandidateId) ||
+      reviewCandidateId <= 0 ||
+      reviewQueue.length === 0
+    ) {
+      return;
+    }
+
+    if (
+      reviewSession?.candidateId === reviewCandidateId &&
+      (!reviewIntakeId || reviewSession?.intakeId === reviewIntakeId)
+    ) {
+      return;
+    }
+
+    const queueRow = reviewQueue.find(
+      (item) => Number(item.candidate_id) === reviewCandidateId
+    );
+
+    if (!queueRow) {
+      setReviewAccessMessage(
+        "This candidate is not available in the Ready for Review queue."
+      );
+      setSearchParams({});
+      return;
+    }
+
+    openReviewCandidateSession(queueRow);
+  }, [
+    dashboardLoading,
+    openReviewCandidateSession,
+    reviewLoadingCandidateId,
+    reviewQueue,
+    reviewSession?.candidateId,
+    reviewSession?.intakeId,
+    searchParams,
+    setSearchParams
+  ]);
 
   const handleResumeFileSelect = (file) => {
     setResumeFile(file);
@@ -1687,6 +2111,8 @@ function CandidateIntakePage() {
       setRegisterCandidateMessage("");
       setRegisterDialogOpen(false);
       setRegisterSuccessOpen(true);
+      clearReviewSession();
+      loadDashboard();
     } catch (error) {
       setRegisterDialogOpen(false);
       setRegisterCandidateMessage(
@@ -1722,31 +2148,63 @@ function CandidateIntakePage() {
     loadDashboard();
   };
 
-  console.log({
-    intakeId,
-    intakeStatus,
-    draftCandidateId
-  });
-
   return (
     <>
-      <Box sx={{ px: 2, pb: 2 }}>
+      <Box sx={{ px: { xs: 1.5, sm: 2 }, pt: 1.5, pb: 1 }}>
         <CandidateIntakeReviewQueue
           reviewQueue={reviewQueue}
           loading={dashboardLoading}
+          onReviewCandidate={openReviewCandidateSession}
+          reviewingCandidateId={reviewLoadingCandidateId}
+          activeReviewCandidateId={reviewSession?.candidateId ?? null}
         />
       </Box>
+      {reviewAccessMessage ? (
+        <Box sx={{ px: { xs: 1.5, sm: 2 }, pb: 1 }}>
+          <Alert
+            severity="error"
+            onClose={() => setReviewAccessMessage("")}
+            sx={{ borderRadius: 2 }}
+          >
+            {reviewAccessMessage}
+          </Alert>
+        </Box>
+      ) : null}
+      <Box ref={workbenchRef}>
       <EnterpriseWorkbench
         header={
-          <EnterpriseWorkspaceHeader
-            title="Enterprise Candidate Registration"
-            subtitle="Create and process candidate registrations from all channels."
-            breadcrumbs={[
-              { label: "Dashboard" },
-              { label: "Recruitment" },
-              { label: "Candidate Registration" }
-            ]}
-          />
+          <Stack spacing={1}>
+            {reviewSession ? (
+              <Alert
+                severity="info"
+                sx={{ mx: { xs: 1.5, sm: 2 }, mt: 1.5, borderRadius: 2 }}
+                action={
+                  <Button
+                    color="inherit"
+                    size="small"
+                    onClick={clearReviewSession}
+                    sx={{ textTransform: "none", fontWeight: 600 }}
+                  >
+                    Exit review
+                  </Button>
+                }
+              >
+                Reviewing {reviewSession.candidateName}
+                {reviewSession.candidateCode
+                  ? ` (${reviewSession.candidateCode})`
+                  : ""}
+              </Alert>
+            ) : null}
+            <EnterpriseWorkspaceHeader
+              title="Enterprise Candidate Registration"
+              subtitle="Create and process candidate registrations from all channels."
+              breadcrumbs={[
+                { label: "Dashboard" },
+                { label: "Recruitment" },
+                { label: "Candidate Registration" }
+              ]}
+            />
+          </Stack>
         }
         kpis={
           <Stack spacing={1.5} sx={{ width: "100%" }}>
@@ -1768,17 +2226,43 @@ function CandidateIntakePage() {
           </Stack>
         }
         leftRail={
-          <CandidateIntakeWorkflowPanel
-            key={intakeSessionKey}
-            selectedSource={selectedSource}
-            onSourceChange={handleSourceChange}
-            resumeFile={resumeFile}
-            onFileSelect={handleResumeFileSelect}
-            onCreateIntake={handleCreateIntake}
-            intakeStatus={intakeStatus}
-            onProcessResume={handleProcessResume}
-            onParseResume={handleParseResume}
-          />
+          <Stack spacing={0} sx={{ minHeight: 0 }}>
+            <Box sx={{ px: 1.5, pt: 1.5, pb: 0.5 }}>
+              <ToggleButtonGroup
+                exclusive
+                fullWidth
+                size="small"
+                value={leftRailMode}
+                onChange={handleLeftRailModeChange}
+                sx={{
+                  "& .MuiToggleButton-root": {
+                    textTransform: "none",
+                    fontWeight: 600
+                  }
+                }}
+              >
+                <ToggleButton value="single">Single CV</ToggleButton>
+                <ToggleButton value="bulk">Bulk Upload CVs</ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
+            {leftRailMode === "single" ? (
+              <CandidateIntakeWorkflowPanel
+                key={intakeSessionKey}
+                selectedSource={selectedSource}
+                onSourceChange={handleSourceChange}
+                resumeFile={resumeFile}
+                onFileSelect={handleResumeFileSelect}
+                onCreateIntake={handleCreateIntake}
+                intakeStatus={intakeStatus}
+                onProcessResume={handleProcessResume}
+                onParseResume={handleParseResume}
+              />
+            ) : (
+              <CandidateIntakeBulkUploadPanel
+                onBatchComplete={handleBulkBatchComplete}
+              />
+            )}
+          </Stack>
         }
         rightPanel={
           <CandidateIntakeIntelligencePanel
@@ -1794,6 +2278,9 @@ function CandidateIntakePage() {
             validationErrors={createValidationErrors}
             intakeStatus={intakeStatus}
             resumeFile={resumeFile}
+            reviewResumeCandidateId={reviewSession?.candidateId || null}
+            reviewResumePath={reviewSession?.resumePath || ""}
+            reviewResumeLabel={reviewSession?.candidateName || ""}
             canShowRegisterCandidate={Boolean(draftCandidateId)}
             onRegisterCandidate={() => {
               setCandidateContainer("PIPELINE");
@@ -1803,6 +2290,7 @@ function CandidateIntakePage() {
           />
         }
       />
+      </Box>
       <RegisterCandidateDestinationDialog
         open={registerDialogOpen}
         onClose={() => setRegisterDialogOpen(false)}

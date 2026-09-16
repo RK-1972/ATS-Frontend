@@ -2,6 +2,39 @@ import { useState, useEffect } from "react";
 import API from "../api/axios";
 import Select from "react-select";
 import Header from "../components/Header";
+import useAtsStageCatalog from "../hooks/useAtsStageCatalog";
+
+const CLASSIC_LEGACY_STAGE_ALIASES = [
+  "L1 Technical",
+  "L1 Non-Technical",
+  "L2 Technical",
+  "L2 Non-Technical",
+  "Client Round"
+];
+
+function buildClassicPipelineStageOptions(catalogStages = [], currentStageName = "") {
+  const catalogLabels = catalogStages.map((stage) => stage.display_name);
+  const governedLabels = [
+    ...new Set([...catalogLabels, ...CLASSIC_LEGACY_STAGE_ALIASES])
+  ];
+
+  const options = governedLabels.map((label) => ({
+    value: label,
+    label,
+    disabled: false
+  }));
+
+  const current = String(currentStageName || "").trim();
+  if (current && !governedLabels.includes(current)) {
+    options.unshift({
+      value: current,
+      label: `${current} (current)`,
+      disabled: true
+    });
+  }
+
+  return options;
+}
 
 /**
  * Legacy Candidate Registration create workflow (Single Source of Truth).
@@ -86,60 +119,10 @@ export async function executeLegacyCandidateRegistration(
 }
 
 function CandidatePage() {
-
-  const candidateStatuses = [
-
-  "Applied",
-
-  "Screening",
-
-  "L1 Technical",
-
-  "L1 Technical Cleared",
-  "L1 Technical Rejected",
-  "L1 Technical On Hold",
-
-  "L1 Non-Technical",
-
-  "L1 Non-Technical Cleared",
-  "L1 Non-Technical Rejected",
-  "L1 Non-Technical On Hold",
-
-  "L2 Technical",
-
-  "L2 Technical Cleared",
-  "L2 Technical Rejected",
-  "L2 Technical On Hold",
-
-  "L2 Non-Technical",
-
-  "L2 Non-Technical Cleared",
-  "L2 Non-Technical Rejected",
-  "L2 Non-Technical On Hold",
-
-  "HR Round",
-
-  "HR Cleared",
-  "HR Rejected",
-  "HR On Hold",
-
-  "Client Round",
-
-  "Client Cleared",
-  "Client Rejected",
-  "Client On Hold",
-
-  "Offer",
-
-  "Offer Accepted",
-  "Offer Rejected",
-  "Offer On Hold",
-
-  "Joined"
-
-];
-
-
+  const {
+    stages: catalogStages,
+    isLoading: isCatalogLoading
+  } = useAtsStageCatalog();
 
   const [formData, setFormData] = useState({
 
@@ -648,36 +631,6 @@ if (editMode) {
 
   }
 
-  // =====================================
-// Existing Mapping
-// Update ATS Stage
-// =====================================
-
-if (
-
-  formData.req_id &&
-
-  formData.map_id
-
-) {
-
-  await API.put(
-
-    `/update-ats-stage/${formData.map_id}`,
-
-    {
-
-      stage_name:
-        formData.ats_stage,
-
-      remarks:
-        formData.remarks
-
-    }
-
-  );
-
-}
   alert(
     "Candidate Updated Successfully!"
   );
@@ -1367,7 +1320,7 @@ PIPELINE DASHBOARD
 
   <select
 
-    value={item.stage_name}
+    value={item.stage_name || ""}
 
     onChange={(e) =>
 
@@ -1380,6 +1333,8 @@ PIPELINE DASHBOARD
       )
 
     }
+
+    disabled={isCatalogLoading}
 
     style={{
 
@@ -1396,29 +1351,26 @@ PIPELINE DASHBOARD
 
   >
 
-    {
+    {isCatalogLoading ? (
+      <option value={item.stage_name || ""}>
+        Loading stages...
+      </option>
+    ) : null}
 
-      candidateStatuses.map(
-
-        (status) => (
-
-          <option
-
-            key={status}
-
-            value={status}
-
-          >
-
-            {status}
-
-          </option>
-
-        )
-
-      )
-
-    }
+    {!isCatalogLoading
+      ? buildClassicPipelineStageOptions(
+        catalogStages,
+        item.stage_name
+      ).map((option) => (
+        <option
+          key={`${item.map_id}-${option.value}`}
+          value={option.value}
+          disabled={option.disabled}
+        >
+          {option.label}
+        </option>
+      ))
+      : null}
 
   </select>
 

@@ -8,6 +8,10 @@ export const NOTIFICATION_CATEGORY_ORDER = [
     label: "Resource Requisition"
   },
   {
+    key: "offer",
+    label: "Offer"
+  },
+  {
     key: "candidateOwnership",
     label: "Candidate Ownership"
   },

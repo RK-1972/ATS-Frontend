@@ -4,6 +4,8 @@ import recruitmentClient from "@/api/clients/recruitmentClient";
 
 import { cloneData } from "@/utils/cloneData";
 
+import { FALLBACK_CATALOG } from "@/enterprise/atsStageCatalogUtils";
+
 
 
 function getInitialState() {
@@ -427,8 +429,131 @@ async function removeRecruiterFromRequisition(assignmentId) {
   return recruitmentClient.removeRecruiterAssignment(assignmentId);
 }
 
+async function publishRequisitionToCandidatePortal(requisitionCode) {
+  if (!isLiveMode()) {
+    return {
+      success: true,
+      message: "Requisition published to the Candidate Portal."
+    };
+  }
+
+  return recruitmentClient.publishToCandidatePortal(requisitionCode);
+}
+
+async function unpublishRequisitionFromCandidatePortal(requisitionCode) {
+  if (!isLiveMode()) {
+    return {
+      success: true,
+      message: "Requisition unpublished from the Candidate Portal."
+    };
+  }
+
+  return recruitmentClient.unpublishFromCandidatePortal(requisitionCode);
+}
+
+async function closeRequisitionAsFilled(requisitionCode) {
+  if (!isLiveMode()) {
+    return {
+      success: true,
+      message: "Requisition closed as filled."
+    };
+  }
+
+  return recruitmentClient.closeRequisitionAsFilled(requisitionCode);
+}
+
+async function closeRequisitionAsCancelled(requisitionCode, cancellationReason) {
+  if (!isLiveMode()) {
+    return {
+      success: true,
+      message: "Requisition closed as cancelled."
+    };
+  }
+
+  return recruitmentClient.closeRequisitionAsCancelled(
+    requisitionCode,
+    cancellationReason
+  );
+}
+
 async function refreshManagementAssignments(reqId) {
   return getAssignedRecruiters(reqId);
+}
+
+async function listHeadcountChanges(requisitionCode) {
+  if (!isLiveMode()) {
+    return {
+      success: true,
+      data: {
+        requisition_code: requisitionCode,
+        current_headcount: 1,
+        pending_change: null,
+        capacity_floor: 0,
+        history: []
+      }
+    };
+  }
+
+  return recruitmentClient.listHeadcountChanges(requisitionCode);
+}
+
+async function requestHeadcountChange(requisitionCode, payload) {
+  if (!isLiveMode()) {
+    return {
+      success: true,
+      message: "Headcount change request submitted.",
+      data: {
+        change_id: "HCR-DEMO",
+        requisition_code: requisitionCode,
+        status: "Pending Approval"
+      }
+    };
+  }
+
+  return recruitmentClient.requestHeadcountChange(requisitionCode, payload);
+}
+
+async function listBudgetChanges(requisitionCode) {
+  if (!isLiveMode()) {
+    return {
+      success: true,
+      data: {
+        requisition_code: requisitionCode,
+        current_budget: 0,
+        wfp_position_budget: null,
+        pending_change: null,
+        offer_budget_floor: 0,
+        history: []
+      }
+    };
+  }
+
+  return recruitmentClient.listBudgetChanges(requisitionCode);
+}
+
+async function requestBudgetChange(requisitionCode, payload) {
+  if (!isLiveMode()) {
+    return {
+      success: true,
+      message: "Budget change request submitted.",
+      data: {
+        change_id: "BCR-DEMO",
+        requisition_code: requisitionCode,
+        status: "Pending Approval"
+      }
+    };
+  }
+
+  return recruitmentClient.requestBudgetChange(requisitionCode, payload);
+}
+
+async function listAtsStageCatalog() {
+  if (!isLiveMode()) {
+    return cloneData(FALLBACK_CATALOG);
+  }
+
+  const response = await recruitmentClient.listAtsStageCatalog();
+  return response.data || [];
 }
 
 const recruitmentRepository = {
@@ -473,7 +598,25 @@ const recruitmentRepository = {
 
   removeRecruiterFromRequisition,
 
-  refreshManagementAssignments
+  publishRequisitionToCandidatePortal,
+
+  unpublishRequisitionFromCandidatePortal,
+
+  closeRequisitionAsFilled,
+
+  closeRequisitionAsCancelled,
+
+  listHeadcountChanges,
+
+  requestHeadcountChange,
+
+  listBudgetChanges,
+
+  requestBudgetChange,
+
+  refreshManagementAssignments,
+
+  listAtsStageCatalog
 
 };
 

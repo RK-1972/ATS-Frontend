@@ -1,7 +1,6 @@
 import { useState } from "react";
 
 import {
-  Box,
   Button,
   Chip,
   IconButton,
@@ -16,7 +15,6 @@ import MoreVertOutlinedIcon from "@mui/icons-material/MoreVertOutlined";
 import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
 import FactCheckOutlinedIcon from "@mui/icons-material/FactCheckOutlined";
 import LayersOutlinedIcon from "@mui/icons-material/LayersOutlined";
-import OpenInNewOutlinedIcon from "@mui/icons-material/OpenInNewOutlined";
 
 function CandidateWorkspaceToolbar({
   profileCompletion = 0,
@@ -78,12 +76,6 @@ function CandidateWorkspaceToolbar({
             <LayersOutlinedIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText>Version</ListItemText>
-        </MenuItem>
-        <MenuItem component="a" href="/candidates/classic">
-          <ListItemIcon>
-            <OpenInNewOutlinedIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Classic View</ListItemText>
         </MenuItem>
       </Menu>
     </Stack>

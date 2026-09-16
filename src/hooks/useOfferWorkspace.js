@@ -5,7 +5,11 @@ import {
   buildApprovedOffersList,
   buildAwaitingLettersList,
   buildGeneratedLettersList,
-  buildPendingApprovalQueue
+  buildMyOfferRequestsList,
+  buildPendingApprovalQueue,
+  buildRejectedOffersList,
+  buildReleasedOffersList,
+  buildWithdrawnOffersList
 } from "@/utils/offerApprovalUtils";
 
 function useOfferWorkspace() {
@@ -16,7 +20,18 @@ function useOfferWorkspace() {
   const setOfferUi = useEnterpriseStore((state) => state.setOfferUi);
   const refreshOffers = useEnterpriseStore((state) => state.refreshOffers);
   const approveOfferStep = useEnterpriseStore((state) => state.approveOfferStep);
+  const releaseOffer = useEnterpriseStore((state) => state.releaseOffer);
+  const acceptOffer = useEnterpriseStore((state) => state.acceptOffer);
+  const negotiateOffer = useEnterpriseStore((state) => state.negotiateOffer);
+  const reviseOffer = useEnterpriseStore((state) => state.reviseOffer);
   const generateOfferDocument = useEnterpriseStore((state) => state.generateOfferDocument);
+
+  let loggedInUser = {};
+  try {
+    loggedInUser = JSON.parse(localStorage.getItem("user") || "null") || {};
+  } catch {
+    loggedInUser = {};
+  }
 
   const setSelectedOfferId = useCallback((id) => {
     setOfferUi((prev) => ({ ...prev, selectedOfferId: id }));
@@ -28,6 +43,13 @@ function useOfferWorkspace() {
 
   const queue = useMemo(() => buildPendingApprovalQueue(offers), [offers]);
   const approvedOffers = useMemo(() => buildApprovedOffersList(offers), [offers]);
+  const myOfferRequests = useMemo(
+    () => buildMyOfferRequestsList(offers, loggedInUser),
+    [offers, loggedInUser]
+  );
+  const rejectedOffers = useMemo(() => buildRejectedOffersList(offers), [offers]);
+  const withdrawnOffers = useMemo(() => buildWithdrawnOffersList(offers), [offers]);
+  const releasedOffers = useMemo(() => buildReleasedOffersList(offers), [offers]);
   const awaitingLetters = useMemo(() => buildAwaitingLettersList(offers), [offers]);
   const generatedLetters = useMemo(() => buildGeneratedLettersList(offers), [offers]);
 
@@ -51,12 +73,20 @@ function useOfferWorkspace() {
     offers,
     queue,
     approvedOffers,
+    myOfferRequests,
+    rejectedOffers,
+    withdrawnOffers,
+    releasedOffers,
     awaitingLetters,
     generatedLetters,
     selectedOfferId,
     setSelectedOfferId,
     selectedOffer,
     approveOffer,
+    releaseOffer,
+    acceptOffer,
+    negotiateOffer,
+    reviseOffer,
     refreshOffers,
     generateOfferDocument,
     toastMessage,

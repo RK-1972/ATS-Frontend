@@ -8,6 +8,7 @@
     "dev:fresh": "node scripts/clean-vite-cache.mjs && vite",
     "build": "vite build",
     "lint": "eslint .",
+    "verify:phase6c6-offer-bell-notifications": "node scripts/verifyPhase6c6OfferBellNotifications.mjs",
     "preview": "vite preview",
     "test:e2e-demo": "playwright test e2e/demo-e2e-dry-run.spec.mjs",
     "test:e2e-demo:headed": "playwright test e2e/demo-e2e-dry-run.spec.mjs --headed"
