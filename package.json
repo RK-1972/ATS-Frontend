@@ -11,7 +11,11 @@
     "verify:phase6c6-offer-bell-notifications": "node scripts/verifyPhase6c6OfferBellNotifications.mjs",
     "preview": "vite preview",
     "test:e2e-demo": "playwright test e2e/demo-e2e-dry-run.spec.mjs",
-    "test:e2e-demo:headed": "playwright test e2e/demo-e2e-dry-run.spec.mjs --headed"
+    "test:e2e-demo:headed": "playwright test e2e/demo-e2e-dry-run.spec.mjs --headed",
+    "test:e2e-wave3": "playwright test e2e/wave3-candidate-workspace.spec.mjs",
+    "test:e2e-wave4": "playwright test e2e/wave4-interview-hiring.spec.mjs",
+    "test:e2e-waves1-4": "playwright test e2e/wave1-identity-access.spec.mjs e2e/wave2-requisition-workforce.spec.mjs e2e/wave3-candidate-workspace.spec.mjs e2e/wave4-interview-hiring.spec.mjs",
+    "test:e2e-wave5": "playwright test e2e/wave5-offers.spec.mjs e2e/demo-e2e-offer-approval-18-19.spec.mjs"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

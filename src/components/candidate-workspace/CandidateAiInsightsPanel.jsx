@@ -1,8 +1,15 @@
+import { useCallback, useEffect, useState } from "react";
 import {
+  Alert,
   Box,
+  Button,
   Chip,
+  CircularProgress,
+  Divider,
   IconButton,
-  LinearProgress,
+  List,
+  ListItem,
+  ListItemText,
   Stack,
   Typography
 } from "@mui/material";
@@ -10,62 +17,115 @@ import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import ChevronRightOutlinedIcon from "@mui/icons-material/ChevronRightOutlined";
 import { useTheme } from "@mui/material/styles";
 
-import { AIInsightCard, EnterpriseSurface, EnterpriseModuleIcon, MetricCell } from "@/components/enterprise";
+import {
+  EnterpriseModuleIcon,
+  EnterpriseSurface
+} from "@/components/enterprise";
+import recruitmentClient from "@/api/clients/recruitmentClient";
 
-function PlaceholderInsight({ title, description, chips = [], highlight = false }) {
-  const theme = useTheme();
-  const { radius } = theme.tokens;
+const STATUS_COLORS = {
+  Meets: "success",
+  Partial: "warning",
+  Unclear: "default",
+  "Not Evidenced": "default"
+};
 
+function RequirementRow({ row }) {
   return (
-    <Box
-      sx={{
-        p: 1.25,
-        borderRadius: `${radius.sm}px`,
-        border: 1,
-        borderColor: highlight ? "primary.main" : "divider",
-        bgcolor: highlight ? undefined : "background.default",
-        background: highlight
-          ? `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`
-          : undefined,
-        color: highlight ? "primary.contrastText" : "inherit"
-      }}
-    >
-      <Typography variant="body2" fontWeight={700} mb={0.25}>
-        {title}
+    <Box sx={{ py: 0.75 }}>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1}>
+        <Typography variant="body2" fontWeight={600}>
+          {row.requirement}
+        </Typography>
+        <Chip
+          label={row.status}
+          size="small"
+          color={STATUS_COLORS[row.status] || "default"}
+          variant="outlined"
+        />
+      </Stack>
+      <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
+        {row.supporting_evidence}
       </Typography>
-      <Typography
-        variant="caption"
-        display="block"
-        mb={chips.length ? 0.75 : 0}
-        sx={{ color: highlight ? "inherit" : "text.secondary", opacity: highlight ? 0.92 : 1 }}
-      >
-        {description}
-      </Typography>
-      {chips.length > 0 && (
-        <Stack direction="row" flexWrap="wrap" gap={0.75}>
-          {chips.map((chip) => (
-            <Chip
-              key={chip}
-              label={chip}
-              size="small"
-              variant={highlight ? "filled" : "outlined"}
-              sx={
-                highlight
-                  ? { bgcolor: "rgba(255,255,255,0.18)", color: "inherit", borderColor: "transparent" }
-                  : undefined
-              }
-            />
-          ))}
-        </Stack>
-      )}
     </Box>
   );
 }
 
-function CandidateAiInsightsPanel({ open, onToggle, skillChips = [] }) {
+function CandidateAiInsightsPanel({
+  open,
+  onToggle,
+  candidateId,
+  requisitionCode
+}) {
   const theme = useTheme();
+  const [availability, setAvailability] = useState(null);
+  const [loadingAvailability, setLoadingAvailability] = useState(true);
+  const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState("");
+  const [reviewPayload, setReviewPayload] = useState(null);
 
-  if (!open) {
+  const loadAvailability = useCallback(async () => {
+    setLoadingAvailability(true);
+    try {
+      const response = await recruitmentClient.getAiReviewAvailability();
+      setAvailability(response?.data || null);
+    } catch {
+      setAvailability({
+        ai_module_enabled: false,
+        feature_enabled: false,
+        available: false
+      });
+    } finally {
+      setLoadingAvailability(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadAvailability();
+  }, [loadAvailability]);
+
+  useEffect(() => {
+    setReviewPayload(null);
+    setError("");
+  }, [candidateId, requisitionCode]);
+
+  const handleGenerate = async () => {
+    if (!candidateId || !requisitionCode) {
+      setError("Map this candidate to a requisition before generating an AI review.");
+      return;
+    }
+
+    setGenerating(true);
+    setError("");
+
+    try {
+      const response = await recruitmentClient.generateAiCandidateReview(
+        candidateId,
+        requisitionCode
+      );
+
+      if (!response?.success) {
+        throw new Error(response?.message || "AI review could not be generated.");
+      }
+
+      setReviewPayload(response.data);
+    } catch (generateError) {
+      const message =
+        generateError?.response?.data?.message ||
+        generateError.message ||
+        "AI review could not be generated.";
+      setError(message);
+      setReviewPayload(null);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const showPanel = open;
+  const aiAvailable = Boolean(availability?.available);
+  const review = reviewPayload?.review;
+
+  if (!showPanel) {
     return (
       <Box
         sx={{
@@ -86,7 +146,7 @@ function CandidateAiInsightsPanel({ open, onToggle, skillChips = [] }) {
   return (
     <Box
       sx={{
-        width: { xs: "100%", lg: 300 },
+        width: { xs: "100%", lg: 320 },
         flexShrink: 0,
         display: "flex",
         flexDirection: "column",
@@ -107,69 +167,134 @@ function CandidateAiInsightsPanel({ open, onToggle, skillChips = [] }) {
             iconSize={16}
           />
           <Typography variant="subtitle2" fontWeight={700}>
-            AI Insights
+            AI Candidate Review
           </Typography>
-          <Chip label="Preview" size="small" color="primary" variant="outlined" sx={{ height: 22 }} />
         </Stack>
         <IconButton size="small" onClick={onToggle} sx={{ display: { xs: "none", lg: "inline-flex" } }}>
           <ChevronRightOutlinedIcon fontSize="small" />
         </IconButton>
       </Stack>
 
-      <AIInsightCard
-        title="Candidate Summary"
-        placeholder="AI narrative summary of profile, trajectory, and hiring context."
-      />
+      <Typography variant="caption" color="text.secondary">
+        Advisory only. Does not change candidate status or make hiring decisions.
+      </Typography>
 
-      <EnterpriseSurface sx={{ p: 1.25 }}>
-        <Typography variant="caption" fontWeight={700} display="block" mb={0.75}>
-          Fitment Score
-        </Typography>
-        <Stack direction="row" alignItems="center" spacing={1}>
-          <MetricCell label="Match" value="—" placeholder />
-          <Box flex={1}>
-            <LinearProgress variant="determinate" value={0} sx={{ height: 6, borderRadius: 3 }} />
-          </Box>
-        </Stack>
-      </EnterpriseSurface>
+      {loadingAvailability ? (
+        <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+          <CircularProgress size={22} />
+        </Box>
+      ) : null}
 
-      <PlaceholderInsight
-        title="Strengths"
-        description="Ranked strengths against role requirements."
-        chips={["Delivery", "Communication", "Technical Depth"]}
-      />
-      <PlaceholderInsight
-        title="Missing Skills"
-        description="Gap analysis for target requisition."
-        chips={["Kubernetes", "System Design"]}
-      />
-      <PlaceholderInsight
-        title="Suggested Requisitions"
-        description="Best-fit open roles by match score."
-        chips={["REQ-24001", "REQ-24018"]}
-      />
-      <PlaceholderInsight
-        title="Interview Readiness"
-        description="Stage readiness and preparation signals."
-        chips={skillChips.slice(0, 2)}
-      />
-      <PlaceholderInsight
-        title="Missing Documents"
-        description="Compliance and completeness checks."
-        chips={["Passport", "Experience Letter"]}
-      />
-      <PlaceholderInsight title="Recent Activity" description="AI-curated highlights from timeline." />
-      <PlaceholderInsight
-        title="Next Best Action"
-        description="Recommended recruiter action for today."
-        chips={["Schedule Interview"]}
-        highlight
-      />
-      <PlaceholderInsight
-        title="Duplicate Candidate Detection"
-        description="Potential duplicate profiles across channels."
-        chips={["92% match · C-240118"]}
-      />
+      {!loadingAvailability && !aiAvailable ? (
+        <Alert severity="info" sx={{ py: 0.5 }}>
+          AI Candidate Review is disabled. Enable the AI module and AI Candidate Review in Platform
+          Configuration.
+        </Alert>
+      ) : null}
+
+      {!loadingAvailability && aiAvailable ? (
+        <>
+          {!requisitionCode ? (
+            <Alert severity="warning" sx={{ py: 0.5 }}>
+              Map this candidate to a requisition to generate a review against role requirements.
+            </Alert>
+          ) : (
+            <Button
+              variant="contained"
+              size="small"
+              onClick={handleGenerate}
+              disabled={generating || !candidateId}
+              startIcon={
+                generating ? <CircularProgress size={16} color="inherit" /> : <AutoAwesomeOutlinedIcon />
+              }
+            >
+              {generating ? "Generating…" : "Generate AI Review"}
+            </Button>
+          )}
+
+          {error ? (
+            <Alert severity="error" sx={{ py: 0.5 }}>
+              {error}
+            </Alert>
+          ) : null}
+
+          {review ? (
+            <Stack spacing={1.25}>
+              {reviewPayload.generated_at ? (
+                <Typography variant="caption" color="text.secondary">
+                  Generated {new Date(reviewPayload.generated_at).toLocaleString()}
+                </Typography>
+              ) : null}
+
+              <EnterpriseSurface sx={{ p: 1.25 }}>
+                <Typography variant="caption" fontWeight={700} display="block" mb={0.5}>
+                  Candidate Summary
+                </Typography>
+                <Typography variant="body2">{review.candidate_summary}</Typography>
+              </EnterpriseSurface>
+
+              <EnterpriseSurface sx={{ p: 1.25 }}>
+                <Typography variant="caption" fontWeight={700} display="block" mb={0.75}>
+                  Requirement Analysis
+                </Typography>
+                {review.requirement_analysis?.map((row, index) => (
+                  <RequirementRow key={`${row.requirement}-${index}`} row={row} />
+                ))}
+              </EnterpriseSurface>
+
+              <EnterpriseSurface sx={{ p: 1.25 }}>
+                <Typography variant="caption" fontWeight={700} display="block" mb={0.5}>
+                  Strengths
+                </Typography>
+                <List dense disablePadding>
+                  {review.strengths?.map((item) => (
+                    <ListItem key={item} disablePadding sx={{ py: 0.25 }}>
+                      <ListItemText primary={item} primaryTypographyProps={{ variant: "body2" }} />
+                    </ListItem>
+                  ))}
+                </List>
+              </EnterpriseSurface>
+
+              <EnterpriseSurface sx={{ p: 1.25 }}>
+                <Typography variant="caption" fontWeight={700} display="block" mb={0.5}>
+                  Areas to Validate
+                </Typography>
+                <List dense disablePadding>
+                  {review.areas_to_validate?.map((item) => (
+                    <ListItem key={item} disablePadding sx={{ py: 0.25 }}>
+                      <ListItemText primary={item} primaryTypographyProps={{ variant: "body2" }} />
+                    </ListItem>
+                  ))}
+                </List>
+              </EnterpriseSurface>
+
+              <EnterpriseSurface
+                sx={{
+                  p: 1.25,
+                  borderColor: "primary.main",
+                  background: `linear-gradient(135deg, ${theme.palette.primary.main}08 0%, ${theme.palette.background.paper} 100%)`
+                }}
+              >
+                <Typography variant="caption" fontWeight={700} display="block" mb={0.5}>
+                  Suggested Recruiter Questions
+                </Typography>
+                <List dense disablePadding>
+                  {review.suggested_recruiter_questions?.map((item) => (
+                    <ListItem key={item} disablePadding sx={{ py: 0.25 }}>
+                      <ListItemText primary={item} primaryTypographyProps={{ variant: "body2" }} />
+                    </ListItem>
+                  ))}
+                </List>
+              </EnterpriseSurface>
+
+              <Divider />
+              <Typography variant="caption" color="text.secondary">
+                {reviewPayload.advisory_notice}
+              </Typography>
+            </Stack>
+          ) : null}
+        </>
+      ) : null}
     </Box>
   );
 }

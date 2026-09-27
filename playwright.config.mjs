@@ -12,7 +12,10 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: process.env.PW_DEMO_VIDEO === "on" ? "on" : "off",
-    channel: process.env.PW_CHANNEL || "msedge",
+    channel:
+      process.env.PW_CHANNEL === "bundled"
+        ? undefined
+        : process.env.PW_CHANNEL || "msedge",
     actionTimeout: 45000,
     navigationTimeout: 90000,
     reducedMotion: "reduce"

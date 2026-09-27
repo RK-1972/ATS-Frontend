@@ -111,7 +111,14 @@ async function listCandidates(workspaceView = "pool") {
   return response?.data || [];
 }
 async function loadCandidateProfile(candidateId) {
-  const response = await recruitmentClient.getCandidateWorkspaceProfile(candidateId);
+  let response;
+
+  try {
+    response = await recruitmentClient.getCandidateWorkspaceProfile(candidateId);
+  } catch (requestError) {
+    const apiMessage = requestError?.response?.data?.message;
+    throw new Error(apiMessage || requestError.message || "Failed to load candidate profile");
+  }
 
   if (response?.success === false) {
     throw new Error(response.message || "Failed to load candidate profile");

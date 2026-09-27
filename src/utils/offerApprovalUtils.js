@@ -24,6 +24,13 @@ export function isPendingApprovalStatus(status) {
   return String(status || "") === "Pending Approval";
 }
 
+const WITHDRAWN_TERMINAL_STATUSES = new Set(["Accepted", "Declined", "Withdrawn"]);
+
+export function canWithdrawOfferStatus(status) {
+  const normalized = String(status || "").trim();
+  return Boolean(normalized) && !WITHDRAWN_TERMINAL_STATUSES.has(normalized);
+}
+
 export function buildPendingApprovalQueue(bundle) {
   const offers = bundle?.offers || [];
   const approvals = bundle?.approvals || [];

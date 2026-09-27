@@ -22,6 +22,7 @@ function OfferStatusWorkspacePage({
   onAccept,
   onNegotiate,
   onRevise,
+  onWithdraw,
   busy = false
 }) {
   const [selectedOfferId, setSelectedOfferId] = useState(null);
@@ -88,6 +89,7 @@ function OfferStatusWorkspacePage({
               onAccept={onAccept}
               onNegotiate={onNegotiate}
               onRevise={onRevise}
+              onWithdraw={onWithdraw}
               busy={busy}
             />
           </Grid>

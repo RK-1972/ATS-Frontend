@@ -1667,6 +1667,30 @@ const useEnterpriseStore = create((set, get) => ({
 
   },
 
+  withdrawOffer(offerId, reason = "") {
+    return Promise.resolve(
+      offerRepository.withdrawOffer(get().offers, offerId, reason)
+    ).then((result) => {
+      set({
+        offers: result.offers,
+        offerUi: {
+          ...get().offerUi,
+          toastMessage: result.toastMessage
+        }
+      });
+
+      publishAudit(set, get, ENTERPRISE_EVENTS.OFFER_WITHDRAWN, {
+        module: "Offer Management",
+        entity: "Offer",
+        entityId: offerId,
+        action: "Offer withdrawn",
+        metadata: { reason }
+      });
+
+      return result;
+    });
+  },
+
   negotiateOffer(offerId, payload = {}) {
     return Promise.resolve(
       offerRepository.negotiateOffer(get().offers, offerId, payload)

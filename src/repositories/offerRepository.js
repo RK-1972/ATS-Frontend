@@ -162,6 +162,20 @@ async function generateOfferLetter(offerId, payload) {
   };
 }
 
+async function withdrawOffer(offers, offerId, reason = "") {
+  if (!isLiveMode()) {
+    return { offers, toastMessage: "Offer withdrawn." };
+  }
+
+  const result = await offerClient.withdrawOffer(offerId, reason);
+  const bundle = await getAll();
+
+  return {
+    offers: bundle,
+    toastMessage: result.toastMessage
+  };
+}
+
 function getDefaultSelectedOfferId(offersBundle) {
   const pending = (offersBundle?.offers || []).find(
     (offer) => offer.offerStatus === "Pending Approval"
@@ -180,6 +194,7 @@ const offerRepository = {
   acceptOffer,
   negotiateOffer,
   reviseOffer,
+  withdrawOffer,
   generateOfferLetter
 };
 

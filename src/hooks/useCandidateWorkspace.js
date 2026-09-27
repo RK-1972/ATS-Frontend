@@ -75,9 +75,6 @@ function useCandidateWorkspace() {
 
       // Empty list: show index Empty State; do not pick another candidate.
       if (rows.length === 0) {
-        if (currentId && !preserveSelection) {
-          navigate("/candidates");
-        }
         return;
       }
 
@@ -85,8 +82,8 @@ function useCandidateWorkspace() {
         (row) => String(row.candidate_id) === String(currentId)
       );
 
-      // Keep selection if it belongs to this list; otherwise open the first.
-      if (!currentExists && !preserveSelection) {
+      // Keep selection if it belongs to this list; otherwise open the first when none selected.
+      if (!currentExists && !preserveSelection && !currentId) {
         navigate(`/candidates/${rows[0].candidate_id}`);
       }
     } catch (loadError) {

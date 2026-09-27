@@ -19,7 +19,7 @@ export async function loginAs(page, email, password, options = {}) {
   await page.getByRole("button", { name: "Login" }).click();
 
   await page.waitForURL(
-    /\/(workspace|recruiter|interviewer|my-approvals|workforce-planning|offers|\/?$)/,
+    /\/(workspace|recruiter|interviewer|my-approvals|workforce-planning|offers|ta-lead|\/?$)/,
     { timeout: 90000 }
   );
 

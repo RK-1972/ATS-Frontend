@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 import { CANDIDATE_NAME, offerApproverCredentials } from "./helpers/demo-config.mjs";
+import { provisionDemoOfferApproval } from "./helpers/provision-demo-offer.mjs";
 import { loginAs } from "./helpers/session.mjs";
 
 const OFFER_DOCUMENT_TYPE = "Offer";
@@ -67,6 +68,10 @@ async function approveOfferRowInMyApprovals(page, ctx) {
  * Uses the real My Approvals workflow (not Offer Workspace).
  */
 test.describe.configure({ mode: "serial" });
+
+test.beforeAll(() => {
+  provisionDemoOfferApproval();
+});
 
 test("DEMO_E2E offer approval L1 and L2 (Steps 18–19 only)", async ({ page }) => {
   test.setTimeout(600000);

@@ -14,6 +14,10 @@ import CheckCircleOutlinedIcon from "@mui/icons-material/CheckCircleOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import HandshakeOutlinedIcon from "@mui/icons-material/HandshakeOutlined";
 import SendOutlinedIcon from "@mui/icons-material/SendOutlined";
+import UndoOutlinedIcon from "@mui/icons-material/UndoOutlined";
+
+import EnterpriseConfirmationDialog from "@/components/enterprise/EnterpriseConfirmationDialog";
+import { canWithdrawOfferStatus } from "@/utils/offerApprovalUtils";
 
 import OfferApprovedSummaryPanel from "./OfferApprovedSummaryPanel";
 
@@ -23,10 +27,13 @@ function OfferWorkspaceDetailPanel({
   onAccept,
   onNegotiate,
   onRevise,
+  onWithdraw,
   busy = false
 }) {
   const [negotiateOpen, setNegotiateOpen] = useState(false);
   const [reviseOpen, setReviseOpen] = useState(false);
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [withdrawReason, setWithdrawReason] = useState("");
   const [proposedCtc, setProposedCtc] = useState("");
   const [negotiationNotes, setNegotiationNotes] = useState("");
   const [revisedCtc, setRevisedCtc] = useState("");
@@ -41,6 +48,7 @@ function OfferWorkspaceDetailPanel({
   const canRevise = ["Draft", "Approved", "Pending Approval"].includes(status);
   const canNegotiate = ["Approved", "Released"].includes(status);
   const canAccept = status === "Released";
+  const canWithdraw = Boolean(onWithdraw) && canWithdrawOfferStatus(status);
 
   const handleNegotiate = async () => {
     await onNegotiate?.(offer.offerId, {
@@ -66,7 +74,7 @@ function OfferWorkspaceDetailPanel({
     <Stack spacing={1.5}>
       <OfferApprovedSummaryPanel offer={offer} />
 
-      {(canRelease || canRevise || canNegotiate || canAccept) ? (
+      {(canRelease || canRevise || canNegotiate || canAccept || canWithdraw) ? (
         <Box
           sx={{
             display: "flex",
@@ -130,8 +138,55 @@ function OfferWorkspaceDetailPanel({
               Mark Accepted
             </Button>
           ) : null}
+          {canWithdraw ? (
+            <Button
+              variant="outlined"
+              color="error"
+              size="small"
+              startIcon={<UndoOutlinedIcon />}
+              disabled={busy}
+              onClick={() => {
+                setWithdrawReason("");
+                setWithdrawOpen(true);
+              }}
+            >
+              Withdraw Offer
+            </Button>
+          ) : null}
         </Box>
       ) : null}
+
+      <EnterpriseConfirmationDialog
+        open={withdrawOpen}
+        title="Withdraw this offer request?"
+        message="The offer will move to Withdrawn and leave active approval or release queues."
+        confirmLabel="Withdraw"
+        confirmColor="error"
+        loading={busy}
+        onClose={() => {
+          if (!busy) {
+            setWithdrawOpen(false);
+          }
+        }}
+        onConfirm={async () => {
+          if (!String(withdrawReason || "").trim()) {
+            return;
+          }
+          await onWithdraw?.(offer.offerId, withdrawReason);
+          setWithdrawOpen(false);
+          setWithdrawReason("");
+        }}
+      >
+        <TextField
+          label="Reason for withdrawal"
+          value={withdrawReason}
+          onChange={(event) => setWithdrawReason(event.target.value)}
+          fullWidth
+          multiline
+          minRows={2}
+          sx={{ mt: 2 }}
+        />
+      </EnterpriseConfirmationDialog>
 
       <Dialog open={negotiateOpen} onClose={() => setNegotiateOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Record Negotiation</DialogTitle>

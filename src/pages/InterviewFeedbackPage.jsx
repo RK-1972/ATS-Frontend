@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import API from "../api/axios";
 import WorkspaceLayout from "../components/enterprise/WorkspaceLayout";
+import { ErrorState } from "../components/enterprise";
 import RecruiterNavRail from "../components/layout/RecruiterNavRail";
 
 function normalizeSkillName(value) {
@@ -71,6 +72,9 @@ function InterviewFeedbackPage() {
   const [submitError, setSubmitError] =
     useState("");
 
+  const [accessDenied, setAccessDenied] = useState(false);
+  const [loadError, setLoadError] = useState("");
+
   // =====================================
   // Load Candidate Details
   // =====================================
@@ -95,9 +99,16 @@ function InterviewFeedbackPage() {
 
         console.log(error);
 
-        alert(
-          "Error loading interview details"
-        );
+        const status = error?.response?.status;
+        const message =
+          error?.response?.data?.message || "Error loading interview details";
+
+        if (status === 401 || status === 403) {
+          setAccessDenied(true);
+          setLoadError(message);
+        } else {
+          alert(message);
+        }
 
       }
 
@@ -349,6 +360,17 @@ function InterviewFeedbackPage() {
 
     return <div style={styles.loading}>Loading...</div>;
 
+  }
+
+  if (accessDenied) {
+    return (
+      <WorkspaceLayout navRail={<RecruiterNavRail loggedInUser={loggedInUser} />}>
+        <ErrorState
+          title="Unable to load interview feedback"
+          message={loadError}
+        />
+      </WorkspaceLayout>
+    );
   }
 
   return (

@@ -12,7 +12,7 @@ import {
 
 import { ENDPOINTS } from "@/api/endpoints";
 import { httpPost } from "@/api/httpClient";
-import offerClient from "@/api/clients/offerClient";
+import myApprovalsService from "@/services/myApprovalsService";
 import {
   EmptyState,
   WorkspaceHeader
@@ -59,8 +59,26 @@ function PendingOfferApprovalsPage() {
   };
 
   const handleReject = async (offerId, reason) => {
-    const result = await offerClient.rejectOffer(offerId, reason);
-    showToast(result?.toastMessage || "Offer rejected.", "info");
+    const approvalsResponse = await myApprovalsService.listMyActiveApprovals();
+    const rows = Array.isArray(approvalsResponse?.data) ? approvalsResponse.data : [];
+    const match = rows.find((row) => {
+      const documentType = String(row?.document_type || row?.workflow_type || "")
+        .trim()
+        .toUpperCase();
+      if (documentType !== "OFFER") {
+        return false;
+      }
+      const documentNumber = String(row?.document_number || row?.offer_id || "").trim();
+      return documentNumber === String(offerId);
+    });
+
+    if (!match?.task_id) {
+      showToast("No active approval task found for this offer.", "error");
+      return;
+    }
+
+    const result = await myApprovalsService.rejectApproval(match.task_id, reason);
+    showToast(result?.message || "Offer approval rejected.", "info");
     await refreshOffers?.();
   };
 

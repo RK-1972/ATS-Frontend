@@ -358,6 +358,28 @@ const recruitmentClient = {
     );
   },
 
+  getAiReviewAvailability() {
+    return httpGet(`${ENDPOINTS.recruitment}/ai-review/availability`, () => ({
+      success: true,
+      data: {
+        ai_module_enabled: false,
+        feature_enabled: false,
+        available: false
+      }
+    }));
+  },
+
+  generateAiCandidateReview(candidateId, requisitionCode) {
+    return httpPost(
+      `${ENDPOINTS.recruitment}/candidates/${encodeURIComponent(candidateId)}/requisitions/${encodeURIComponent(requisitionCode)}/ai-review`,
+      {},
+      () => ({
+        success: false,
+        message: "AI review is unavailable."
+      })
+    );
+  },
+
   updateCandidateStage(mapId, stageName, remarks = "") {
     return httpPut(
       `${ENDPOINTS.recruitment}/candidate-mappings/${mapId}/stage`,

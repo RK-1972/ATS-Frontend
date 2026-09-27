@@ -501,7 +501,14 @@ if (
         <CandidateAiInsightsPanel
           open={aiPanelOpen}
           onToggle={() => setAiPanelOpen((prev) => !prev)}
-          skillChips={skillChips}
+          candidateId={candidate?.candidate_id}
+          requisitionCode={
+            mapping?.req_code ||
+            mapping?.requisition_code ||
+            profile?.mapping?.req_code ||
+            profile?.mapping?.requisition_code ||
+            null
+          }
         />
       </Stack>
 
