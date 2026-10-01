@@ -3,7 +3,8 @@ import {
   Typography,
   Stack,
   Avatar,
-  Chip
+  Chip,
+  CircularProgress
 } from "@mui/material";
 
 import {
@@ -63,7 +64,11 @@ function getInitials(name) {
 
 }
 
-function ApprovalTimelinePanel({ events }) {
+function ApprovalTimelinePanel({
+  events,
+  loading = false,
+  emptyMessage = "No activity recorded for this requisition."
+}) {
 
   return (
 
@@ -85,9 +90,21 @@ function ApprovalTimelinePanel({ events }) {
 
       <Box sx={{ maxHeight: 280, overflowY: "auto", px: 2, py: 1 }}>
 
+        {loading ? (
+          <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+            <CircularProgress size={28} />
+          </Box>
+        ) : null}
+
+        {!loading && !events.length ? (
+          <Typography variant="body2" color="text.secondary" fontSize={13} sx={{ py: 1 }}>
+            {emptyMessage}
+          </Typography>
+        ) : null}
+
         <Stack spacing={0}>
 
-          {events.map((event, index) => {
+          {!loading && events.map((event, index) => {
 
             const config =
               EVENT_CONFIG[event.event_type] ?? EVENT_CONFIG.submitted;

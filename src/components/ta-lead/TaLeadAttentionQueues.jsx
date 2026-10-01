@@ -13,7 +13,13 @@ import AssignmentIndOutlinedIcon from "@mui/icons-material/AssignmentIndOutlined
 import TaskAltOutlinedIcon from "@mui/icons-material/TaskAltOutlined";
 
 import EnterpriseModuleIcon from "@/components/enterprise/EnterpriseModuleIcon";
-import { PANEL_SHELL, PANEL_HEADER } from "./taLeadTokens";
+import {
+  PANEL_SHELL,
+  PANEL_HEADER,
+  TA_LEAD_TABLE_ACTION_BUTTON_SX,
+  TA_LEAD_TABLE_SCROLL_SX,
+  TA_LEAD_TABLE_SX
+} from "./taLeadTokens";
 
 function QueueTable({ rows, emptyLabel, actionLabel, onAction }) {
   if (!rows.length) {
@@ -25,19 +31,41 @@ function QueueTable({ rows, emptyLabel, actionLabel, onAction }) {
   }
 
   return (
-    <Box sx={{ overflowX: "auto" }}>
-      <Table size="small" sx={{ minWidth: 420 }}>
+    <Box sx={TA_LEAD_TABLE_SCROLL_SX}>
+      <Table size="small" sx={TA_LEAD_TABLE_SX}>
         <TableHead>
           <TableRow>
-            <TableCell sx={{ fontSize: 11, fontWeight: 700, color: "text.secondary", py: 0.75 }}>
+            <TableCell
+              sx={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: "text.secondary",
+                py: 0.75,
+                width: { xs: "36%", md: "auto" }
+              }}
+            >
               Requisition
             </TableCell>
-            <TableCell sx={{ fontSize: 11, fontWeight: 700, color: "text.secondary", py: 0.75 }}>
+            <TableCell
+              sx={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: "text.secondary",
+                py: 0.75,
+                width: { xs: "38%", md: "auto" }
+              }}
+            >
               Role
             </TableCell>
             <TableCell
               align="right"
-              sx={{ fontSize: 11, fontWeight: 700, color: "text.secondary", py: 0.75, width: 120 }}
+              sx={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: "text.secondary",
+                py: 0.75,
+                width: { xs: "26%", md: 120 }
+              }}
             >
               Action
             </TableCell>
@@ -51,7 +79,10 @@ function QueueTable({ rows, emptyLabel, actionLabel, onAction }) {
               <TableRow
                 key={row.requisition_code || code}
                 hover
-                sx={{ "&:last-child td": { borderBottom: 0 }, "& td": { py: 0.7 } }}
+                sx={{
+                  "&:last-child td": { borderBottom: 0 },
+                  "& td": { py: { xs: 1, md: 0.7 }, verticalAlign: "middle" }
+                }}
               >
                 <TableCell>
                   <Typography sx={{ fontSize: 13, fontWeight: 600, lineHeight: 1.2 }}>
@@ -71,7 +102,7 @@ function QueueTable({ rows, emptyLabel, actionLabel, onAction }) {
                     size="small"
                     variant="outlined"
                     onClick={() => onAction(row)}
-                    sx={{ textTransform: "none", fontSize: 11, py: 0.25 }}
+                    sx={TA_LEAD_TABLE_ACTION_BUTTON_SX}
                   >
                     {actionLabel}
                   </Button>

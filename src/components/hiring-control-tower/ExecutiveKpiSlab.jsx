@@ -121,6 +121,9 @@ function ExecutiveKpiSlab({
             value: metric.value,
             rows: metric.detailRows
           }}
+          sx={{
+            minHeight: { xs: 88, md: denseMotionCard.minHeight }
+          }}
         />
       ))}
     </Box>

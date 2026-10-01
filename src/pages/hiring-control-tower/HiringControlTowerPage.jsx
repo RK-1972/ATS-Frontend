@@ -48,6 +48,8 @@ function HiringControlTowerPage({ towerState }) {
     showClarificationForm,
     clarificationDraft,
     stageNotifications,
+    requisitionBudget,
+    requisitionApprovalPath,
     sortedTimeline,
     stageTimeline,
     setShowClarificationForm,
@@ -82,8 +84,13 @@ function HiringControlTowerPage({ towerState }) {
     handleRequisitionSelect
   } = towerState;
 
-  const { budget } = data;
+  const budget = liveModeEnabled ? requisitionBudget : data.budget;
+  const approvalPath = liveModeEnabled ? requisitionApprovalPath : data.budget_approval_path;
   const headerReady = !displayHeader.isEmpty;
+  const panelsRequireRequisition = liveModeEnabled && !selectedRequisition?.requisition_code;
+  const panelsLoading = liveModeEnabled
+    && Boolean(selectedRequisition?.requisition_code)
+    && lifecycleLoading;
 
   const lifecycleEmptyMessage = liveModeEnabled
     ? "Search and select a requisition to view the real hiring lifecycle."
@@ -220,9 +227,9 @@ function HiringControlTowerPage({ towerState }) {
             sx={{
               display: "flex",
               flexDirection: "column",
-              minHeight: 0,
-              height: workspaceHeight,
-              maxHeight: workspaceHeight,
+              height: { xs: "auto", lg: workspaceHeight },
+              maxHeight: { xs: "none", lg: workspaceHeight },
+              minHeight: { xs: 280, lg: 0 },
               width: "100%"
             }}
           >
@@ -237,7 +244,7 @@ function HiringControlTowerPage({ towerState }) {
             stageTimeline={stageTimeline}
             businessRuleDetails={data.business_rule_details}
             processBusinessRules={data.process_business_rules}
-            budget={budget}
+            budget={liveModeEnabled ? requisitionBudget : budget}
             showClarificationForm={showClarificationForm}
             clarificationDraft={clarificationDraft}
             onApprove={approveStage}
@@ -261,12 +268,28 @@ function HiringControlTowerPage({ towerState }) {
 
         <Grid size={{ xs: 12, md: 6 }}>
           <SectionLabel>Activity</SectionLabel>
-          <ApprovalTimelinePanel events={sortedTimeline} />
+          <ApprovalTimelinePanel
+            events={sortedTimeline}
+            loading={panelsLoading}
+            emptyMessage={
+              panelsRequireRequisition
+                ? "Search and select a requisition to view persisted activity."
+                : "No workflow or offer history recorded for this requisition."
+            }
+          />
         </Grid>
 
         <Grid size={{ xs: 12, md: 6 }}>
           <SectionLabel>Notifications</SectionLabel>
-          <NotificationPreviewPanel notification={stageNotifications} />
+          <NotificationPreviewPanel
+            notification={stageNotifications}
+            loading={panelsLoading}
+            emptyMessage={
+              panelsRequireRequisition
+                ? "Search and select a requisition to view delivery attempts."
+                : "No notification delivery records for this requisition."
+            }
+          />
         </Grid>
 
       </Grid>
@@ -275,7 +298,9 @@ function HiringControlTowerPage({ towerState }) {
         <SectionLabel>Budget</SectionLabel>
         <BudgetValidationPanel
           budget={budget}
-          approvalPath={data.budget_approval_path}
+          approvalPath={approvalPath}
+          loading={panelsLoading}
+          requireRequisition={panelsRequireRequisition}
         />
       </Box>
 

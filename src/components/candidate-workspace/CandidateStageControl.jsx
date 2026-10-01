@@ -42,8 +42,9 @@ function CandidateStageControl({
     setRemarks("");
   };
 
-  const selectDisabled = isSaving || isLoading || isEmpty;
-  const submitDisabled = isSaving || isLoading || isEmpty || !stageName.trim();
+  const catalogBlocked = isLoading || isEmpty || Boolean(error);
+  const selectDisabled = isSaving || catalogBlocked;
+  const submitDisabled = isSaving || catalogBlocked || !stageName.trim();
 
   return (
     <Stack spacing={1} mt={1.5}>
@@ -52,7 +53,7 @@ function CandidateStageControl({
           {error}
         </Alert>
       ) : null}
-      {isEmpty ? (
+      {isEmpty && !error ? (
         <Alert severity="info" sx={{ py: 0 }}>
           No active ATS stages are available.
         </Alert>

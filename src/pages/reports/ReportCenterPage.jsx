@@ -19,6 +19,7 @@ import {
   LoadingState,
   WorkspaceHeader
 } from "../../components/enterprise";
+import { ENTERPRISE_MOBILE_CONTAINED_ACTION_SX } from "../../components/enterprise/enterpriseWorkspaceTokens";
 import { fetchStandardReports } from "./standardReportsApi";
 
 const ICON_MAP = {
@@ -187,7 +188,12 @@ function ReportCenterPage() {
             variant="contained"
             endIcon={<ArrowForwardOutlinedIcon />}
             onClick={() => navigate("/reports/builder")}
-            sx={{ textTransform: "none", fontWeight: 600, flexShrink: 0 }}
+            sx={{
+              textTransform: "none",
+              fontWeight: 600,
+              flexShrink: 0,
+              ...ENTERPRISE_MOBILE_CONTAINED_ACTION_SX
+            }}
           >
             Build Ad-hoc Report
           </Button>

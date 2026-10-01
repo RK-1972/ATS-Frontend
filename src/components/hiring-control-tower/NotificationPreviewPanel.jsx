@@ -6,12 +6,17 @@ import {
   TableBody,
   TableCell,
   TableHead,
-  TableRow
+  TableRow,
+  CircularProgress
 } from "@mui/material";
 
 import { formatOptalynxDateTime } from "@/utils/formatDateTime";
 
-function NotificationPreviewPanel({ notification }) {
+function NotificationPreviewPanel({
+  notification,
+  loading = false,
+  emptyMessage = "No notification delivery records for this requisition."
+}) {
 
   return (
 
@@ -39,15 +44,23 @@ function NotificationPreviewPanel({ notification }) {
 
       </Box>
 
-      {!notification?.deliveries?.length ? (
+      {loading ? (
+        <Box sx={{ p: 2, display: "flex", justifyContent: "center" }}>
+          <CircularProgress size={28} />
+        </Box>
+      ) : null}
+
+      {!loading && !notification?.deliveries?.length ? (
 
         <Box sx={{ p: 2 }}>
           <Typography variant="body2" color="text.secondary" fontSize={13}>
-            Select a stage with notification delivery records to preview.
+            {emptyMessage}
           </Typography>
         </Box>
 
-      ) : (
+      ) : null}
+
+      {!loading && notification?.deliveries?.length ? (
 
         <Table size="small">
 
@@ -111,13 +124,15 @@ function NotificationPreviewPanel({ notification }) {
                     label={row.status}
                     size="small"
                     color={
-                      row.status === "Delivered"
+                      row.status === "Delivered" || row.status === "Success"
                         ? "success"
                         : row.status === "Read"
                           ? "info"
                           : row.status === "Pending"
                             ? "warning"
-                            : "default"
+                            : row.status === "Failed"
+                              ? "error"
+                              : "default"
                     }
                     variant="outlined"
                     sx={{ height: 20, fontSize: 9, fontWeight: 700 }}
@@ -137,7 +152,7 @@ function NotificationPreviewPanel({ notification }) {
 
         </Table>
 
-      )}
+      ) : null}
 
     </Box>
 

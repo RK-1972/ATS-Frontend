@@ -56,7 +56,13 @@ function RecruiterInspector({
   onCompleteTask,
   onAdvanceStage
 }) {
-  const { stages: catalogStages, isLoading: isCatalogLoading, error: catalogError, isEmpty: isCatalogEmpty } = useAtsStageCatalog();
+  const {
+    stages: catalogStages,
+    isLoading: isCatalogLoading,
+    error: catalogError,
+    isEmpty: isCatalogEmpty,
+    isUnavailable: isCatalogUnavailable
+  } = useAtsStageCatalog();
   const stageOptions = buildStageSelectOptions(catalogStages, selectedCandidate?.stage_name);
 
   const activeTab = recruiterUi.inspectorTab || "details";
@@ -101,7 +107,7 @@ function RecruiterInspector({
             { label: "Requisition", value: selectedCandidate?.requisition_code },
             { label: "Source", value: selectedCandidate?.source_type }
           ]}
-          actions={selectedCandidate && nextStage ? (
+          actions={selectedCandidate && nextStage && !isCatalogUnavailable && !isCatalogEmpty ? (
             <Button
               size="small"
               variant="contained"
@@ -157,7 +163,7 @@ function RecruiterInspector({
                 {catalogError}
               </Typography>
             ) : null}
-            {isCatalogEmpty ? (
+            {isCatalogEmpty && !catalogError ? (
               <Typography variant="caption" color="text.secondary">
                 No active ATS stages are available.
               </Typography>
@@ -172,7 +178,7 @@ function RecruiterInspector({
                   selectedCandidate.mapping_id || selectedCandidate.map_id,
                   event.target.value
                 )}
-                disabled={isCatalogLoading || isCatalogEmpty}
+                disabled={isCatalogLoading || isCatalogEmpty || isCatalogUnavailable}
               >
                 {isCatalogLoading ? (
                   <MenuItem value="" disabled>

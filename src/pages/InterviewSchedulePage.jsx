@@ -22,6 +22,7 @@ import masterDataClient from "../api/clients/masterDataClient";
 import { getPublishedRecords } from "../enterprise/masterDataHelpers";
 import AppHeader from "../components/layout/AppHeader";
 import RecruiterNavRail from "../components/layout/RecruiterNavRail";
+import { ENTERPRISE_MOBILE_CONTAINED_ACTION_SX } from "../components/enterprise/enterpriseWorkspaceTokens";
 import {
   EnterpriseDataGrid,
   EnterpriseSurface,
@@ -30,6 +31,13 @@ import {
 } from "../components/enterprise";
 import { useCopilotContext } from "../components/copilot/CopilotContext";
 import { useNavigationFilters } from "@/copilot/core/useNavigationFilters";
+
+const autocompleteTouchSx = {
+  "& .MuiAutocomplete-popupIndicator": {
+    width: { xs: 44, md: 28 },
+    height: { xs: 44, md: 28 }
+  }
+};
 
 const denseFieldSx = {
   "& .MuiInputBase-root": {
@@ -525,7 +533,12 @@ function InterviewSchedulePage() {
             size="small"
             variant="contained"
             onClick={() => navigate(`/view-feedback/${params.row.schedule_id}`)}
-            sx={{ textTransform: "none", minWidth: 0, px: 1.25, py: 0.25 }}
+            sx={{
+              textTransform: "none",
+              minWidth: 0,
+              px: 1.25,
+              ...ENTERPRISE_MOBILE_CONTAINED_ACTION_SX
+            }}
           >
             View
           </Button>
@@ -548,7 +561,7 @@ function InterviewSchedulePage() {
       <Box sx={{ display: "flex" }}>
         <RecruiterNavRail loggedInUser={loggedInUser} />
 
-        <Box component="main" sx={{ flex: 1, minWidth: 0 }}>
+        <Box component="main" sx={{ flex: 1, minWidth: 0, maxWidth: "100%", overflowX: "hidden" }}>
           <Container maxWidth="xl" sx={{ pt: 3, pb: 4 }}>
             <Stack spacing={2}>
               <Box>
@@ -576,6 +589,7 @@ function InterviewSchedulePage() {
                     <Autocomplete
                       size="small"
                       disableClearable
+                      sx={autocompleteTouchSx}
                       options={requisitionOptions}
                       getOptionLabel={(option) => option.label || ""}
                       isOptionEqualToValue={(option, value) => option.value === value.value}
@@ -608,6 +622,7 @@ function InterviewSchedulePage() {
                     <Autocomplete
                       size="small"
                       disableClearable
+                      sx={autocompleteTouchSx}
                       options={candidateOptions}
                       getOptionLabel={(option) => option.label || ""}
                       isOptionEqualToValue={(option, value) => option.value === value.value}
@@ -734,7 +749,7 @@ function InterviewSchedulePage() {
                           textTransform: "none",
                           fontWeight: 600,
                           px: 2.5,
-                          py: 0.75
+                          ...ENTERPRISE_MOBILE_CONTAINED_ACTION_SX
                         }}
                       >
                         Schedule Interview

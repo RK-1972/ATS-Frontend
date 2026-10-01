@@ -32,7 +32,7 @@ function PipelineNode({ label, Icon, active = false, isTerminal = false }) {
 
   return (
 
-    <Stack alignItems="center" spacing={0.5} sx={{ minWidth: 88 }}>
+    <Stack alignItems="center" spacing={0.5} sx={{ minWidth: { xs: 72, md: 88 } }}>
 
       <Box
         sx={{
@@ -123,9 +123,10 @@ function IntegrationTraceBar({ chain }) {
       </Typography>
 
         <Box
+          data-hct-internal-scroll="integration"
           sx={{
             display: "block",
-            overflowX: "auto",
+            overflowX: { xs: "visible", md: "auto" },
             overflowY: "hidden",
             overscrollBehaviorX: "contain",
             width: "100%",
@@ -139,15 +140,18 @@ function IntegrationTraceBar({ chain }) {
 
         <Box
           sx={{
-            width: "max-content",
-            minWidth: "100%"
+            width: { xs: "100%", md: "max-content" },
+            minWidth: { xs: 0, md: "100%" }
           }}
         >
 
         <Box
           sx={{
             display: "flex",
-            alignItems: "flex-start"
+            flexWrap: { xs: "wrap", md: "nowrap" },
+            alignItems: "flex-start",
+            gap: { xs: 1, md: 0 },
+            justifyContent: { xs: "center", md: "flex-start" }
           }}
         >
 
@@ -179,7 +183,7 @@ function IntegrationTraceBar({ chain }) {
               {index < pipelineSteps.length - 1 && (
                 <Box
                   sx={{
-                    display: "flex",
+                    display: { xs: "none", md: "flex" },
                     flexDirection: "column",
                     alignItems: "center",
                     pt: 1.25,

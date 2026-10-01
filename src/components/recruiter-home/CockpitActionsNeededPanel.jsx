@@ -26,7 +26,16 @@ function CockpitActionsNeededPanel({ items = [], selectedId, onSelect, criticalC
   const visible = expanded ? items : items.slice(0, 4);
 
   return (
-    <Box sx={{ ...PANEL_SHELL, display: "flex", flexDirection: "column", height: "100%", minHeight: 0, overflow: "hidden" }}>
+    <Box
+      sx={{
+        ...PANEL_SHELL,
+        display: "flex",
+        flexDirection: "column",
+        height: { xs: "auto", lg: "100%" },
+        minHeight: { xs: 220, lg: 0 },
+        overflow: "hidden"
+      }}
+    >
       <Box sx={{ ...PANEL_HEADER, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
           <EnterpriseModuleIcon
@@ -79,7 +88,8 @@ function CockpitActionsNeededPanel({ items = [], selectedId, onSelect, criticalC
                   width: "100%",
                   m: 0,
                   px: 1.5,
-                  py: 1,
+                  py: { xs: 1.25, md: 1 },
+                  minHeight: { xs: 48, md: "auto" },
                   gap: 1,
                   border: 0,
                   borderBottom: index < visible.length - 1 ? `1px solid ${DESIGN.border}` : 0,
@@ -101,7 +111,19 @@ function CockpitActionsNeededPanel({ items = [], selectedId, onSelect, criticalC
                   <Typography sx={{ fontSize: 13, fontWeight: 600, color: DESIGN.textPrimary, lineHeight: 1.3 }}>
                     {item.displayType || meta.displayType}
                   </Typography>
-                  <Typography sx={{ fontSize: 11, color: DESIGN.textSecondary, mt: 0.25 }} noWrap>
+                  <Typography
+                    sx={{
+                      fontSize: 11,
+                      color: DESIGN.textSecondary,
+                      mt: 0.25,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      display: { xs: "-webkit-box", md: "block" },
+                      WebkitLineClamp: { xs: 2, md: 1 },
+                      WebkitBoxOrient: "vertical",
+                      whiteSpace: { xs: "normal", md: "nowrap" }
+                    }}
+                  >
                     {item.roleLine}
                   </Typography>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mt: 0.5 }}>
@@ -117,7 +139,24 @@ function CockpitActionsNeededPanel({ items = [], selectedId, onSelect, criticalC
 
       {items.length > 4 && (
         <Box sx={{ px: 1.5, py: 0.75, flexShrink: 0, borderTop: visible.length > 0 ? `1px solid ${DESIGN.border}` : 0 }}>
-          <Link component="button" type="button" underline="hover" onClick={onViewAll} sx={{ fontSize: 12, fontWeight: 600, color: DESIGN.blue, border: 0, bgcolor: "transparent", cursor: "pointer" }}>
+          <Link
+            component="button"
+            type="button"
+            underline="hover"
+            onClick={onViewAll}
+            sx={{
+              fontSize: 12,
+              fontWeight: 600,
+              color: DESIGN.blue,
+              border: 0,
+              bgcolor: "transparent",
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              minHeight: { xs: 44, md: "auto" },
+              py: { xs: 0.5, md: 0 }
+            }}
+          >
             View all actions →
           </Link>
         </Box>

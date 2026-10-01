@@ -21,7 +21,8 @@ function WorkspaceHeader({
           sx={{
             display: "block",
             mb: 0.5,
-            fontSize: typography.caption.fontSize
+            fontSize: typography.caption.fontSize,
+            overflowWrap: "anywhere"
           }}
         >
           {breadcrumbs.map((b) => b.label).join(" / ")}

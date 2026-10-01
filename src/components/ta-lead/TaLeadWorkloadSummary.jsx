@@ -13,7 +13,13 @@ import { useTheme } from "@mui/material/styles";
 import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
 
 import EnterpriseModuleIcon from "@/components/enterprise/EnterpriseModuleIcon";
-import { PANEL_SHELL, PANEL_HEADER, ROW_INTERACTIVE } from "./taLeadTokens";
+import {
+  PANEL_SHELL,
+  PANEL_HEADER,
+  ROW_INTERACTIVE,
+  TA_LEAD_TABLE_SCROLL_SX,
+  TA_LEAD_WORKLOAD_TABLE_SX
+} from "./taLeadTokens";
 
 function initialsFromName(name, code) {
   const source = String(name || code || "").trim();
@@ -98,7 +104,8 @@ function TaLeadWorkloadSummary({ rows = [], onRowClick }) {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          gap: 1
+          gap: 1,
+          flexWrap: { xs: "wrap", md: "nowrap" }
         }}
       >
         <Stack direction="row" alignItems="center" spacing={0.75}>
@@ -130,28 +137,54 @@ function TaLeadWorkloadSummary({ rows = [], onRowClick }) {
         </Typography>
       </Box>
 
-      <Box sx={{ overflowX: "auto" }}>
-        <Table size="small" sx={{ minWidth: 480 }}>
+      <Box sx={TA_LEAD_TABLE_SCROLL_SX}>
+        <Table size="small" sx={TA_LEAD_WORKLOAD_TABLE_SX}>
           <TableHead>
             <TableRow>
-              <TableCell sx={{ fontSize: 11, fontWeight: 700, color: "text.secondary", py: 0.85 }}>
+              <TableCell
+                sx={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "text.secondary",
+                  py: 0.85,
+                  width: { xs: "40%", md: "auto" }
+                }}
+              >
                 Recruiter
               </TableCell>
               <TableCell
                 align="right"
-                sx={{ fontSize: 11, fontWeight: 700, color: "text.secondary", py: 0.85, width: 110 }}
+                sx={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "text.secondary",
+                  py: 0.85,
+                  width: { xs: "18%", md: 110 }
+                }}
               >
                 Requisitions
               </TableCell>
               <TableCell
                 align="right"
-                sx={{ fontSize: 11, fontWeight: 700, color: "text.secondary", py: 0.85, width: 130 }}
+                sx={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "text.secondary",
+                  py: 0.85,
+                  width: { xs: "22%", md: 130 }
+                }}
               >
                 Active Candidates
               </TableCell>
               <TableCell
                 align="right"
-                sx={{ fontSize: 11, fontWeight: 700, color: "text.secondary", py: 0.85, width: 100 }}
+                sx={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "text.secondary",
+                  py: 0.85,
+                  width: { xs: "20%", md: 100 }
+                }}
               >
                 Load
               </TableCell>
@@ -170,7 +203,7 @@ function TaLeadWorkloadSummary({ rows = [], onRowClick }) {
                   sx={{
                     ...(onRowClick ? ROW_INTERACTIVE : {}),
                     "&:last-child td": { borderBottom: 0 },
-                    "& td": { py: 0.75 }
+                    "& td": { py: { xs: 1, md: 0.75 } }
                   }}
                 >
                   <TableCell>

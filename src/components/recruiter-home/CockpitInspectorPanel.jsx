@@ -118,7 +118,16 @@ function CockpitInspectorPanel({
   const ctx = resolveContext({ requisition, actionItem, selectedCandidate, enrichedPriority, priorityCandidate });
 
   return (
-    <Box sx={{ ...PANEL_SHELL, display: "flex", flexDirection: "column", height: "100%", minHeight: 0, overflow: "hidden" }}>
+    <Box
+      sx={{
+        ...PANEL_SHELL,
+        display: "flex",
+        flexDirection: "column",
+        height: { xs: "auto", lg: "100%" },
+        minHeight: { xs: 220, lg: 0 },
+        overflow: "hidden"
+      }}
+    >
       <Box sx={{ ...PANEL_HEADER, display: "flex", alignItems: "center", gap: 0.75, flexShrink: 0 }}>
         <EnterpriseModuleIcon
           icon={MdPerson}
@@ -195,6 +204,7 @@ function CockpitInspectorPanel({
             fontWeight: 600,
             fontSize: 13,
             py: 0.85,
+            minHeight: { xs: 44, md: "auto" },
             boxShadow: "none",
             bgcolor: "#0B3D7A",
             "&:hover": { bgcolor: "#092F5E", boxShadow: "none" }

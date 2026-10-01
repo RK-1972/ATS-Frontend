@@ -75,7 +75,8 @@ function CandidateAssignmentCard({
         mt: 1,
         borderRadius: 2,
         textTransform: "none",
-        fontWeight: 600
+        fontWeight: 600,
+        minHeight: { xs: 44, md: 36 }
       }}
     >
       Release Candidate
@@ -91,7 +92,8 @@ function CandidateAssignmentCard({
         mt: 1,
         borderRadius: 2,
         textTransform: "none",
-        fontWeight: 600
+        fontWeight: 600,
+        minHeight: { xs: 44, md: 36 }
       }}
     >
       Assign Requisition

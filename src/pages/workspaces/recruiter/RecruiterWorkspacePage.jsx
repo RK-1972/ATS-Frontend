@@ -10,8 +10,10 @@ import {
   Typography,
   Button,
   ToggleButton,
-  ToggleButtonGroup
+  ToggleButtonGroup,
+  useMediaQuery
 } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import RefreshOutlinedIcon from "@mui/icons-material/RefreshOutlined";
 import {
   WorkspaceHeader,
@@ -101,7 +103,27 @@ const PIPELINE_COLUMNS = [
   }
 ];
 
+const MOBILE_GRID_WRAPPER_SX = {
+  width: "100%",
+  minWidth: 0,
+  maxWidth: "100%",
+  "& .MuiDataGrid-columnHeader .MuiIconButton-root": {
+    width: { xs: 44, md: 28 },
+    height: { xs: 44, md: 28 }
+  },
+  "& .MuiDataGrid-menuIconButton": {
+    width: { xs: 44, md: 28 },
+    height: { xs: 44, md: 28 }
+  },
+  "& .MuiTablePagination-root .MuiIconButton-root": {
+    width: { xs: 44, md: 34 },
+    height: { xs: 44, md: 34 }
+  }
+};
+
 function RecruiterWorkspacePage() {
+  const theme = useTheme();
+  const isMobileLayout = useMediaQuery(theme.breakpoints.down("md"));
   const workspace = useOutletContext();
   const {
     user,
@@ -184,6 +206,11 @@ function RecruiterWorkspacePage() {
             size="small"
             startIcon={<RefreshOutlinedIcon />}
             onClick={refreshRecruitment}
+            sx={{
+              minHeight: { xs: 44, md: 32 },
+              py: { xs: 1, md: 0.5 },
+              textTransform: "none"
+            }}
           >
             Refresh
           </Button>
@@ -212,6 +239,16 @@ function RecruiterWorkspacePage() {
 
       <Box mb={2}>
         <EnterpriseToolbar
+          sx={{
+            flexDirection: { xs: "column", md: "row" },
+            alignItems: { xs: "stretch", md: "center" },
+            gap: { xs: 1, md: 1 },
+            "& > .MuiStack-root": {
+              width: { xs: "100%", md: "auto" },
+              maxWidth: "100%",
+              minWidth: 0
+            }
+          }}
           left={(
             <ToggleButtonGroup
               exclusive
@@ -220,6 +257,16 @@ function RecruiterWorkspacePage() {
               onChange={(_, value) => {
                 if (value) {
                   setRecruiterUi({ activeTab: value });
+                }
+              }}
+              sx={{
+                flexWrap: { xs: "wrap", md: "nowrap" },
+                width: { xs: "100%", md: "auto" },
+                "& .MuiToggleButton-root": {
+                  flex: { xs: "1 1 auto", md: "0 1 auto" },
+                  minHeight: { xs: 44, md: 32 },
+                  py: { xs: 1, md: 0.5 },
+                  textTransform: "none"
                 }
               }}
             >
@@ -232,11 +279,15 @@ function RecruiterWorkspacePage() {
             </ToggleButtonGroup>
           )}
           right={(
-            <SearchBar
-              value={recruiterUi.searchQuery}
-              onChange={(event) => setRecruiterUi({ searchQuery: event.target.value })}
-              placeholder="Search requisitions or candidates…"
-            />
+            <Box sx={{ width: { xs: "100%", md: "auto" }, minWidth: 0 }}>
+              <SearchBar
+                value={recruiterUi.searchQuery}
+                onChange={(event) => setRecruiterUi({ searchQuery: event.target.value })}
+                placeholder="Search requisitions or candidates…"
+                width="100%"
+                size={isMobileLayout ? "medium" : "small"}
+              />
+            </Box>
           )}
         />
       </Box>
@@ -255,24 +306,38 @@ function RecruiterWorkspacePage() {
               />
             </EnterpriseSurface>
           ) : (
-            <EnterpriseDataGrid
-              rows={gridRows}
-              columns={
-                recruiterUi.activeTab === "pipeline"
-                  ? PIPELINE_COLUMNS
-                  : REQUISITION_COLUMNS
-              }
-              height={420}
-              onRowClick={handleRowClick}
-            />
+            <Box sx={MOBILE_GRID_WRAPPER_SX}>
+              <EnterpriseDataGrid
+                rows={gridRows}
+                columns={
+                  recruiterUi.activeTab === "pipeline"
+                    ? PIPELINE_COLUMNS
+                    : REQUISITION_COLUMNS
+                }
+                height={420}
+                onRowClick={handleRowClick}
+                rowHeight={isMobileLayout ? 44 : 36}
+                columnHeaderHeight={isMobileLayout ? 48 : 36}
+              />
+            </Box>
           )
         )}
         secondary={(
-          <TaskSummary
-            tasks={tasks}
-            onComplete={handleCompleteTask}
-            maxItems={5}
-          />
+          <Box
+            sx={{
+              "& button.MuiButton-outlined": {
+                minHeight: { xs: 44, md: 32 },
+                py: { xs: 1.1, md: 0.5 },
+                px: { xs: 1.5, md: 1 }
+              }
+            }}
+          >
+            <TaskSummary
+              tasks={tasks}
+              onComplete={handleCompleteTask}
+              maxItems={5}
+            />
+          </Box>
         )}
         primaryFlex={1.6}
         secondaryFlex={1}

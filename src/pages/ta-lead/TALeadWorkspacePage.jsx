@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useNavigate } from "react-router-dom";
 
-import { Box, Stack, Typography } from "@mui/material";
+import { Alert, Box, Stack, Typography } from "@mui/material";
 
 import AssignmentIndOutlinedIcon from "@mui/icons-material/AssignmentIndOutlined";
 
@@ -60,7 +60,11 @@ function TALeadWorkspacePage() {
 
   const navigate = useNavigate();
 
-  const { stages: catalogStages } = useAtsStageCatalog();
+  const {
+    stages: catalogStages,
+    error: catalogError,
+    isEmpty: isCatalogEmpty
+  } = useAtsStageCatalog();
 
   const [loading, setLoading] = useState(true);
 
@@ -403,7 +407,15 @@ function TALeadWorkspacePage() {
 
     <WorkspaceLayout navRail={<TALeadNavRail />}>
 
-      <Box sx={{ py: { xs: 1.5, sm: 2 }, width: "100%", minWidth: 0 }}>
+      <Box
+        sx={{
+          py: { xs: 1.5, sm: 2 },
+          width: "100%",
+          minWidth: 0,
+          maxWidth: "100%",
+          overflowX: "hidden"
+        }}
+      >
 
         <EnterpriseWorkspaceHeader
 
@@ -414,6 +426,17 @@ function TALeadWorkspacePage() {
         />
 
 
+
+        {catalogError ? (
+          <Alert severity="warning" sx={{ mt: 1, mb: 1 }}>
+            Pipeline stages unavailable: {catalogError}
+          </Alert>
+        ) : null}
+        {!catalogError && isCatalogEmpty ? (
+          <Alert severity="info" sx={{ mt: 1, mb: 1 }}>
+            No active ATS pipeline stages are configured.
+          </Alert>
+        ) : null}
 
         <Box sx={{ mt: 1, mb: 1.5 }}>
 
@@ -455,7 +478,7 @@ function TALeadWorkspacePage() {
 
         >
 
-          <Stack spacing={1.5} minWidth={0}>
+          <Stack spacing={1.5} minWidth={0} sx={{ maxWidth: "100%", overflowX: "hidden" }}>
 
             {pipelineStages ? (
               <TaLeadPipelineFlow

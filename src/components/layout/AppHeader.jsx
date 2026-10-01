@@ -13,12 +13,15 @@ import {
   Divider,
   Badge,
   Menu,
-  Stack
+  MenuItem,
+  Stack,
+  useMediaQuery
 } from "@mui/material";
 import { alpha, useTheme } from "@mui/material/styles";
 
 import NotificationsNoneOutlinedIcon from "@mui/icons-material/NotificationsNoneOutlined";
 import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
+import MenuOutlinedIcon from "@mui/icons-material/MenuOutlined";
 
 import candidateRepository from "@/repositories/candidateRepository";
 import MyApprovalsService from "@/services/myApprovalsService";
@@ -94,14 +97,26 @@ function resolveWorkAssignmentLabel(userRole) {
  * Authenticated controls (avatar, name, work-assignment badge, notifications, logout)
  * are owned exclusively by this component.
  */
+const mobileIconButtonSx = {
+  color: "#FFFFFF",
+  width: 44,
+  height: 44,
+  "&:hover": {
+    backgroundColor: "rgba(255,255,255,.08)"
+  }
+};
+
 function AppHeader({
   loggedInUser: loggedInUserProp,
   userRole: userRoleProp,
   onLogout,
-  showUserActions
+  showUserActions,
+  showMobileNavMenu = false,
+  onMobileNavOpen
 }) {
   const theme = useTheme();
   const { brand, layout } = theme.tokens;
+  const isMobileViewport = useMediaQuery(theme.breakpoints.down("md"));
   const navigate = useNavigate();
 
   const storedUser = readStoredUser();
@@ -124,6 +139,7 @@ function AppHeader({
   const [requisitionNotifications, setRequisitionNotifications] = useState([]);
   const [offerNotifications, setOfferNotifications] = useState([]);
   const [menuAnchor, setMenuAnchor] = useState(null);
+  const [userMenuAnchor, setUserMenuAnchor] = useState(null);
 
   const notificationFeed = useMemo(
     () =>
@@ -316,6 +332,7 @@ function AppHeader({
   };
 
   const handleLogout = () => {
+    setUserMenuAnchor(null);
     if (typeof onLogout === "function") {
       onLogout();
       return;
@@ -325,80 +342,15 @@ function AppHeader({
     navigate("/login");
   };
 
-  return (
-    <AppBar
-      position="sticky"
-      elevation={2}
-      sx={{
-        backgroundColor: brand.headerBg,
-        height: layout.headerHeight,
-        justifyContent: "center",
-        borderBottom: `1px solid ${brand.headerBorder}`
-      }}
-    >
-      <Toolbar
-        sx={{
-          px: 4,
-          minHeight: `${layout.headerHeight}px !important`,
-          display: "grid",
-          gridTemplateColumns: "1fr auto 1fr",
-          alignItems: "center",
-          gap: 2
-        }}
-      >
-        <Box aria-hidden="true" />
+  const handleUserMenuOpen = (event) => {
+    setUserMenuAnchor(event.currentTarget);
+  };
 
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "center",
-            justifySelf: "center"
-          }}
-        >
-          <BrandLogo />
-        </Box>
+  const handleUserMenuClose = () => {
+    setUserMenuAnchor(null);
+  };
 
-        <Box
-          sx={{
-            minWidth: shouldShowUserActions ? 330 : 0,
-            display: "flex",
-            justifyContent: "flex-end",
-            justifySelf: "end",
-            alignItems: "center",
-            gap: 2
-          }}
-        >
-          {shouldShowUserActions ? (
-            <>
-              <OptalynxCopilot
-                iconButtonSx={{
-                  color: "#FFFFFF",
-                  "&:hover": {
-                    backgroundColor: "rgba(255,255,255,.08)"
-                  }
-                }}
-              />
-
-              <Tooltip title="Notifications">
-                <IconButton
-                  onClick={handleBellClick}
-                  sx={{
-                    color: "#FFFFFF",
-                    "&:hover": {
-                      backgroundColor: "rgba(255,255,255,.08)"
-                    }
-                  }}
-                >
-                  <Badge
-                    badgeContent={pendingCount}
-                    color="error"
-                    invisible={pendingCount === 0}
-                  >
-                    <NotificationsNoneOutlinedIcon />
-                  </Badge>
-                </IconButton>
-              </Tooltip>
-
+  const notificationMenu = (
               <Menu
                 anchorEl={menuAnchor}
                 open={Boolean(menuAnchor)}
@@ -492,77 +444,272 @@ function AppHeader({
                   </Box>
                 )}
               </Menu>
+  );
 
-              <Divider
-                orientation="vertical"
-                flexItem
-                sx={{
-                  borderColor: "rgba(255,255,255,.15)"
-                }}
-              />
+  const desktopUserCluster = shouldShowUserActions ? (
+    <>
+      <OptalynxCopilot
+        iconButtonSx={{
+          color: "#FFFFFF",
+          "&:hover": {
+            backgroundColor: "rgba(255,255,255,.08)"
+          }
+        }}
+      />
 
-              <Avatar
-                sx={{
-                  bgcolor: "#F59E0B",
-                  color: "#1F3B63",
-                  width: 46,
-                  height: 46,
-                  fontWeight: 700,
-                  fontSize: 18
-                }}
-              >
-                {resolvedUser?.full_name?.charAt(0)?.toUpperCase() || "U"}
-              </Avatar>
+      <Tooltip title="Notifications">
+        <IconButton
+          onClick={handleBellClick}
+          sx={{
+            color: "#FFFFFF",
+            "&:hover": {
+              backgroundColor: "rgba(255,255,255,.08)"
+            }
+          }}
+        >
+          <Badge
+            badgeContent={pendingCount}
+            color="error"
+            invisible={pendingCount === 0}
+          >
+            <NotificationsNoneOutlinedIcon />
+          </Badge>
+        </IconButton>
+      </Tooltip>
 
-              <Box>
-                <Typography
-                  sx={{
-                    color: "#FFFFFF",
-                    fontWeight: 600,
-                    fontSize: 16,
-                    lineHeight: 1.2
-                  }}
-                >
-                  {resolvedUser?.full_name || "User"}
-                </Typography>
+      {notificationMenu}
 
-                <Chip
-                  label={workAssignmentLabel}
-                  size="small"
-                  title={workAssignmentLabel}
-                  sx={{
-                    mt: 0.5,
-                    maxWidth: 180,
-                    bgcolor: "rgba(255,255,255,.12)",
-                    color: "#FFFFFF",
-                    fontWeight: 600,
-                    height: 24,
-                    "& .MuiChip-label": {
-                      overflow: "hidden",
-                      textOverflow: "ellipsis"
-                    }
-                  }}
-                />
-              </Box>
+      <Divider
+        orientation="vertical"
+        flexItem
+        sx={{
+          borderColor: "rgba(255,255,255,.15)"
+        }}
+      />
 
-              <Tooltip title="Logout">
-                <IconButton
-                  onClick={handleLogout}
-                  sx={{
-                    color: "#FFFFFF",
-                    ml: 1,
-                    "&:hover": {
-                      backgroundColor: "#EF4444"
-                    }
-                  }}
-                >
-                  <LogoutOutlinedIcon />
-                </IconButton>
-              </Tooltip>
-            </>
-          ) : null}
+      <Avatar
+        sx={{
+          bgcolor: "#F59E0B",
+          color: "#1F3B63",
+          width: 46,
+          height: 46,
+          fontWeight: 700,
+          fontSize: 18
+        }}
+      >
+        {resolvedUser?.full_name?.charAt(0)?.toUpperCase() || "U"}
+      </Avatar>
+
+      <Box>
+        <Typography
+          sx={{
+            color: "#FFFFFF",
+            fontWeight: 600,
+            fontSize: 16,
+            lineHeight: 1.2
+          }}
+        >
+          {resolvedUser?.full_name || "User"}
+        </Typography>
+
+        <Chip
+          label={workAssignmentLabel}
+          size="small"
+          title={workAssignmentLabel}
+          sx={{
+            mt: 0.5,
+            maxWidth: 180,
+            bgcolor: "rgba(255,255,255,.12)",
+            color: "#FFFFFF",
+            fontWeight: 600,
+            height: 24,
+            "& .MuiChip-label": {
+              overflow: "hidden",
+              textOverflow: "ellipsis"
+            }
+          }}
+        />
+      </Box>
+
+      <Tooltip title="Logout">
+        <IconButton
+          onClick={handleLogout}
+          sx={{
+            color: "#FFFFFF",
+            ml: 1,
+            "&:hover": {
+              backgroundColor: "#EF4444"
+            }
+          }}
+        >
+          <LogoutOutlinedIcon />
+        </IconButton>
+      </Tooltip>
+    </>
+  ) : null;
+
+  const mobileUserCluster = shouldShowUserActions ? (
+    <>
+      <OptalynxCopilot iconButtonSx={mobileIconButtonSx} />
+
+      <Tooltip title="Notifications">
+        <IconButton onClick={handleBellClick} sx={mobileIconButtonSx} aria-label="Notifications">
+          <Badge badgeContent={pendingCount} color="error" invisible={pendingCount === 0}>
+            <NotificationsNoneOutlinedIcon />
+          </Badge>
+        </IconButton>
+      </Tooltip>
+
+      {notificationMenu}
+
+      <Tooltip title="Account">
+        <IconButton
+          onClick={handleUserMenuOpen}
+          sx={mobileIconButtonSx}
+          aria-label="Open account menu"
+        >
+          <Avatar
+            sx={{
+              bgcolor: "#F59E0B",
+              color: "#1F3B63",
+              width: 32,
+              height: 32,
+              fontWeight: 700,
+              fontSize: 14
+            }}
+          >
+            {resolvedUser?.full_name?.charAt(0)?.toUpperCase() || "U"}
+          </Avatar>
+        </IconButton>
+      </Tooltip>
+
+      <Menu
+        anchorEl={userMenuAnchor}
+        open={Boolean(userMenuAnchor)}
+        onClose={handleUserMenuClose}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
+        slotProps={{
+          paper: {
+            sx: { minWidth: 240, maxWidth: "92vw" }
+          }
+        }}
+      >
+        <Box sx={{ px: 2, py: 1.5 }}>
+          <Typography sx={{ fontWeight: 600, fontSize: 15 }}>
+            {resolvedUser?.full_name || "User"}
+          </Typography>
+          <Chip
+            label={workAssignmentLabel}
+            size="small"
+            title={workAssignmentLabel}
+            sx={{ mt: 1, maxWidth: "100%" }}
+          />
         </Box>
-      </Toolbar>
+        <Divider />
+        <MenuItem onClick={handleLogout} sx={{ py: 1.25 }}>
+          <LogoutOutlinedIcon fontSize="small" sx={{ mr: 1 }} />
+          Logout
+        </MenuItem>
+      </Menu>
+    </>
+  ) : null;
+
+  return (
+    <AppBar
+      position="sticky"
+      elevation={2}
+      sx={{
+        backgroundColor: brand.headerBg,
+        height: layout.headerHeight,
+        justifyContent: "center",
+        borderBottom: `1px solid ${brand.headerBorder}`
+      }}
+    >
+      {isMobileViewport ? (
+        <Toolbar
+          sx={{
+            px: 1,
+            minHeight: `${layout.headerHeight}px !important`,
+            display: "flex",
+            alignItems: "center",
+            gap: 0.5,
+            minWidth: 0
+          }}
+        >
+          {showMobileNavMenu ? (
+            <IconButton
+              onClick={onMobileNavOpen}
+              sx={mobileIconButtonSx}
+              aria-label="Open navigation menu"
+            >
+              <MenuOutlinedIcon />
+            </IconButton>
+          ) : (
+            <Box sx={{ width: 44, flexShrink: 0 }} aria-hidden />
+          )}
+
+          <Box
+            sx={{
+              flex: 1,
+              minWidth: 0,
+              display: "flex",
+              justifyContent: "center",
+              overflow: "hidden"
+            }}
+          >
+            <BrandLogo compact />
+          </Box>
+
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 0.25,
+              flexShrink: 0,
+              minWidth: 0
+            }}
+          >
+            {mobileUserCluster}
+          </Box>
+        </Toolbar>
+      ) : (
+        <Toolbar
+          sx={{
+            px: 4,
+            minHeight: `${layout.headerHeight}px !important`,
+            display: "grid",
+            gridTemplateColumns: "1fr auto 1fr",
+            alignItems: "center",
+            gap: 2
+          }}
+        >
+          <Box aria-hidden="true" />
+
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              justifySelf: "center"
+            }}
+          >
+            <BrandLogo />
+          </Box>
+
+          <Box
+            sx={{
+              minWidth: shouldShowUserActions ? 330 : 0,
+              display: "flex",
+              justifyContent: "flex-end",
+              justifySelf: "end",
+              alignItems: "center",
+              gap: 2
+            }}
+          >
+            {desktopUserCluster}
+          </Box>
+        </Toolbar>
+      )}
     </AppBar>
   );
 }

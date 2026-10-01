@@ -13,7 +13,12 @@ function getLoggedInUser() {
 
 function useRecruiterWorkspace() {
   const user = getLoggedInUser();
-  const { stages: catalogStages } = useAtsStageCatalog();
+  const {
+    stages: catalogStages,
+    error: atsStageCatalogError,
+    isEmpty: isAtsStageCatalogEmpty,
+    isUnavailable: isAtsStageCatalogUnavailable
+  } = useAtsStageCatalog();
 
   const recruitment = useEnterpriseStore((state) => state.recruitment);
   const taskInbox = useEnterpriseStore((state) => state.taskInbox);
@@ -61,6 +66,9 @@ function useRecruiterWorkspace() {
     setRecruiterUi,
     completeTask,
     refreshRecruitment,
+    atsStageCatalogError,
+    isAtsStageCatalogEmpty,
+    isAtsStageCatalogUnavailable,
     isLoading: recruitment?.requisitions?.length === 0
       && recruitment?.pipeline?.length === 0
       && !recruiterUi.initialLoadComplete

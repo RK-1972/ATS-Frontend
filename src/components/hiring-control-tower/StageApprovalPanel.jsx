@@ -21,6 +21,12 @@ import {
 
 import ConfigSurface from "../platform-config/ConfigSurface";
 
+const HCT_ACTION_BUTTON_SX = {
+  fontWeight: 600,
+  minHeight: { xs: 44, md: 32 },
+  py: { xs: 1, md: 0.5 }
+};
+
 function ApprovalWorkspaceContent({
 
   stage,
@@ -93,7 +99,7 @@ function ApprovalWorkspaceContent({
             color="success"
             startIcon={<MdCheckCircleOutline size={18} />}
             onClick={() => onApprove(stage.key)}
-            sx={{ fontWeight: 600 }}
+            sx={HCT_ACTION_BUTTON_SX}
           >
             Approve
           </Button>
@@ -104,7 +110,7 @@ function ApprovalWorkspaceContent({
             color="error"
             startIcon={<MdCancel size={18} />}
             onClick={() => onReject(stage.key)}
-            sx={{ fontWeight: 600 }}
+            sx={HCT_ACTION_BUTTON_SX}
           >
             Reject
           </Button>
@@ -115,7 +121,7 @@ function ApprovalWorkspaceContent({
             color="warning"
             startIcon={<MdHelpOutline size={18} />}
             onClick={() => onRequestClarification(stage.key)}
-            sx={{ fontWeight: 600 }}
+            sx={HCT_ACTION_BUTTON_SX}
           >
             Request Clarification
           </Button>
@@ -147,7 +153,7 @@ function ApprovalWorkspaceContent({
             color="secondary"
             startIcon={<MdReply size={18} />}
             onClick={() => onSubmitClarification(stage.key)}
-            sx={{ mt: 0.75, fontWeight: 600 }}
+            sx={{ mt: 0.75, ...HCT_ACTION_BUTTON_SX }}
           >
             Submit Clarification
           </Button>
@@ -243,7 +249,7 @@ function ApprovalWorkspaceContent({
                 size="small"
                 startIcon={<MdSend size={18} />}
                 onClick={() => onSendClarification(stage.key)}
-                sx={{ fontWeight: 600 }}
+                sx={HCT_ACTION_BUTTON_SX}
               >
                 Send
               </Button>
@@ -252,6 +258,7 @@ function ApprovalWorkspaceContent({
                 variant="text"
                 size="small"
                 onClick={onCancelClarification}
+                sx={HCT_ACTION_BUTTON_SX}
               >
                 Cancel
               </Button>

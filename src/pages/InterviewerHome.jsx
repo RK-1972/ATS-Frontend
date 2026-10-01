@@ -33,6 +33,7 @@ import {
   StatusChip,
   WorkspaceHeader
 } from "../components/enterprise";
+import { ENTERPRISE_MOBILE_PRIMARY_BUTTON_SX } from "../components/enterprise/enterpriseWorkspaceTokens";
 import { useNavigationFilters } from "@/copilot/core/useNavigationFilters";
 
 function InterviewerHome() {
@@ -144,6 +145,13 @@ function InterviewerHome() {
     setResumeUnavailable((prev) => ({ ...prev, open: false }));
   };
 
+  const gridActionSx = {
+    textTransform: "none",
+    minWidth: 0,
+    px: { xs: 1.25, md: 1 },
+    ...ENTERPRISE_MOBILE_PRIMARY_BUTTON_SX
+  };
+
   const openJdAlert = (row) => {
     alert(
       `Client : ${row.client_name}\n\nPosition : ${row.job_title}\n\nPrimary Skill : ${row.primary_skill}\n\nSecondary Skill : ${row.secondary_skill}\n\nExperience : ${row.experience_min} - ${row.experience_max} Years`
@@ -200,7 +208,7 @@ function InterviewerHome() {
             variant="outlined"
             startIcon={<DescriptionOutlinedIcon sx={{ fontSize: 16 }} />}
             onClick={() => openResumePreview(params.row)}
-            sx={{ textTransform: "none", minWidth: 0, px: 1, py: 0.25 }}
+            sx={gridActionSx}
           >
             Resume
           </Button>
@@ -222,7 +230,7 @@ function InterviewerHome() {
           variant="outlined"
           startIcon={<WorkOutlineOutlinedIcon sx={{ fontSize: 16 }} />}
           onClick={() => openJdAlert(params.row)}
-          sx={{ textTransform: "none", minWidth: 0, px: 1, py: 0.25 }}
+          sx={gridActionSx}
         >
           JD
         </Button>
@@ -239,7 +247,7 @@ function InterviewerHome() {
           <Button
             size="small"
             disabled
-            sx={{ textTransform: "none", minWidth: 0, px: 1, py: 0.25 }}
+            sx={gridActionSx}
           >
             Completed
           </Button>
@@ -249,7 +257,7 @@ function InterviewerHome() {
             variant="outlined"
             startIcon={<VideocamOutlinedIcon sx={{ fontSize: 16 }} />}
             onClick={() => window.open(params.row.meeting_link, "_blank")}
-            sx={{ textTransform: "none", minWidth: 0, px: 1, py: 0.25 }}
+            sx={gridActionSx}
           >
             Join Teams
           </Button>
@@ -267,10 +275,7 @@ function InterviewerHome() {
             size="small"
             disabled
             sx={{
-              textTransform: "none",
-              minWidth: 0,
-              px: 1,
-              py: 0.25,
+              ...gridActionSx,
               bgcolor: "success.50",
               color: "success.dark"
             }}
@@ -283,7 +288,7 @@ function InterviewerHome() {
             variant="contained"
             startIcon={<RateReviewOutlinedIcon sx={{ fontSize: 16 }} />}
             onClick={() => navigate(`/feedback/${params.row.schedule_id}`)}
-            sx={{ textTransform: "none", minWidth: 0, px: 1.25, py: 0.25 }}
+            sx={gridActionSx}
           >
             Submit
           </Button>
@@ -306,7 +311,11 @@ function InterviewerHome() {
     <WorkspaceLayout
       navRail={<RecruiterNavRail loggedInUser={loggedInUser} />}
     >
-      <Container maxWidth="xl" disableGutters sx={{ pt: 0, pb: 1 }}>
+      <Container
+        maxWidth="xl"
+        disableGutters
+        sx={{ pt: 0, pb: 1, width: "100%", minWidth: 0, maxWidth: "100%" }}
+      >
         <Stack spacing={2}>
           <WorkspaceHeader
             title="Interviewer Workspace"

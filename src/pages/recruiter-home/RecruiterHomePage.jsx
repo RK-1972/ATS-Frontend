@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Box, Button, Typography } from "@mui/material";
+import { Alert, Box, Button, Typography } from "@mui/material";
 import { MdSwapHoriz } from "react-icons/md";
 import { LoadingState, EnterpriseModuleIcon } from "@/components/enterprise";
 import RecruiterCockpitHeader from "@/components/recruiter-home/RecruiterCockpitHeader";
@@ -26,7 +26,11 @@ import useAtsStageCatalog from "@/hooks/useAtsStageCatalog";
 function RecruiterHomePage() {
   const navigate = useNavigate();
   const { setCurrentPage } = useCopilotContext();
-  const { stageLabels } = useAtsStageCatalog();
+  const {
+    stageLabels,
+    error: catalogError,
+    isEmpty: isCatalogEmpty
+  } = useAtsStageCatalog();
   const initialRange = defaultCockpitRange();
 
   useEffect(() => {
@@ -230,8 +234,11 @@ function RecruiterHomePage() {
         flexDirection: "column",
         flex: 1,
         minHeight: 0,
-        maxHeight: "calc(100vh - 64px)",
-        overflow: "hidden"
+        minWidth: 0,
+        maxWidth: "100%",
+        maxHeight: { xs: "none", md: "calc(100vh - 64px)" },
+        overflowX: "visible",
+        overflowY: { xs: "auto", md: "hidden" }
       }}
     >
       <RecruiterCockpitHeader
@@ -245,12 +252,29 @@ function RecruiterHomePage() {
         onReset={handleReset}
       />
 
+      {catalogError ? (
+        <Alert severity="warning" sx={{ mb: 1, flexShrink: 0 }}>
+          Pipeline stages unavailable: {catalogError}
+        </Alert>
+      ) : null}
+      {!catalogError && isCatalogEmpty ? (
+        <Alert severity="info" sx={{ mb: 1, flexShrink: 0 }}>
+          No active ATS pipeline stages are configured.
+        </Alert>
+      ) : null}
+
       {/* TEMP: SPA navigation probe — remove after verification */}
       <Button
         size="small"
         variant="outlined"
         onClick={() => navigate("/candidate-intake")}
-        sx={{ alignSelf: "flex-start", mb: 1, textTransform: "none" }}
+        sx={{
+          alignSelf: "flex-start",
+          mb: 1,
+          textTransform: "none",
+          minHeight: { xs: 44, md: 32 },
+          py: { xs: 1.1, md: 0.5 }
+        }}
       >
         Open Candidate Intake
       </Button>
@@ -292,17 +316,37 @@ function RecruiterHomePage() {
         </Box>
       </Box>
 
-      <Box sx={{ display: "flex", gap: WORKBENCH_GAP, flex: 1, minHeight: 0, overflow: "hidden" }}>
-        <Box sx={{ flex: 1, minWidth: 0, minHeight: 0, display: "flex", flexDirection: "column", gap: WORKBENCH_GAP, overflow: "hidden" }}>
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: { xs: "column", lg: "row" },
+          gap: WORKBENCH_GAP,
+          flex: { xs: "0 0 auto", md: 1 },
+          minHeight: 0,
+          minWidth: 0,
+          overflow: { xs: "visible", md: "hidden" }
+        }}
+      >
+        <Box
+          sx={{
+            flex: 1,
+            minWidth: 0,
+            minHeight: 0,
+            display: "flex",
+            flexDirection: "column",
+            gap: WORKBENCH_GAP,
+            overflow: { xs: "visible", md: "hidden" }
+          }}
+        >
           <Box
             sx={{
               display: "grid",
               gridTemplateColumns: { xs: "1fr", lg: "1.2fr 0.85fr 1fr" },
               gap: WORKBENCH_GAP,
               flexShrink: 0,
-              height: WORKBENCH_ROW_HEIGHT,
-              minHeight: WORKBENCH_ROW_HEIGHT,
-              maxHeight: WORKBENCH_ROW_HEIGHT
+              height: { xs: "auto", lg: WORKBENCH_ROW_HEIGHT },
+              minHeight: { xs: "auto", lg: WORKBENCH_ROW_HEIGHT },
+              maxHeight: { xs: "none", lg: WORKBENCH_ROW_HEIGHT }
             }}
           >
             <CockpitActionsNeededPanel

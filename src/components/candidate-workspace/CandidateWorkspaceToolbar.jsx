@@ -16,6 +16,11 @@ import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
 import FactCheckOutlinedIcon from "@mui/icons-material/FactCheckOutlined";
 import LayersOutlinedIcon from "@mui/icons-material/LayersOutlined";
 
+import {
+  CANDIDATE_MOBILE_CONTAINED_BUTTON_SX,
+  CANDIDATE_MOBILE_ICON_BUTTON_SX
+} from "@/components/candidate-workspace/candidateWorkspaceTokens";
+
 function CandidateWorkspaceToolbar({
   profileCompletion = 0,
   onSave,
@@ -46,6 +51,7 @@ function CandidateWorkspaceToolbar({
         startIcon={<SaveOutlinedIcon />}
         onClick={onSave}
         disabled={isSaving}
+        sx={CANDIDATE_MOBILE_CONTAINED_BUTTON_SX}
       >
         Save
       </Button>
@@ -54,6 +60,7 @@ function CandidateWorkspaceToolbar({
         size="small"
         aria-label="More actions"
         onClick={(event) => setAnchorEl(event.currentTarget)}
+        sx={CANDIDATE_MOBILE_ICON_BUTTON_SX}
       >
         <MoreVertOutlinedIcon />
       </IconButton>

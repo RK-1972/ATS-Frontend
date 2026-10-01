@@ -15,6 +15,7 @@ import {
   StatusChip
 } from "../../components/enterprise";
 import candidateRepository from "../../repositories/candidateRepository";
+import { ENTERPRISE_MOBILE_PRIMARY_BUTTON_SX } from "../../components/enterprise/enterpriseWorkspaceTokens";
 
 function MyAssignedRequisitionsPage() {
   const navigate = useNavigate();
@@ -125,7 +126,7 @@ function MyAssignedRequisitionsPage() {
             event.stopPropagation();
             handleOpen(params.row);
           }}
-          sx={{ textTransform: "none", fontWeight: 600, py: 0.25 }}
+          sx={{ textTransform: "none", fontWeight: 600, ...ENTERPRISE_MOBILE_PRIMARY_BUTTON_SX }}
         >
           Open
         </Button>
@@ -134,7 +135,7 @@ function MyAssignedRequisitionsPage() {
   ];
 
   return (
-    <Box>
+    <Box sx={{ width: "100%", minWidth: 0, maxWidth: "100%" }}>
       <EnterpriseWorkspaceHeader
         title="My Assigned Requisitions"
         subtitle="Requisitions assigned to you for recruiting"
@@ -145,7 +146,7 @@ function MyAssignedRequisitionsPage() {
             startIcon={<RefreshOutlinedIcon />}
             onClick={loadRequisitions}
             disabled={isLoading}
-            sx={{ textTransform: "none", fontWeight: 600 }}
+            sx={{ textTransform: "none", fontWeight: 600, ...ENTERPRISE_MOBILE_PRIMARY_BUTTON_SX }}
           >
             Refresh
           </Button>

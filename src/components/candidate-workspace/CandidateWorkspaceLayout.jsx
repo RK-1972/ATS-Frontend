@@ -8,6 +8,7 @@ import AdminNavRail from "@/components/layout/AdminNavRail";
 import RecruiterNavRail from "@/components/layout/RecruiterNavRail";
 import CandidateListSidebar from "@/components/candidate-workspace/CandidateListSidebar";
 import CandidateNewDialog from "@/components/candidate-workspace/CandidateNewDialog";
+import { CANDIDATE_MOBILE_ICON_BUTTON_SX } from "@/components/candidate-workspace/candidateWorkspaceTokens";
 import useCandidateWorkspace from "@/hooks/useCandidateWorkspace";
 
 function CandidateWorkspaceLayout() {
@@ -80,6 +81,7 @@ function CandidateWorkspaceLayout() {
           size="small"
           aria-label="Open candidate list"
           onClick={() => setMobileSidebarOpen(true)}
+          sx={CANDIDATE_MOBILE_ICON_BUTTON_SX}
         >
           <MenuOutlinedIcon />
         </IconButton>

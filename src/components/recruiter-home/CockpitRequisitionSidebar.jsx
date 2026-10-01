@@ -92,9 +92,12 @@ function CockpitRequisitionSidebar({ requisition, onNavigate }) {
 
           <IconButton
 
-            size="small"
-
-            sx={{ color: "#fff", p: 0.5 }}
+            sx={{
+              color: "#fff",
+              p: 0.5,
+              width: { xs: 44, md: 32 },
+              height: { xs: 44, md: 32 }
+            }}
 
             aria-label="Open requisition details"
 
@@ -160,7 +163,16 @@ function CockpitRequisitionSidebar({ requisition, onNavigate }) {
 
           onClick={() => onNavigate?.(requisitionPath)}
 
-          sx={{ textTransform: "none", fontWeight: 600, fontSize: 12, py: 0.85, bgcolor: "#0B3D7A", boxShadow: "none", "&:hover": { bgcolor: "#092F5E", boxShadow: "none" } }}
+          sx={{
+            textTransform: "none",
+            fontWeight: 600,
+            fontSize: 12,
+            py: 0.85,
+            minHeight: { xs: 44, md: "auto" },
+            bgcolor: "#0B3D7A",
+            boxShadow: "none",
+            "&:hover": { bgcolor: "#092F5E", boxShadow: "none" }
+          }}
 
         >
 
@@ -172,7 +184,13 @@ function CockpitRequisitionSidebar({ requisition, onNavigate }) {
 
           <IconButton
 
-            sx={{ border: `1px solid ${DESIGN.border}`, borderRadius: 1.5, flexShrink: 0 }}
+            sx={{
+              border: `1px solid ${DESIGN.border}`,
+              borderRadius: 1.5,
+              flexShrink: 0,
+              minWidth: { xs: 44, md: "auto" },
+              minHeight: { xs: 44, md: "auto" }
+            }}
 
             aria-label="Email hiring manager"
 

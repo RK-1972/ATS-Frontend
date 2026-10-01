@@ -68,8 +68,9 @@ function TaLeadQuickActionsPanel({
               onClick={action.onClick}
               sx={{
                 ...ROW_INTERACTIVE,
-                py: 0.7,
-                px: 1.5
+                py: { xs: 1.1, md: 0.7 },
+                px: 1.5,
+                minHeight: { xs: 48, md: "auto" }
               }}
             >
               <ListItemIcon sx={{ minWidth: 34 }}>

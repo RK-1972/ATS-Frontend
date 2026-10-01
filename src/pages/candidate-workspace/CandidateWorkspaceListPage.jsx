@@ -13,7 +13,17 @@ function CandidateWorkspaceListPage() {
   }, [setCurrentPage]);
 
   return (
-    <Box sx={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+    <Box
+      sx={{
+        flex: 1,
+        display: "flex",
+        flexDirection: "column",
+        minHeight: 0,
+        minWidth: 0,
+        maxWidth: "100%",
+        overflowX: "hidden"
+      }}
+    >
       <WorkspaceHeader
         title="Candidate Workspace"
         subtitle="Select a candidate from the list to open the enterprise profile workspace."

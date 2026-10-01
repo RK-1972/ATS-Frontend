@@ -1,9 +1,11 @@
+import { useEffect, useState } from "react";
 import { Box, Snackbar, Alert } from "@mui/material";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTheme } from "@mui/material/styles";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { pageFramerProps } from "../../theme/motion";
 import AppHeader from "../layout/AppHeader";
+import NavRailResponsiveShell from "../layout/NavRailResponsiveShell";
 
 /**
  * Shared workspace shell.
@@ -39,6 +41,13 @@ function WorkspaceLayout({
     navigate("/login");
   };
 
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const hasNavRail = Boolean(navRail);
+
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [location.pathname]);
+
   return (
     <Box
       sx={{
@@ -52,10 +61,16 @@ function WorkspaceLayout({
         loggedInUser={loggedInUser}
         userRole={userRole}
         onLogout={handleLogout}
+        showMobileNavMenu={hasNavRail}
+        onMobileNavOpen={() => setMobileNavOpen(true)}
       />
 
-      <Box sx={{ display: "flex", flex: 1, minHeight: 0 }}>
-        {navRail}
+      <Box sx={{ display: "flex", flex: 1, minHeight: 0, minWidth: 0 }}>
+        <NavRailResponsiveShell
+          navRail={navRail}
+          mobileOpen={mobileNavOpen}
+          onMobileClose={() => setMobileNavOpen(false)}
+        />
 
         <Box
           sx={{
@@ -92,10 +107,12 @@ function WorkspaceLayout({
                   py: { xs: 2, sm: 2 },
                   maxWidth: contentMaxWidth,
                   width: "100%",
+                  minWidth: 0,
                   mx: "auto",
                   display: "flex",
                   flexDirection: "column",
-                  minHeight: 0
+                  minHeight: 0,
+                  overflowX: "hidden"
                 }}
               >
                 {children}

@@ -201,7 +201,8 @@ function WorkflowCard({
         onFocus={() => openDetail(true)}
         onBlur={closeDetail}
         sx={{
-          width: CARD_WIDTH,
+          width: { xs: "100%", md: CARD_WIDTH },
+          maxWidth: { xs: "100%", md: CARD_WIDTH },
           minHeight: TIMELINE_CARD_MIN_HEIGHT,
           flexShrink: 0,
           border: 2,
@@ -398,7 +399,8 @@ function TimelineWorkspaceShell({ subtitle, children, centerContent = false }) {
           borderColor: "divider",
           display: "flex",
           justifyContent: "space-between",
-          alignItems: "center",
+          alignItems: { xs: "flex-start", md: "center" },
+          flexDirection: { xs: "column", md: "row" },
           gap: 1
         }}
       >
@@ -408,7 +410,12 @@ function TimelineWorkspaceShell({ subtitle, children, centerContent = false }) {
         </Typography>
 
         {subtitle ? (
-          <Typography variant="caption" color="text.secondary" textAlign="right">
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            textAlign={{ xs: "left", md: "right" }}
+            sx={{ width: { xs: "100%", md: "auto" } }}
+          >
             {subtitle}
           </Typography>
         ) : null}
@@ -534,9 +541,10 @@ function EnterpriseProcessTimeline({
 
       <Box
         ref={scrollRef}
+        data-hct-internal-scroll="lifecycle"
         sx={{
           display: "block",
-          overflowX: "auto",
+          overflowX: { xs: "visible", md: "auto" },
           overflowY: "hidden",
           overscrollBehaviorX: "contain",
           width: "100%",
@@ -555,16 +563,18 @@ function EnterpriseProcessTimeline({
 
         <Box
           sx={{
-            width: "max-content",
-            minWidth: "100%",
-            maxWidth: "none"
+            width: { xs: "100%", md: "max-content" },
+            minWidth: { xs: 0, md: "100%" },
+            maxWidth: { xs: "100%", md: "none" }
           }}
         >
 
           <Box
             sx={{
               display: "flex",
-              alignItems: "stretch"
+              flexDirection: { xs: "column", md: "row" },
+              alignItems: { xs: "stretch", md: "stretch" },
+              gap: { xs: 1, md: 0 }
             }}
           >
 
@@ -592,7 +602,9 @@ function EnterpriseProcessTimeline({
               />
 
               {index < stages.length - 1 && (
-                <CardConnector active={connectorActive} />
+                <Box sx={{ display: { xs: "none", md: "block" } }}>
+                  <CardConnector active={connectorActive} />
+                </Box>
               )}
 
             </Box>

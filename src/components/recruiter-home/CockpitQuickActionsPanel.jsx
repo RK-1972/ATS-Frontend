@@ -34,7 +34,15 @@ function CockpitQuickActionsPanel({ onNavigate, onQuickAction }) {
   };
 
   return (
-    <Box sx={{ ...PANEL_SHELL, display: "flex", flexDirection: "column", height: "100%" }}>
+    <Box
+      sx={{
+        ...PANEL_SHELL,
+        display: "flex",
+        flexDirection: "column",
+        height: { xs: "auto", lg: "100%" },
+        minHeight: { xs: "auto", lg: 0 }
+      }}
+    >
       <Box sx={{ ...PANEL_HEADER, display: "flex", alignItems: "center", gap: 0.75 }}>
         <EnterpriseModuleIcon
           icon={MdBolt}
@@ -55,8 +63,9 @@ function CockpitQuickActionsPanel({ onNavigate, onQuickAction }) {
             onClick={() => handleClick({ key, label, icon: Icon })}
             sx={{
               ...ROW_INTERACTIVE,
-              py: 0.65,
-              px: 1.5
+              py: { xs: 1, md: 0.65 },
+              px: 1.5,
+              minHeight: { xs: 48, md: "auto" }
             }}
           >
             <ListItemIcon sx={{ minWidth: 32 }}>

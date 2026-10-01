@@ -1,6 +1,7 @@
 import { DataGrid } from "@mui/x-data-grid";
 import { useTheme } from "@mui/material/styles";
 import EnterpriseSurface from "./EnterpriseSurface";
+import { ENTERPRISE_DATA_GRID_SURFACE_SX } from "./enterpriseDataGridTokens";
 
 function EnterpriseDataGrid({
   rows = [],
@@ -17,7 +18,11 @@ function EnterpriseDataGrid({
   const { typography } = theme.tokens;
 
   return (
-    <EnterpriseSurface padding={false} sx={{ overflow: "hidden", ...sx }}>
+    <EnterpriseSurface
+      padding={false}
+      data-enterprise-grid-scroll="table"
+      sx={{ ...ENTERPRISE_DATA_GRID_SURFACE_SX, ...sx }}
+    >
       <DataGrid
         rows={rows}
         columns={columns}
@@ -35,6 +40,8 @@ function EnterpriseDataGrid({
         }}
         sx={{
           height,
+          width: "100%",
+          minWidth: 0,
           border: "none",
           fontSize: typography.secondary.fontSize,
           "& .MuiDataGrid-columnHeaderTitle": {

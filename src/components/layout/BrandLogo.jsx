@@ -10,7 +10,7 @@ import {
 
 import OptalynxLogo from "../../assets/OptalynxLogo";
 
-function BrandLogo() {
+function BrandLogo({ compact = false }) {
 
   return (
 
@@ -22,7 +22,7 @@ function BrandLogo() {
 
         alignItems:"center",
 
-        gap:1.8
+        gap: compact ? 1 : 1.8
 
       }}
 
@@ -30,7 +30,7 @@ function BrandLogo() {
 
       <OptalynxLogo
 
-        size={56}
+        size={compact ? 40 : 56}
 
       />
 
@@ -44,9 +44,9 @@ function BrandLogo() {
 
             fontWeight:700,
 
-            fontSize:30,
+            fontSize: compact ? 20 : 30,
 
-            letterSpacing:2,
+            letterSpacing: compact ? 1.2 : 2,
 
             lineHeight:1
 
@@ -58,6 +58,7 @@ function BrandLogo() {
 
         </Typography>
 
+        {!compact ? (
         <Typography
 
           sx={{
@@ -75,6 +76,7 @@ function BrandLogo() {
           Linking Talent with Opportunity
 
         </Typography>
+        ) : null}
 
       </Box>
 

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
 import recruitmentRepository from "@/repositories/recruitmentRepository";
-import { FALLBACK_CATALOG } from "@/enterprise/atsStageCatalogUtils";
 
 let cachedStages = null;
 let inflightRequest = null;
@@ -27,6 +26,14 @@ async function loadCatalogStages() {
   return inflightRequest;
 }
 
+function resolveCatalogLoadError(loadError) {
+  return (
+    loadError.response?.data?.message ||
+    loadError.message ||
+    "Failed to load ATS stage catalog."
+  );
+}
+
 function useAtsStageCatalog() {
   const [stages, setStages] = useState(cachedStages || []);
   const [isLoading, setIsLoading] = useState(!cachedStages);
@@ -43,13 +50,10 @@ function useAtsStageCatalog() {
       setStages(rows);
       return rows;
     } catch (loadError) {
-      const message =
-        loadError.response?.data?.message ||
-        loadError.message ||
-        "Failed to load ATS stage catalog.";
-      setStages(FALLBACK_CATALOG);
+      const message = resolveCatalogLoadError(loadError);
+      setStages([]);
       setError(message);
-      return FALLBACK_CATALOG;
+      return [];
     } finally {
       setIsLoading(false);
     }
@@ -78,11 +82,8 @@ function useAtsStageCatalog() {
           return;
         }
 
-        const message =
-          loadError.response?.data?.message ||
-          loadError.message ||
-          "Failed to load ATS stage catalog.";
-        setStages(FALLBACK_CATALOG);
+        const message = resolveCatalogLoadError(loadError);
+        setStages([]);
         setError(message);
       } finally {
         if (active) {
@@ -103,7 +104,8 @@ function useAtsStageCatalog() {
     stageLabels,
     isLoading,
     error,
-    isEmpty: !isLoading && stages.length === 0,
+    isEmpty: !isLoading && stages.length === 0 && !error,
+    isUnavailable: !isLoading && Boolean(error),
     reload
   };
 }

@@ -32,8 +32,27 @@ const tdSx = { fontSize: 12, color: DESIGN.textPrimary, py: 0.75, px: 1.5, borde
 
 function CockpitRequisitionsTable({ rows = [], selectedId, onSelect, onViewAll }) {
   return (
-    <Box sx={{ ...PANEL_SHELL, flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
-      <Box sx={{ ...PANEL_HEADER, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+    <Box
+      sx={{
+        ...PANEL_SHELL,
+        flex: 1,
+        minHeight: { xs: 240, md: 0 },
+        minWidth: 0,
+        maxWidth: "100%",
+        display: "flex",
+        flexDirection: "column"
+      }}
+    >
+      <Box
+        sx={{
+          ...PANEL_HEADER,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 1,
+          flexWrap: { xs: "wrap", md: "nowrap" }
+        }}
+      >
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.75 }}>
           <EnterpriseModuleIcon
             icon={MdWorkOutline}
@@ -46,7 +65,25 @@ function CockpitRequisitionsTable({ rows = [], selectedId, onSelect, onViewAll }
             MY REQUISITIONS
           </Typography>
         </Box>
-        <Link component="button" type="button" underline="hover" onClick={onViewAll} sx={{ fontSize: 12, fontWeight: 600, color: DESIGN.blue, border: 0, bgcolor: "transparent", cursor: "pointer" }}>
+        <Link
+          component="button"
+          type="button"
+          underline="hover"
+          onClick={onViewAll}
+          sx={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: DESIGN.blue,
+            border: 0,
+            bgcolor: "transparent",
+            cursor: "pointer",
+            display: "inline-flex",
+            alignItems: "center",
+            minHeight: { xs: 44, md: "auto" },
+            flexShrink: 0,
+            py: { xs: 0.5, md: 0 }
+          }}
+        >
           View All Requisitions →
         </Link>
       </Box>
@@ -57,8 +94,8 @@ function CockpitRequisitionsTable({ rows = [], selectedId, onSelect, onViewAll }
         </Box>
       ) : (
         <>
-          <Box sx={{ flex: 1, overflow: "auto", minHeight: 0 }}>
-            <Table size="small" stickyHeader>
+          <Box sx={{ flex: 1, overflow: "auto", minHeight: 0, minWidth: 0, maxWidth: "100%" }}>
+            <Table size="small" stickyHeader sx={{ minWidth: { xs: 640, md: "auto" } }}>
               <TableHead>
                 <TableRow>
                   <TableCell sx={thSx}>REQ ID</TableCell>

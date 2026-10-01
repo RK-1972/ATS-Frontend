@@ -121,7 +121,10 @@ export async function executeLegacyCandidateRegistration(
 function CandidatePage() {
   const {
     stages: catalogStages,
-    isLoading: isCatalogLoading
+    isLoading: isCatalogLoading,
+    error: catalogError,
+    isEmpty: isCatalogEmpty,
+    isUnavailable: isCatalogUnavailable
   } = useAtsStageCatalog();
 
   const [formData, setFormData] = useState({
@@ -1241,6 +1244,17 @@ PIPELINE DASHBOARD
     Recruiter Pipeline Dashboard
   </div>
 
+  {catalogError ? (
+    <div style={{ color: "#b45309", fontSize: "13px", marginBottom: "8px" }}>
+      ATS stage catalog unavailable: {catalogError}
+    </div>
+  ) : null}
+  {!catalogError && isCatalogEmpty ? (
+    <div style={{ color: "#6b7280", fontSize: "13px", marginBottom: "8px" }}>
+      No active ATS stages are available.
+    </div>
+  ) : null}
+
   <table style={styles.table}>
 
     <thead>
@@ -1334,7 +1348,7 @@ PIPELINE DASHBOARD
 
     }
 
-    disabled={isCatalogLoading}
+    disabled={isCatalogLoading || isCatalogUnavailable || isCatalogEmpty}
 
     style={{
 

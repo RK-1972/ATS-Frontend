@@ -3,7 +3,8 @@ import {
   Typography,
   Chip,
   Stack,
-  LinearProgress
+  LinearProgress,
+  CircularProgress
 } from "@mui/material";
 
 import { MdArrowDownward } from "react-icons/md";
@@ -96,7 +97,75 @@ function ApprovalPathStep({ step, isLast }) {
 
 }
 
-function BudgetValidationPanel({ budget, approvalPath }) {
+function BudgetValidationPanel({
+  budget,
+  approvalPath = [],
+  loading = false,
+  requireRequisition = false
+}) {
+
+  if (loading) {
+    return (
+      <Box
+        sx={{
+          border: 1,
+          borderColor: "divider",
+          borderRadius: 2,
+          bgcolor: "background.paper",
+          px: 2,
+          py: 4,
+          display: "flex",
+          justifyContent: "center"
+        }}
+      >
+        <CircularProgress size={28} />
+      </Box>
+    );
+  }
+
+  if (requireRequisition || !budget) {
+    return (
+      <Box
+        sx={{
+          border: 1,
+          borderColor: "divider",
+          borderRadius: 2,
+          bgcolor: "background.paper",
+          px: 2,
+          py: 2
+        }}
+      >
+        <Typography variant="subtitle2" fontWeight={700} mb={1}>
+          Budget Validation
+        </Typography>
+        <Typography variant="body2" color="text.secondary" fontSize={13}>
+          Search and select a requisition to compare offer budget against approved snapshot.
+        </Typography>
+      </Box>
+    );
+  }
+
+  if (budget.has_offer === false) {
+    return (
+      <Box
+        sx={{
+          border: 1,
+          borderColor: "divider",
+          borderRadius: 2,
+          bgcolor: "background.paper",
+          px: 2,
+          py: 2
+        }}
+      >
+        <Typography variant="subtitle2" fontWeight={700} mb={1}>
+          Budget Validation
+        </Typography>
+        <Typography variant="body2" color="text.secondary" fontSize={13}>
+          No active offer for this requisition (Declined and Withdrawn offers are excluded).
+        </Typography>
+      </Box>
+    );
+  }
 
   const exceedsThreshold =
     budget.variance_pct > budget.variance_threshold_pct;

@@ -400,7 +400,18 @@ if (
   })();
 
   return (
-    <Box sx={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, pb: { xs: 12, sm: 10 } }}>
+    <Box
+      sx={{
+        flex: 1,
+        display: "flex",
+        flexDirection: "column",
+        minHeight: 0,
+        minWidth: 0,
+        maxWidth: "100%",
+        overflowX: "hidden",
+        pb: { xs: 12, sm: 10 }
+      }}
+    >
       <WorkspaceHeader
         dense
         title={displayName}

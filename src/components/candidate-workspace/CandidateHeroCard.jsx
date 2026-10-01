@@ -178,7 +178,7 @@ function CandidateHeroCard({
 
           <Box
             sx={{
-              display: "grid",
+              display: { xs: "none", md: "grid" },
               gridTemplateColumns: "1fr 1fr",
               gap: 0.75
             }}
@@ -211,8 +211,14 @@ function CandidateHeroCard({
             </Tooltip>
           </Box>
 
-          <Stack direction="row" spacing={0.75} mt={1} sx={{ display: { md: "none" } }}>
-            <Button size="small" variant="contained" fullWidth onClick={() => onAction?.("upload-resume")}>
+          <Stack direction="row" spacing={0.75} mt={1} sx={{ display: { xs: "flex", md: "none" } }}>
+            <Button
+              size="small"
+              variant="contained"
+              fullWidth
+              onClick={() => onAction?.("upload-resume")}
+              sx={{ minHeight: { xs: 44, md: 32 } }}
+            >
               Upload
             </Button>
             <Button
@@ -221,6 +227,7 @@ function CandidateHeroCard({
               fullWidth
               disabled={!candidate.resume_path}
               onClick={() => onAction?.("download-resume")}
+              sx={{ minHeight: { xs: 44, md: 32 } }}
             >
               Download
             </Button>

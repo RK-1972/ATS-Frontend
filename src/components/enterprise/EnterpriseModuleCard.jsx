@@ -2,6 +2,7 @@ import { Box, Button, Typography } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import EnterpriseSurface from "./EnterpriseSurface";
 import EnterpriseModuleIcon from "./EnterpriseModuleIcon";
+import { ENTERPRISE_MOBILE_PRIMARY_BUTTON_SX } from "./enterpriseWorkspaceTokens";
 
 /**
  * Optalynx Enterprise Module Card — Workspace Card visual standard.
@@ -94,7 +95,12 @@ function EnterpriseModuleCard({
             variant="contained"
             size="small"
             onClick={onAction}
-            sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
+            sx={{
+              textTransform: "none",
+              fontWeight: 600,
+              borderRadius: 2,
+              ...ENTERPRISE_MOBILE_PRIMARY_BUTTON_SX
+            }}
           >
             {actionLabel}
           </Button>

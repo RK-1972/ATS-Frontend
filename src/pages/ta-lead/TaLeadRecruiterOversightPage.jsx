@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import {
+  Alert,
   Box,
   Button,
   Stack,
@@ -31,7 +32,11 @@ import { fetchTaLeadRecruiterSummary } from "./taLeadHomeApi";
 function TaLeadRecruiterOversightPage() {
   const navigate = useNavigate();
   const { recruiterCode } = useParams();
-  const { stages: catalogStages } = useAtsStageCatalog();
+  const {
+    stages: catalogStages,
+    error: catalogError,
+    isEmpty: isCatalogEmpty
+  } = useAtsStageCatalog();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [summary, setSummary] = useState(null);
@@ -124,6 +129,17 @@ function TaLeadRecruiterOversightPage() {
           title={recruiterName}
           subtitle={`Recruiter oversight — ${summary?.recruiter?.recruiter_code || recruiterCode}`}
         />
+
+        {catalogError ? (
+          <Alert severity="warning" sx={{ mt: 1 }}>
+            Pipeline stages unavailable: {catalogError}
+          </Alert>
+        ) : null}
+        {!catalogError && isCatalogEmpty ? (
+          <Alert severity="info" sx={{ mt: 1 }}>
+            No active ATS pipeline stages are configured.
+          </Alert>
+        ) : null}
 
         <Stack
           direction={{ xs: "column", sm: "row" }}

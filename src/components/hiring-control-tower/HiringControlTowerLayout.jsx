@@ -1,4 +1,5 @@
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import {
   Box,
@@ -8,6 +9,7 @@ import {
 
 import AppHeader from "../layout/AppHeader";
 import AdminNavRail from "../layout/AdminNavRail";
+import NavRailResponsiveShell from "../layout/NavRailResponsiveShell";
 import useHiringControlTower from "../../hooks/useHiringControlTower";
 import HiringControlTowerPage from "../../pages/hiring-control-tower/HiringControlTowerPage";
 
@@ -21,6 +23,12 @@ function HiringControlTowerLayout() {
   const userRole = loggedInUser?.role_name || "Admin";
 
   const towerState = useHiringControlTower();
+  const location = useLocation();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [location.pathname]);
 
   const handleLogout = () => {
 
@@ -51,11 +59,17 @@ function HiringControlTowerLayout() {
         loggedInUser={loggedInUser}
         userRole={userRole}
         onLogout={handleLogout}
+        showMobileNavMenu
+        onMobileNavOpen={() => setMobileNavOpen(true)}
       />
 
       <Box sx={{ display: "flex", flex: 1, minWidth: 0, maxWidth: "100%", overflowX: "hidden" }}>
 
-        <AdminNavRail />
+        <NavRailResponsiveShell
+          navRail={<AdminNavRail />}
+          mobileOpen={mobileNavOpen}
+          onMobileClose={() => setMobileNavOpen(false)}
+        />
 
         <Box
           component="main"

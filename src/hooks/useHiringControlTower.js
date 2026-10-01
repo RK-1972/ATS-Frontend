@@ -94,20 +94,54 @@ function useHiringControlTower() {
     [data.stages, selectedStageKey]
   );
 
+  const operationalPanels = lifecycleData?.operational_panels ?? null;
+
   const stageNotifications = useMemo(() => {
+    if (liveModeEnabled) {
+      return operationalPanels?.notifications ?? null;
+    }
+
     if (!selectedStageKey) {
       return null;
     }
-    return data.stage_notifications[selectedStageKey] ?? null;
-  }, [data.stage_notifications, selectedStageKey]);
 
-  const sortedTimeline = useMemo(
-    () =>
-      [...data.timeline].sort(
+    return data.stage_notifications[selectedStageKey] ?? null;
+  }, [
+    data.stage_notifications,
+    liveModeEnabled,
+    operationalPanels?.notifications,
+    selectedStageKey
+  ]);
+
+  const requisitionBudget = useMemo(() => {
+    if (liveModeEnabled) {
+      return operationalPanels?.budget ?? null;
+    }
+
+    return data.budget;
+  }, [data.budget, liveModeEnabled, operationalPanels?.budget]);
+
+  const requisitionApprovalPath = useMemo(() => {
+    if (liveModeEnabled) {
+      return operationalPanels?.approval_path ?? [];
+    }
+
+    return data.budget_approval_path ?? [];
+  }, [data.budget_approval_path, liveModeEnabled, operationalPanels?.approval_path]);
+
+  const sortedTimeline = useMemo(() => {
+    if (liveModeEnabled) {
+      const events = operationalPanels?.activity_events ?? [];
+
+      return [...events].sort(
         (a, b) => new Date(a.time) - new Date(b.time)
-      ),
-    [data.timeline]
-  );
+      );
+    }
+
+    return [...data.timeline].sort(
+      (a, b) => new Date(a.time) - new Date(b.time)
+    );
+  }, [data.timeline, liveModeEnabled, operationalPanels?.activity_events]);
 
   const stageTimeline = useMemo(
     () =>
@@ -383,6 +417,8 @@ function useHiringControlTower() {
     showClarificationForm,
     clarificationDraft,
     stageNotifications,
+    requisitionBudget,
+    requisitionApprovalPath,
     sortedTimeline,
     stageTimeline,
     toastMessage,

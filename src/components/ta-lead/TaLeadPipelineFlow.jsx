@@ -55,9 +55,10 @@ function PipelineStageCell({ stage, count, isBottleneck, reducedMotion }) {
       }}
       transition={framerTransition(reducedMotion)}
       sx={{
-        flex: "1 1 0",
-        minWidth: { xs: 88, sm: 100 },
-        maxWidth: 140,
+        flex: { xs: "1 1 auto", md: "1 1 0" },
+        minWidth: { xs: 0, sm: 100 },
+        maxWidth: { xs: "100%", md: 140 },
+        width: { xs: "100%", md: "auto" },
         px: 1,
         py: 0.85,
         borderRadius: 1.5,
@@ -135,7 +136,8 @@ function TaLeadPipelineFlow({ stageOrder, stageCounts }) {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          gap: 1
+          gap: 1,
+          flexWrap: { xs: "wrap", md: "nowrap" }
         }}
       >
         <Stack direction="row" alignItems="center" spacing={0.75}>
@@ -172,10 +174,14 @@ function TaLeadPipelineFlow({ stageOrder, stageCounts }) {
         sx={{
           px: 1.25,
           py: 1.25,
+          width: "100%",
+          minWidth: 0,
+          maxWidth: "100%",
           display: "flex",
+          flexWrap: { xs: "wrap", md: "nowrap" },
           alignItems: "stretch",
-          gap: 0.25,
-          overflowX: "auto",
+          gap: { xs: 1, md: 0.25 },
+          overflowX: { xs: "visible", md: "auto" },
           WebkitOverflowScrolling: "touch"
         }}
       >
@@ -185,8 +191,12 @@ function TaLeadPipelineFlow({ stageOrder, stageCounts }) {
             sx={{
               display: "flex",
               alignItems: "center",
-              flex: "1 1 0",
-              minWidth: 0
+              flex: {
+                xs: "1 1 calc(50% - 8px)",
+                md: "1 1 0"
+              },
+              minWidth: { xs: 0, md: 0 },
+              maxWidth: { xs: "calc(50% - 8px)", md: "none" }
             }}
           >
             <PipelineStageCell
@@ -195,7 +205,11 @@ function TaLeadPipelineFlow({ stageOrder, stageCounts }) {
               isBottleneck={showBottleneck && stage === bottleneckStage}
               reducedMotion={reducedMotion}
             />
-            {index < stageOrder.length - 1 ? <StageConnector /> : null}
+            {index < stageOrder.length - 1 ? (
+              <Box sx={{ display: { xs: "none", md: "block" } }}>
+                <StageConnector />
+              </Box>
+            ) : null}
           </Box>
         ))}
       </Box>

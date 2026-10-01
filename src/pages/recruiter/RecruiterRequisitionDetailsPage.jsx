@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
+  Alert,
   Box,
   Button,
   Chip,
@@ -45,6 +46,7 @@ import candidateRepository from "../../repositories/candidateRepository";
 import useEnterpriseStore from "@/store/enterpriseStore";
 import { formatRequisitionSkillDisplay } from "@/utils/requisitionSkillUtils";
 import SuggestedMatchesPanel from "../../components/requisitions/SuggestedMatchesPanel";
+import { ENTERPRISE_MOBILE_PRIMARY_BUTTON_SX } from "../../components/enterprise/enterpriseWorkspaceTokens";
 
 const PIPELINE_STAGE_ICONS = {
   Applied: PersonAddAltOutlinedIcon,
@@ -419,7 +421,11 @@ function RecruiterRequisitionDetailsPage() {
   const navigate = useNavigate();
   const { reqCode: routeReqCode } = useParams();
   const reqCode = decodeURIComponent(routeReqCode || "");
-  const { stages: catalogStages } = useAtsStageCatalog();
+  const {
+    stages: catalogStages,
+    error: catalogError,
+    isEmpty: isCatalogEmpty
+  } = useAtsStageCatalog();
 
   const [requisition, setRequisition] = useState(null);
   const [candidates, setCandidates] = useState([]);
@@ -604,7 +610,7 @@ function RecruiterRequisitionDetailsPage() {
             event.stopPropagation();
             handleScheduleInterview(params.row);
           }}
-          sx={{ textTransform: "none", fontWeight: 600, py: 0.25 }}
+          sx={{ textTransform: "none", fontWeight: 600, ...ENTERPRISE_MOBILE_PRIMARY_BUTTON_SX }}
         >
           Schedule Interview
         </Button>
@@ -613,7 +619,7 @@ function RecruiterRequisitionDetailsPage() {
   ];
 
   return (
-    <Box>
+    <Box sx={{ width: "100%", minWidth: 0, maxWidth: "100%" }}>
       <EnterpriseWorkspaceHeader
         title="Requisition Details"
         subtitle="Recruiter working view for an assigned requisition"
@@ -624,7 +630,7 @@ function RecruiterRequisitionDetailsPage() {
               size="small"
               startIcon={<ArrowBackOutlinedIcon />}
               onClick={() => navigate("/recruiter/my-requisitions")}
-              sx={{ textTransform: "none", fontWeight: 600 }}
+              sx={{ textTransform: "none", fontWeight: 600, ...ENTERPRISE_MOBILE_PRIMARY_BUTTON_SX }}
             >
               Back
             </Button>
@@ -634,7 +640,7 @@ function RecruiterRequisitionDetailsPage() {
               startIcon={<RefreshOutlinedIcon />}
               onClick={loadDetails}
               disabled={isLoading}
-              sx={{ textTransform: "none", fontWeight: 600 }}
+              sx={{ textTransform: "none", fontWeight: 600, ...ENTERPRISE_MOBILE_PRIMARY_BUTTON_SX }}
             >
               Refresh
             </Button>
@@ -660,6 +666,16 @@ function RecruiterRequisitionDetailsPage() {
             title="Pipeline Summary"
             subtitle="Candidate counts by stage for this requisition"
           >
+            {catalogError ? (
+              <Alert severity="warning" sx={{ mb: 1.5 }}>
+                Pipeline stages unavailable: {catalogError}
+              </Alert>
+            ) : null}
+            {!catalogError && isCatalogEmpty ? (
+              <Alert severity="info" sx={{ mb: 1.5 }}>
+                No active ATS pipeline stages are configured.
+              </Alert>
+            ) : null}
             <PipelineStageMetricCards metrics={pipelineMetrics} />
           </EnterpriseCard>
 

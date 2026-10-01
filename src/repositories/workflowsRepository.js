@@ -62,7 +62,19 @@ function getHiringInitialState() {
       ...cloneData(hiringControlTowerMock),
       meta: { ...hiringControlTowerMock.meta, process_id: "" },
       stages: [],
-      timeline: []
+      timeline: [],
+      budget: {
+        approved_budget_lpa: null,
+        offered_ctc_lpa: null,
+        variance_pct: null,
+        variance_threshold_pct: 10,
+        status: "No qualifying offer",
+        exception_workflow_triggered: false,
+        currency: "INR",
+        has_offer: false
+      },
+      stage_notifications: {},
+      budget_approval_path: []
     };
   }
 

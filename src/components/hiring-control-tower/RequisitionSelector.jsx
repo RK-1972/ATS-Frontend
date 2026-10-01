@@ -3,8 +3,10 @@ import {
   Autocomplete,
   TextField,
   Alert,
-  Box
+  Box,
+  useMediaQuery
 } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 
 function requisitionOptionLabel(option) {
   if (!option?.requisition_code) {
@@ -29,6 +31,8 @@ function RequisitionSelector({
   onSelect
 }) {
 
+  const theme = useTheme();
+  const isMobileLayout = useMediaQuery(theme.breakpoints.down("md"));
   const debounceRef = useRef(null);
   const [inputValue, setInputValue] = useState("");
 
@@ -80,6 +84,20 @@ function RequisitionSelector({
         inputValue={inputValue}
         loading={loading}
         disabled={disabled}
+        slotProps={{
+          popupIndicator: {
+            sx: {
+              width: { xs: 44, md: 28 },
+              height: { xs: 44, md: 28 }
+            }
+          },
+          clearIndicator: {
+            sx: {
+              width: { xs: 44, md: 28 },
+              height: { xs: 44, md: 28 }
+            }
+          }
+        }}
         onInputChange={handleInputChange}
         onChange={(_event, value) => {
           setInputValue(value ? requisitionOptionLabel(value) : "");
@@ -102,7 +120,7 @@ function RequisitionSelector({
             label={hideFieldLabel ? undefined : "Requisition"}
             placeholder="Search requisitions…"
             fullWidth
-            size="small"
+            size={isMobileLayout ? "medium" : "small"}
             error={Boolean(searchError)}
             helperText={helperText}
           />
