@@ -28,6 +28,7 @@ import MyApprovalsService from "@/services/myApprovalsService";
 import BrandLogo from "./BrandLogo";
 import EnterpriseNotificationFeedItem from "./EnterpriseNotificationFeedItem";
 import { OptalynxCopilot } from "../copilot";
+import OptalynxHelp from "../help/OptalynxHelp";
 import { clearAuthStorage, getStoredToken } from "@/utils/sessionAuth";
 import {
   APPROVAL_NOTIFICATIONS_UPDATED_EVENT,
@@ -448,6 +449,15 @@ function AppHeader({
 
   const desktopUserCluster = shouldShowUserActions ? (
     <>
+      <OptalynxHelp
+        iconButtonSx={{
+          color: "#FFFFFF",
+          "&:hover": {
+            backgroundColor: "rgba(255,255,255,.08)"
+          }
+        }}
+      />
+
       <OptalynxCopilot
         iconButtonSx={{
           color: "#FFFFFF",
@@ -550,6 +560,8 @@ function AppHeader({
 
   const mobileUserCluster = shouldShowUserActions ? (
     <>
+      <OptalynxHelp iconButtonSx={mobileIconButtonSx} />
+
       <OptalynxCopilot iconButtonSx={mobileIconButtonSx} />
 
       <Tooltip title="Notifications">

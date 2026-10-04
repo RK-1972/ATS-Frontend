@@ -32,7 +32,8 @@ import {
   Typography
 } from "@mui/material";
 import { stepConnectorClasses } from "@mui/material/StepConnector";
-import { alpha, styled } from "@mui/material/styles";
+import { alpha, styled, useTheme } from "@mui/material/styles";
+import useMediaQuery from "@mui/material/useMediaQuery";
 import PictureAsPdfOutlinedIcon from "@mui/icons-material/PictureAsPdfOutlined";
 import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
 import MailOutlineOutlinedIcon from "@mui/icons-material/MailOutlineOutlined";
@@ -1708,6 +1709,8 @@ function CandidateIntakePage() {
   const [reviewAccessMessage, setReviewAccessMessage] = useState("");
   const [leftRailMode, setLeftRailMode] = useState("single");
   const { createCandidateIntake, processResume, parseResume } = useCandidateIntake();
+  const theme = useTheme();
+  const isDesktopIntakeRail = useMediaQuery(theme.breakpoints.up("lg"));
 
   const loadDashboard = async () => {
     setDashboardLoading(true);
@@ -2148,6 +2151,46 @@ function CandidateIntakePage() {
     loadDashboard();
   };
 
+  const renderIntakeWorkflowRail = () => (
+    <Stack spacing={0} sx={{ minHeight: 0, width: "100%", minWidth: 0 }}>
+      <Box sx={{ px: 1.5, pt: 1.5, pb: 0.5 }}>
+        <ToggleButtonGroup
+          exclusive
+          fullWidth
+          size="small"
+          value={leftRailMode}
+          onChange={handleLeftRailModeChange}
+          sx={{
+            "& .MuiToggleButton-root": {
+              textTransform: "none",
+              fontWeight: 600
+            }
+          }}
+        >
+          <ToggleButton value="single">Single CV</ToggleButton>
+          <ToggleButton value="bulk">Bulk Upload CVs</ToggleButton>
+        </ToggleButtonGroup>
+      </Box>
+      {leftRailMode === "single" ? (
+        <CandidateIntakeWorkflowPanel
+          key={intakeSessionKey}
+          selectedSource={selectedSource}
+          onSourceChange={handleSourceChange}
+          resumeFile={resumeFile}
+          onFileSelect={handleResumeFileSelect}
+          onCreateIntake={handleCreateIntake}
+          intakeStatus={intakeStatus}
+          onProcessResume={handleProcessResume}
+          onParseResume={handleParseResume}
+        />
+      ) : (
+        <CandidateIntakeBulkUploadPanel
+          onBatchComplete={handleBulkBatchComplete}
+        />
+      )}
+    </Stack>
+  );
+
   return (
     <>
       <Box sx={{ px: { xs: 1.5, sm: 2 }, pt: 1.5, pb: 1 }}>
@@ -2225,45 +2268,7 @@ function CandidateIntakePage() {
             ) : null}
           </Stack>
         }
-        leftRail={
-          <Stack spacing={0} sx={{ minHeight: 0 }}>
-            <Box sx={{ px: 1.5, pt: 1.5, pb: 0.5 }}>
-              <ToggleButtonGroup
-                exclusive
-                fullWidth
-                size="small"
-                value={leftRailMode}
-                onChange={handleLeftRailModeChange}
-                sx={{
-                  "& .MuiToggleButton-root": {
-                    textTransform: "none",
-                    fontWeight: 600
-                  }
-                }}
-              >
-                <ToggleButton value="single">Single CV</ToggleButton>
-                <ToggleButton value="bulk">Bulk Upload CVs</ToggleButton>
-              </ToggleButtonGroup>
-            </Box>
-            {leftRailMode === "single" ? (
-              <CandidateIntakeWorkflowPanel
-                key={intakeSessionKey}
-                selectedSource={selectedSource}
-                onSourceChange={handleSourceChange}
-                resumeFile={resumeFile}
-                onFileSelect={handleResumeFileSelect}
-                onCreateIntake={handleCreateIntake}
-                intakeStatus={intakeStatus}
-                onProcessResume={handleProcessResume}
-                onParseResume={handleParseResume}
-              />
-            ) : (
-              <CandidateIntakeBulkUploadPanel
-                onBatchComplete={handleBulkBatchComplete}
-              />
-            )}
-          </Stack>
-        }
+        leftRail={isDesktopIntakeRail ? renderIntakeWorkflowRail() : null}
         rightPanel={
           <CandidateIntakeIntelligencePanel
             key={intakeSessionKey}
@@ -2271,23 +2276,30 @@ function CandidateIntakePage() {
           />
         }
         main={
-          <CandidateIntakeMainWorkspace
-            key={intakeSessionKey}
-            editableCandidate={editableCandidate}
-            onEditableCandidateChange={handleEditableCandidateChange}
-            validationErrors={createValidationErrors}
-            intakeStatus={intakeStatus}
-            resumeFile={resumeFile}
-            reviewResumeCandidateId={reviewSession?.candidateId || null}
-            reviewResumePath={reviewSession?.resumePath || ""}
-            reviewResumeLabel={reviewSession?.candidateName || ""}
-            canShowRegisterCandidate={Boolean(draftCandidateId)}
-            onRegisterCandidate={() => {
-              setCandidateContainer("PIPELINE");
-              setRegisterDialogOpen(true);
-            }}
-            registerCandidateMessage={registerCandidateMessage}
-          />
+          <Stack spacing={1.5} sx={{ width: "100%", minWidth: 0 }}>
+            {!isDesktopIntakeRail ? (
+              <Box sx={{ width: "100%", minWidth: 0 }}>
+                {renderIntakeWorkflowRail()}
+              </Box>
+            ) : null}
+            <CandidateIntakeMainWorkspace
+              key={intakeSessionKey}
+              editableCandidate={editableCandidate}
+              onEditableCandidateChange={handleEditableCandidateChange}
+              validationErrors={createValidationErrors}
+              intakeStatus={intakeStatus}
+              resumeFile={resumeFile}
+              reviewResumeCandidateId={reviewSession?.candidateId || null}
+              reviewResumePath={reviewSession?.resumePath || ""}
+              reviewResumeLabel={reviewSession?.candidateName || ""}
+              canShowRegisterCandidate={Boolean(draftCandidateId)}
+              onRegisterCandidate={() => {
+                setCandidateContainer("PIPELINE");
+                setRegisterDialogOpen(true);
+              }}
+              registerCandidateMessage={registerCandidateMessage}
+            />
+          </Stack>
         }
       />
       </Box>
