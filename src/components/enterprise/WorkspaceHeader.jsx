@@ -11,6 +11,7 @@ function WorkspaceHeader({
 }) {
   const theme = useTheme();
   const { typography } = theme.tokens;
+  const hasLeadingContent = Boolean(title || subtitle);
 
   return (
     <Box sx={{ mb: dense ? 2 : 3 }}>
@@ -31,38 +32,48 @@ function WorkspaceHeader({
 
       <Stack
         direction={{ xs: "column", sm: "row" }}
-        justifyContent="space-between"
+        justifyContent={hasLeadingContent || statusChip ? "space-between" : "flex-end"}
         alignItems={{ xs: "flex-start", sm: "center" }}
         gap={1}
       >
-        <Box sx={{ minWidth: 0 }}>
-          <Typography
-            sx={{
-              ...typography.pageTitle,
-              color: "text.primary"
-            }}
-          >
-            {title}
-          </Typography>
+        {hasLeadingContent ? (
+          <Box sx={{ minWidth: 0 }}>
+            {title ? (
+              typeof title === "string" ? (
+                <Typography
+                  sx={{
+                    ...typography.pageTitle,
+                    color: "text.primary"
+                  }}
+                >
+                  {title}
+                </Typography>
+              ) : (
+                <Box sx={{ minWidth: 0, maxWidth: "100%" }}>{title}</Box>
+              )
+            ) : null}
 
-          {subtitle ? (
-            <Typography
-              color="text.secondary"
-              mt={0.5}
-              sx={{
-                fontSize: typography.secondary.fontSize,
-                maxWidth: 720
-              }}
-            >
-              {subtitle}
-            </Typography>
-          ) : null}
-        </Box>
+            {subtitle ? (
+              <Typography
+                color="text.secondary"
+                mt={title ? 0.5 : 0}
+                sx={{
+                  fontSize: typography.secondary.fontSize,
+                  maxWidth: 720
+                }}
+              >
+                {subtitle}
+              </Typography>
+            ) : null}
+          </Box>
+        ) : null}
 
-        <Stack direction="row" alignItems="center" gap={1} sx={{ flexShrink: 0 }}>
-          {statusChip}
-          {actions}
-        </Stack>
+        {statusChip || actions ? (
+          <Stack direction="row" alignItems="center" gap={1} sx={{ flexShrink: 0 }}>
+            {statusChip}
+            {actions}
+          </Stack>
+        ) : null}
       </Stack>
     </Box>
   );

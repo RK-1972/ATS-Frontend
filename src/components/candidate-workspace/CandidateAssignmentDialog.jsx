@@ -31,6 +31,7 @@ import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import AssignmentTurnedInOutlinedIcon from "@mui/icons-material/AssignmentTurnedInOutlined";
 
 import candidateRepository from "@/repositories/candidateRepository";
+import PersonIdentityText from "@/components/candidate-workspace/PersonIdentityText";
 
 function CandidateAssignmentDialog({
   open,
@@ -529,19 +530,15 @@ function handleAssign() {
             CANDIDATE
           </Typography>
 
-          <Typography
-          fontWeight={700}
-          variant="h6"
-      >
-          {`${candidate?.first_name || ""} ${candidate?.last_name || ""}`.trim()}
-            </Typography>
-
-            <Typography
-                variant="body2"
-                color="text.secondary"
-            >
-                {candidate?.candidate_code}
-            </Typography>
+          <Typography component="div" fontWeight={700} variant="h6" sx={{ minWidth: 0 }}>
+            <PersonIdentityText
+              candidate={candidate}
+              variant="h6"
+              fontWeight={700}
+              noWrap
+              idSx={{ fontSize: "0.875rem" }}
+            />
+          </Typography>
 
         </Box>
 

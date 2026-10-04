@@ -1,10 +1,9 @@
 import { Box, Typography, Stack } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 
-import { EnterpriseSurface, MetricCell, StatusChip } from "@/components/enterprise";
-import InterviewProgressStepCell from "@/components/interviews/InterviewProgressStepCell";
-import CandidateStageControl from "@/components/candidate-workspace/CandidateStageControl";
+import { EnterpriseSurface, MetricCell } from "@/components/enterprise";
 import { formatExperience } from "@/enterprise/candidateWorkspaceUtils";
+import PersonIdentityText from "@/components/candidate-workspace/PersonIdentityText";
 
 function SummaryCard({ title, children, sx = {} }) {
   const theme = useTheme();
@@ -21,14 +20,20 @@ function SummaryCard({ title, children, sx = {} }) {
 }
 
 function FieldRow({ label, value }) {
+  const isNode = value !== null && value !== undefined && typeof value === "object";
+
   return (
     <Stack direction="row" justifyContent="space-between" spacing={2} py={0.75}>
       <Typography variant="body2" color="text.secondary">
         {label}
       </Typography>
-      <Typography variant="body2" fontWeight={600} textAlign="right">
-        {value || "—"}
-      </Typography>
+      {isNode ? (
+        <Box sx={{ textAlign: "right", minWidth: 0, maxWidth: "65%" }}>{value}</Box>
+      ) : (
+        <Typography variant="body2" fontWeight={600} textAlign="right">
+          {value || "—"}
+        </Typography>
+      )}
     </Stack>
   );
 }
@@ -38,13 +43,8 @@ function CandidateOverviewPanel({
   mapping = {},
   masterLabels = {},
   profileCompletion = 0,
-  profileCompletionBreakdown,
-  timelineEvents = [],
-  onUpdateStage,
-  isSaving = false
+  profileCompletionBreakdown
 }) {
-  const recentActivity = timelineEvents.filter((event) => !event.placeholder).slice(0, 3);
-
   return (
     <Box
       sx={{
@@ -54,7 +54,11 @@ function CandidateOverviewPanel({
           md: "repeat(2, minmax(0, 1fr))",
           xl: "repeat(3, minmax(0, 1fr))"
         },
-        gap: 2
+        gap: 2,
+        minWidth: 0,
+        maxWidth: "100%",
+        width: "100%",
+        boxSizing: "border-box"
       }}
     >
       <SummaryCard title="Personal Summary">
@@ -78,29 +82,19 @@ function CandidateOverviewPanel({
       </SummaryCard>
 
       <SummaryCard title="Recruiter">
-        <FieldRow label="Assigned Recruiter" value={candidate.recruiter_name || candidate.recruiter_id} />
+        <FieldRow
+          label="Assigned Recruiter"
+          value={
+            <PersonIdentityText
+              name={candidate.recruiter_name}
+              id={candidate.recruiter_id}
+              align="right"
+              noWrap
+            />
+          }
+        />
         <FieldRow label="Created On" value={candidate.created_on ? new Date(candidate.created_on).toLocaleDateString() : "—"} />
         <FieldRow label="Last Updated" value={candidate.updated_on ? new Date(candidate.updated_on).toLocaleDateString() : "—"} />
-      </SummaryCard>
-
-      <SummaryCard title="Interview Status">
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1}>
-          <Typography variant="body2" color="text.secondary">
-            Pipeline Stage
-          </Typography>
-          <InterviewProgressStepCell
-            row={mapping}
-            value={mapping.stage_name || "Not Mapped"}
-          />
-        </Stack>
-        <FieldRow label="Requisition" value={mapping.req_id} />
-        <FieldRow label="Map ID" value={mapping.map_id} />
-        <CandidateStageControl
-          key={`${mapping.map_id}-${mapping.stage_name || ""}`}
-          mapping={mapping}
-          onUpdateStage={onUpdateStage}
-          isSaving={isSaving}
-        />
       </SummaryCard>
 
       <SummaryCard title="Profile Completion">
@@ -119,22 +113,6 @@ function CandidateOverviewPanel({
             </Typography>
           </Stack>
         ))}
-      </SummaryCard>
-
-      <SummaryCard title="Recent Activity" sx={{ gridColumn: { md: "span 2", xl: "span 3" } }}>
-        {recentActivity.length === 0 ? (
-          <Typography variant="body2" color="text.secondary">
-            Activity will appear as the candidate progresses through the hiring pipeline.
-          </Typography>
-        ) : (
-          recentActivity.map((event) => (
-            <FieldRow
-              key={event.id}
-              label={event.type}
-              value={event.date ? new Date(event.date).toLocaleString() : event.description}
-            />
-          ))
-        )}
       </SummaryCard>
     </Box>
   );

@@ -18,10 +18,8 @@ import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
 import FilterListOutlinedIcon from "@mui/icons-material/FilterListOutlined";
 
 import { SearchBar, LoadingState, EmptyState } from "@/components/enterprise";
-import {
-  calculateProfileCompletion,
-  getCandidateDisplayName
-} from "@/enterprise/candidateWorkspaceUtils";
+import { calculateProfileCompletion } from "@/enterprise/candidateWorkspaceUtils";
+import PersonIdentityText from "@/components/candidate-workspace/PersonIdentityText";
 
 const FILTER_OPTIONS = [
   { key: "all", label: "All" },
@@ -30,34 +28,20 @@ const FILTER_OPTIONS = [
   { key: "screen", label: "To be screened" }
 ];
 
-function CandidateListContent({
-
-  candidates = [],
-  selectedId,
-
-
+function CandidateListHeader({
   workspaceView,
   onWorkspaceViewChange,
-
-
   searchQuery,
   onSearchChange,
-
-    statusFilter,
+  statusFilter,
   onStatusFilterChange,
-
-  onSelect,
-  onNewCandidate,
-
-  isLoading = false
-
+  onNewCandidate
 }) {
   const theme = useTheme();
   const { typography } = theme.tokens;
 
   return (
-    <>
-      <Box sx={{ p: 2, borderBottom: 1, borderColor: "divider" }}>
+      <Box sx={{ p: 2, borderBottom: 1, borderColor: "divider", flexShrink: 0 }}>
         <Typography sx={{ ...typography.sectionTitle, fontSize: 15, mb: 1.5 }}>
           Candidates
         </Typography>
@@ -116,7 +100,20 @@ function CandidateListContent({
           ))}
         </Stack>
       </Box>
+  );
+}
 
+function CandidateListScroll({
+  candidates = [],
+  selectedId,
+  onSelect,
+  onNewCandidate,
+  isLoading = false
+}) {
+  const theme = useTheme();
+  const { typography } = theme.tokens;
+
+  return (
       <Box sx={{ flex: 1, overflow: "auto", minHeight: 0 }}>
         {isLoading ? (
           <LoadingState message="Loading candidates..." />
@@ -160,8 +157,10 @@ function CandidateListContent({
 
                     <Box minWidth={0} flex={1}>
                       <ListItemText
-                        primary={getCandidateDisplayName(row)}
-                        secondary={row.candidate_code || `ID ${row.candidate_id}`}
+                        primary={
+                          <PersonIdentityText candidate={row} noWrap fontWeight={600} />
+                        }
+                        secondary={row.email_id || undefined}
                         primaryTypographyProps={{
                           fontWeight: 600,
                           fontSize: typography.secondary.fontSize,
@@ -190,9 +189,32 @@ function CandidateListContent({
           </List>
         )}
       </Box>
+  );
+}
+
+function CandidateListContent(props) {
+  return (
+    <>
+      <CandidateListHeader
+        workspaceView={props.workspaceView}
+        onWorkspaceViewChange={props.onWorkspaceViewChange}
+        searchQuery={props.searchQuery}
+        onSearchChange={props.onSearchChange}
+        statusFilter={props.statusFilter}
+        onStatusFilterChange={props.onStatusFilterChange}
+        onNewCandidate={props.onNewCandidate}
+      />
+      <CandidateListScroll
+        candidates={props.candidates}
+        selectedId={props.selectedId}
+        onSelect={props.onSelect}
+        onNewCandidate={props.onNewCandidate}
+        isLoading={props.isLoading}
+      />
     </>
   );
 }
+
 function CandidateListSidebar({
   candidates = [],
   selectedId,
@@ -211,25 +233,33 @@ function CandidateListSidebar({
 
   isLoading = false,
   mobileOpen = false,
-  onMobileClose
+  onMobileClose,
+  onOperationalMount
 }) {
   const theme = useTheme();
   const { layout } = theme.tokens;
 
-  const sidebarShell = {
+  const directoryViewportHeight = `calc(100vh - ${layout.headerHeight}px)`;
+
+  const sidebarColumn = {
     width: layout.sidebarWidth || 300,
     maxWidth: layout.sidebarWidth || 300,
+    flexShrink: 0,
+    alignSelf: "flex-start",
+    display: "flex",
+    flexDirection: "column",
     borderRight: 1,
     borderColor: "divider",
-    bgcolor: "background.paper",
+    bgcolor: "background.paper"
+  };
+
+  const directoryPanel = {
     display: "flex",
     flexDirection: "column",
     minHeight: 0,
-    flexShrink: 0,
-    height: `calc(100vh - ${layout.headerHeight}px)`,
-    maxHeight: `calc(100vh - ${layout.headerHeight}px)`,
-    overflow: "hidden",
-    alignSelf: "flex-start"
+    height: directoryViewportHeight,
+    maxHeight: directoryViewportHeight,
+    overflow: "hidden"
   };
 
   const contentProps = {
@@ -256,8 +286,35 @@ function CandidateListSidebar({
 
   return (
     <>
-      <Box sx={{ ...sidebarShell, display: { xs: "none", md: "flex" } }}>
-        <CandidateListContent {...contentProps} />
+      <Box sx={{ ...sidebarColumn, display: { xs: "none", md: "flex" } }}>
+        <Box sx={directoryPanel}>
+          <CandidateListHeader
+            workspaceView={contentProps.workspaceView}
+            onWorkspaceViewChange={contentProps.onWorkspaceViewChange}
+            searchQuery={contentProps.searchQuery}
+            onSearchChange={contentProps.onSearchChange}
+            statusFilter={contentProps.statusFilter}
+            onStatusFilterChange={contentProps.onStatusFilterChange}
+            onNewCandidate={contentProps.onNewCandidate}
+          />
+          <CandidateListScroll
+            candidates={contentProps.candidates}
+            selectedId={contentProps.selectedId}
+            onSelect={contentProps.onSelect}
+            onNewCandidate={contentProps.onNewCandidate}
+            isLoading={contentProps.isLoading}
+          />
+        </Box>
+        <Box
+          ref={onOperationalMount}
+          sx={{
+            flexShrink: 0,
+            borderTop: 1,
+            borderColor: "divider",
+            overflow: "visible",
+            bgcolor: "background.paper"
+          }}
+        />
       </Box>
 
       <Drawer

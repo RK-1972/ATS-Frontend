@@ -15,11 +15,16 @@ function WorkspaceLayout({
   navRail = null,
   sidebar = null,
   children,
+  rightPanel = null,
   inspector = null,
   timeline = null,
   toast = null,
   onToastClose,
-  maxWidth
+  maxWidth,
+  workspaceBodySx = {},
+  workspaceRowSx = {},
+  workspaceMainSx = {},
+  workspaceRightPanelSx = {}
 }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -65,7 +70,15 @@ function WorkspaceLayout({
         onMobileNavOpen={() => setMobileNavOpen(true)}
       />
 
-      <Box sx={{ display: "flex", flex: 1, minHeight: 0, minWidth: 0 }}>
+      <Box
+        sx={{
+          display: "flex",
+          flex: 1,
+          minHeight: 0,
+          minWidth: 0,
+          ...workspaceBodySx
+        }}
+      >
         <NavRailResponsiveShell
           navRail={navRail}
           mobileOpen={mobileNavOpen}
@@ -78,7 +91,8 @@ function WorkspaceLayout({
             flex: 1,
             flexDirection: { xs: "column", md: "row" },
             minWidth: 0,
-            minHeight: 0
+            minHeight: 0,
+            ...workspaceRowSx
           }}
         >
           {sidebar}
@@ -86,11 +100,14 @@ function WorkspaceLayout({
           <Box
             component="main"
             sx={{
-              flex: 1,
+              flex: "1 1 0%",
               minWidth: 0,
+              maxWidth: "100%",
               display: "flex",
               flexDirection: "column",
-              minHeight: 0
+              minHeight: 0,
+              alignSelf: "stretch",
+              ...workspaceMainSx
             }}
           >
             <AnimatePresence mode="wait">
@@ -105,14 +122,13 @@ function WorkspaceLayout({
                   flex: 1,
                   px: { xs: 2, sm: 2.5 },
                   py: { xs: 2, sm: 2 },
-                  maxWidth: contentMaxWidth,
+                  maxWidth: rightPanel ? "100%" : contentMaxWidth,
                   width: "100%",
                   minWidth: 0,
-                  mx: "auto",
+                  mx: rightPanel ? 0 : "auto",
                   display: "flex",
                   flexDirection: "column",
-                  minHeight: 0,
-                  overflowX: "hidden"
+                  minHeight: 0
                 }}
               >
                 {children}
@@ -133,6 +149,27 @@ function WorkspaceLayout({
               </Box>
             )}
           </Box>
+
+          {rightPanel ? (
+            <Box
+              component="aside"
+              aria-label="Workspace right panel"
+              sx={{
+                display: { xs: "none", lg: "flex" },
+                flexDirection: "column",
+                flexShrink: 0,
+                minWidth: 0,
+                alignSelf: "flex-start",
+                boxSizing: "border-box",
+                pt: 2,
+                pr: 2.5,
+                pb: 2,
+                ...workspaceRightPanelSx
+              }}
+            >
+              {rightPanel}
+            </Box>
+          ) : null}
         </Box>
       </Box>
 

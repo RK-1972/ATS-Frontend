@@ -16,18 +16,58 @@ import DownloadOutlinedIcon from "@mui/icons-material/DownloadOutlined";
 import LinkOutlinedIcon from "@mui/icons-material/LinkOutlined";
 import EventOutlinedIcon from "@mui/icons-material/EventOutlined";
 
-import { EnterpriseSurface, StatusChip } from "@/components/enterprise";
-import { formatExperience } from "@/enterprise/candidateWorkspaceUtils";
+import { EnterpriseSurface } from "@/components/enterprise";
+import { formatExperience, formatPersonIdentity } from "@/enterprise/candidateWorkspaceUtils";
+import PersonIdentityText from "@/components/candidate-workspace/PersonIdentityText";
 
-function CompactMeta({ label, value }) {
+function CompactMeta({ label, value, identityName, identityId, singleLine = false }) {
+  const displayValue =
+    identityName !== undefined
+      ? formatPersonIdentity(identityName, identityId)
+      : value || "—";
+
+  const valueContent =
+    identityName !== undefined ? (
+      <PersonIdentityText
+        name={identityName}
+        id={identityId}
+        variant="body2"
+        fontWeight={600}
+        noWrap={singleLine}
+      />
+    ) : (
+      <Typography
+        variant="body2"
+        fontWeight={600}
+        lineHeight={1.3}
+        noWrap={singleLine}
+        sx={{
+          minWidth: 0,
+          maxWidth: "100%",
+          ...(singleLine
+            ? {
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                display: "block"
+              }
+            : {
+                overflowWrap: "anywhere",
+                wordBreak: "break-word"
+              })
+        }}
+      >
+        {displayValue}
+      </Typography>
+    );
+
   return (
-    <Box minWidth={0}>
-      <Typography variant="caption" color="text.secondary" display="block" lineHeight={1.2}>
+    <Box sx={{ minWidth: 0, maxWidth: "100%", width: "100%" }}>
+      <Typography variant="caption" color="text.secondary" display="block" lineHeight={1.2} noWrap>
         {label}
       </Typography>
-      <Typography variant="body2" fontWeight={600} noWrap lineHeight={1.3}>
-        {value || "—"}
-      </Typography>
+      <Tooltip title={displayValue} placement="top" disableHoverListener={displayValue === "—"}>
+        <Box sx={{ minWidth: 0, maxWidth: "100%", lineHeight: 1.3 }}>{valueContent}</Box>
+      </Tooltip>
     </Box>
   );
 }
@@ -58,6 +98,8 @@ function CandidateHeroCard({
       padding
       sx={{
         mb: 1.5,
+        minWidth: 0,
+        maxWidth: "100%",
         p: { xs: 1.5, sm: 2 },
         background: (t) =>
           t.palette.mode === "dark"
@@ -65,8 +107,20 @@ function CandidateHeroCard({
             : `linear-gradient(135deg, ${t.palette.primary.main}0d 0%, ${t.palette.background.paper} 55%)`
       }}
     >
-      <Stack direction={{ xs: "column", md: "row" }} spacing={1.5} alignItems="stretch">
-        <Stack direction="row" spacing={1.5} flex={1} minWidth={0} alignItems="flex-start">
+      <Stack
+        direction={{ xs: "column", md: "row" }}
+        spacing={1.5}
+        alignItems="stretch"
+        sx={{ minWidth: 0, maxWidth: "100%", width: "100%" }}
+      >
+        <Stack
+          direction="row"
+          spacing={1.5}
+          flex={1}
+          minWidth={0}
+          alignItems="flex-start"
+          sx={{ minWidth: 0, maxWidth: "100%", pr: { md: 1.5 } }}
+        >
           <Avatar
             src={candidate.profile_photo_url || undefined}
             sx={{
@@ -80,21 +134,18 @@ function CandidateHeroCard({
             {(candidate.first_name?.[0] || "C").toUpperCase()}
           </Avatar>
 
-          <Box flex={1} minWidth={0}>
-            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap mb={0.25}>
-              <Typography sx={{ ...typography.sectionTitle, fontSize: 20, lineHeight: 1.2 }}>
-                {displayName}
-              </Typography>
-              <StatusChip status={masterLabels.status} variant="soft" size="small" />
-              <Chip
-                size="small"
-                label={candidate.candidate_code || "—"}
-                variant="outlined"
-                sx={{ height: 22 }}
-              />
-            </Stack>
-
-            <Typography variant="body2" color="text.secondary" mb={1} noWrap>
+          <Box flex={1} minWidth={0} sx={{ minWidth: 0, maxWidth: "100%" }}>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              mb={1}
+              sx={{
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                maxWidth: "100%"
+              }}
+            >
               {designation} · {candidate.current_company || "—"}
             </Typography>
 
@@ -103,22 +154,45 @@ function CandidateHeroCard({
                 display: "grid",
                 gridTemplateColumns: {
                   xs: "repeat(2, minmax(0, 1fr))",
-                  sm: "repeat(3, minmax(0, 1fr))",
-                  lg: "repeat(5, minmax(0, 1fr))"
+                  md: "repeat(3, minmax(0, 1fr))"
                 },
-                gap: 1.25,
-                mb: 1
+                columnGap: 2,
+                rowGap: 1.25,
+                mb: 1.25,
+                minWidth: 0,
+                maxWidth: "100%",
+                width: "100%",
+                boxSizing: "border-box",
+                "& > *": {
+                  minWidth: 0,
+                  maxWidth: "100%"
+                }
               }}
             >
               <CompactMeta label="Experience" value={formatExperience(candidate.total_experience)} />
               <CompactMeta label="Location" value={candidate.current_location} />
-              <CompactMeta label="Recruiter" value={candidate.recruiter_name || candidate.recruiter_id} />
-              <CompactMeta label="Source" value={masterLabels.source} />
+              <CompactMeta
+                label="Recruiter"
+                identityName={candidate.recruiter_name}
+                identityId={candidate.recruiter_id}
+                singleLine
+              />
+              <CompactMeta label="Source" value={masterLabels.source} singleLine />
               <CompactMeta label="Stage" value={stage} />
               <CompactMeta label="Resume" value={resumeStatus} />
             </Box>
 
-            <Stack direction="row" flexWrap="wrap" gap={0.75} alignItems="center">
+            <Box
+              sx={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 0.75,
+                alignItems: "center",
+                minWidth: 0,
+                maxWidth: "100%",
+                width: "100%"
+              }}
+            >
               {skillChips.length > 0 ? (
                 skillChips.map((skill) => (
                   <Chip
@@ -127,13 +201,13 @@ function CandidateHeroCard({
                     size="small"
                     color="primary"
                     variant="filled"
-                    sx={{ height: 24, borderRadius: `${radius.pill}px` }}
+                    sx={{ height: 24, borderRadius: `${radius.pill}px`, maxWidth: "100%" }}
                   />
                 ))
               ) : (
                 <Chip label="Skills pending" size="small" variant="outlined" sx={{ height: 24 }} />
               )}
-            </Stack>
+            </Box>
           </Box>
         </Stack>
 

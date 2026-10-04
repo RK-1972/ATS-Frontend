@@ -11,10 +11,12 @@ import {
   ListItem,
   ListItemText,
   Stack,
+  Tooltip,
   Typography
 } from "@mui/material";
 import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import ChevronRightOutlinedIcon from "@mui/icons-material/ChevronRightOutlined";
+import LinkOutlinedIcon from "@mui/icons-material/LinkOutlined";
 import { useTheme } from "@mui/material/styles";
 
 import {
@@ -22,6 +24,9 @@ import {
   EnterpriseSurface
 } from "@/components/enterprise";
 import recruitmentClient from "@/api/clients/recruitmentClient";
+
+const MAP_REQUISITION_AI_TOOLTIP =
+  "Map this candidate to a requisition to generate a review against role requirements.";
 
 const STATUS_COLORS = {
   Meets: "success",
@@ -55,7 +60,8 @@ function CandidateAiInsightsPanel({
   open,
   onToggle,
   candidateId,
-  requisitionCode
+  requisitionCode,
+  onMapRequisition
 }) {
   const theme = useTheme();
   const [availability, setAvailability] = useState(null);
@@ -146,8 +152,10 @@ function CandidateAiInsightsPanel({
   return (
     <Box
       sx={{
-        width: { xs: "100%", lg: 320 },
-        flexShrink: 0,
+        width: "100%",
+        maxWidth: "100%",
+        minWidth: 0,
+        boxSizing: "border-box",
         display: "flex",
         flexDirection: "column",
         gap: 1.25,
@@ -157,8 +165,13 @@ function CandidateAiInsightsPanel({
         top: { lg: 12 }
       }}
     >
-      <Stack direction="row" alignItems="center" justifyContent="space-between">
-        <Stack direction="row" spacing={0.75} alignItems="center">
+      <Stack
+        direction="row"
+        alignItems="center"
+        justifyContent="space-between"
+        sx={{ width: "100%", minWidth: 0 }}
+      >
+        <Stack direction="row" spacing={0.75} alignItems="center" sx={{ minWidth: 0, flex: 1 }}>
           <EnterpriseModuleIcon
             icon={AutoAwesomeOutlinedIcon}
             module="team"
@@ -166,7 +179,7 @@ function CandidateAiInsightsPanel({
             size={28}
             iconSize={16}
           />
-          <Typography variant="subtitle2" fontWeight={700}>
+          <Typography variant="subtitle2" fontWeight={700} sx={{ minWidth: 0 }}>
             AI Candidate Review
           </Typography>
         </Stack>
@@ -195,9 +208,22 @@ function CandidateAiInsightsPanel({
       {!loadingAvailability && aiAvailable ? (
         <>
           {!requisitionCode ? (
-            <Alert severity="warning" sx={{ py: 0.5 }}>
-              Map this candidate to a requisition to generate a review against role requirements.
-            </Alert>
+            <Tooltip
+              title={MAP_REQUISITION_AI_TOOLTIP}
+              placement="left"
+              arrow
+              describeChild
+            >
+              <IconButton
+                size="small"
+                color="primary"
+                onClick={() => onMapRequisition?.()}
+                aria-label="Map to Requisition"
+                sx={{ alignSelf: "flex-start" }}
+              >
+                <LinkOutlinedIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
           ) : (
             <Button
               variant="contained"

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
 import {
   Alert,
+  Box,
   Button,
   Dialog,
   DialogActions,
@@ -80,18 +81,26 @@ function CandidateOwnershipDialog({
             <Typography variant="caption" color="text.secondary" fontWeight={600}>
               Current Candidate
             </Typography>
-            <Typography variant="body1" fontWeight={600}>
-              {candidateName}
-            </Typography>
+            {typeof candidateName === "string" ? (
+              <Typography variant="body1" fontWeight={600}>
+                {candidateName}
+              </Typography>
+            ) : (
+              <Box component="div">{candidateName}</Box>
+            )}
           </Stack>
 
           <Stack spacing={0.25}>
             <Typography variant="caption" color="text.secondary" fontWeight={600}>
               Current Owner
             </Typography>
-            <Typography variant="body1" fontWeight={600}>
-              {currentOwner}
-            </Typography>
+            {typeof currentOwner === "string" ? (
+              <Typography variant="body1" fontWeight={600}>
+                {currentOwner}
+              </Typography>
+            ) : (
+              <Box component="div">{currentOwner}</Box>
+            )}
           </Stack>
 
           <TextField

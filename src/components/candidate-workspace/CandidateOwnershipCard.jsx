@@ -11,6 +11,7 @@ import {
 
 import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
 import EnterpriseModuleIcon from "@/components/enterprise/EnterpriseModuleIcon";
+import PersonIdentityText from "@/components/candidate-workspace/PersonIdentityText";
 
 function CandidateOwnershipCard({
   ownerDisplayName = "—",
@@ -45,9 +46,7 @@ function CandidateOwnershipCard({
     isOwner &&
     !isAssigned;
 
-  const displayOwnerName = isTalentPoolShared
-    ? "None"
-    : ownerDisplayName || "—";
+  const displayOwnerName = isTalentPoolShared ? "None" : null;
 
   const mapRequisitionButton = (
     <Button
@@ -167,9 +166,21 @@ function CandidateOwnershipCard({
             <Typography variant="caption" color="text.secondary" fontWeight={600}>
               Current Owner
             </Typography>
-            <Typography variant="body1" fontWeight={700}>
-              {displayOwnerName}
-            </Typography>
+            {isTalentPoolShared ? (
+              <Typography variant="body1" fontWeight={700}>
+                {displayOwnerName}
+              </Typography>
+            ) : (
+              <Typography component="div" variant="body1" fontWeight={700} sx={{ minWidth: 0 }}>
+                <PersonIdentityText
+                  name={ownerDisplayName}
+                  id={ownerEmployeeCode}
+                  variant="body1"
+                  fontWeight={700}
+                  noWrap
+                />
+              </Typography>
+            )}
 
             {isTalentPoolShared ? (
               <Typography

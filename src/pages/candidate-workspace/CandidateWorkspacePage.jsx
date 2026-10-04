@@ -2,9 +2,11 @@ import CandidateAssignmentDialog
 from "@/components/candidate-workspace/CandidateAssignmentDialog";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate, useOutletContext } from "react-router-dom";
 
-import { Box, Stack, Tab, Typography } from "@mui/material";
+import { Box, Stack, Tab, Typography, useMediaQuery } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 
 import {
   ErrorState,
@@ -14,6 +16,7 @@ import {
   EnterpriseTabs
 } from "@/components/enterprise";
 import { WORKSPACE_TABS } from "@/enterprise/candidateWorkspaceUtils";
+import PersonIdentityText from "@/components/candidate-workspace/PersonIdentityText";
 import { useCopilotContext } from "@/components/copilot/CopilotContext";
 
 import CandidateHeroCard from "@/components/candidate-workspace/CandidateHeroCard";
@@ -30,26 +33,31 @@ import CandidateExperiencePanel from "@/components/candidate-workspace/panels/Ca
 import CandidateDocumentsPanel from "@/components/candidate-workspace/panels/CandidateDocumentsPanel";
 import CandidateNotesPanel from "@/components/candidate-workspace/panels/CandidateNotesPanel";
 import CandidateTimelinePanel from "@/components/candidate-workspace/panels/CandidateTimelinePanel";
+import CandidateRecentActivitySection from "@/components/candidate-workspace/CandidateRecentActivitySection";
 import CandidateAssignmentCard from "@/components/candidate-workspace/CandidateAssignmentCard";
 import CandidateOwnershipCard from "@/components/candidate-workspace/CandidateOwnershipCard";
 import CandidateOwnershipDialog from "@/components/candidate-workspace/CandidateOwnershipDialog";
 import EnterpriseConfirmationDialog from "@/components/enterprise/EnterpriseConfirmationDialog";
 import CandidateDraftRegisterPanel from "@/components/candidate-workspace/CandidateDraftRegisterPanel";
 import candidateRepository from "@/repositories/candidateRepository";
+import useEnterpriseStore from "@/store/enterpriseStore";
+import { buildEntityAuditEvents } from "@/enterprise/recruiterSelectors.wave2";
 
 function CandidateWorkspacePage() {
   const navigate = useNavigate();
   const workspace = useOutletContext();
+  const theme = useTheme();
+  const isDesktopSidebar = useMediaQuery(theme.breakpoints.up("md"));
   const { setCurrentCandidate } = useCopilotContext();
   const [openSkillDialog, setOpenSkillDialog] = useState(false);
   const [openExperienceDialog, setOpenExperienceDialog] = useState(false);
-  const [assignmentOpen, setAssignmentOpen] =
-  useState(false);
   const [ownershipDialogOpen, setOwnershipDialogOpen] = useState(false);
   const [releaseDialogOpen, setReleaseDialogOpen] = useState(false);
   const [releaseLoading, setReleaseLoading] = useState(false);
   const [returnPoolDialogOpen, setReturnPoolDialogOpen] = useState(false);
   const [returnPoolLoading, setReturnPoolLoading] = useState(false);
+  const [timelineView, setTimelineView] = useState("activity");
+  const auditEvents = useEnterpriseStore((state) => state.auditEvents);
   const {
     candidate,
     mapping,
@@ -60,7 +68,9 @@ function CandidateWorkspacePage() {
     profileCompletionBreakdown,
     skillChips,
     skills,
-    saveSkills,
+    addSkillsBatch,
+    updateSkill,
+    deleteSkill,
     timelineEvents,
     masterLabels,
     masterData,
@@ -68,13 +78,14 @@ function CandidateWorkspacePage() {
     setActiveTab,
     aiPanelOpen,
     setAiPanelOpen,
+    assignmentDialogOpen,
+    setAssignmentDialogOpen,
     isLoadingProfile,
     isSaving,
     error,
     showToast,
     saveCandidate,
     mapCandidateToRequisition,
-    updateCandidateStage,
     localNotes,
     setLocalNotes,
     triggerResumeUpload,
@@ -84,7 +95,8 @@ function CandidateWorkspacePage() {
     requestOwnership,
     loadCandidates,
     loadProfile,
-    candidateId
+    candidateId,
+    sidebarOperationalMount
   } = workspace;
 
   useEffect(() => {
@@ -139,6 +151,51 @@ function CandidateWorkspacePage() {
 
     return profileMapping;
   }, [profile?.mapping, mapping, candidates, candidate?.candidate_id]);
+
+  const candidateAuditEvents = useMemo(() => {
+    const scoped = buildEntityAuditEvents(auditEvents, {
+      requisitionCode:
+        activeAssignmentMapping?.req_code || String(activeAssignmentMapping?.req_id || ""),
+      candidateMapId: mapping?.map_id
+    });
+
+    const candidateId = String(candidate?.candidate_id || "");
+    const candidateCode = String(candidate?.candidate_code || "");
+    const seen = new Set(scoped.map((event) => event.id));
+
+    const extra = (Array.isArray(auditEvents) ? auditEvents : [])
+      .filter((event) => {
+        const entityId = String(event.entityId || "");
+        if (candidateId && entityId === candidateId) {
+          return true;
+        }
+        if (candidateCode && entityId === candidateCode) {
+          return true;
+        }
+        const meta = event.metadata || {};
+        return String(meta.candidateId || meta.candidate_id || "") === candidateId;
+      })
+      .map((event) => ({
+        id: event.id || event.correlationId,
+        title: event.action || event.eventType,
+        subtitle: [event.entity, event.entityId].filter(Boolean).join(" · "),
+        timestamp: event.timestamp
+          ? new Date(event.timestamp).toLocaleString()
+          : event.created_on
+            ? new Date(event.created_on).toLocaleString()
+            : null
+      }))
+      .filter((event) => event.id && !seen.has(event.id));
+
+    return [...scoped, ...extra];
+  }, [
+    auditEvents,
+    activeAssignmentMapping?.req_code,
+    activeAssignmentMapping?.req_id,
+    mapping?.map_id,
+    candidate?.candidate_id,
+    candidate?.candidate_code
+  ]);
 
   const handleWorkspaceAction = useCallback(
     (actionKey, payload) => {
@@ -202,7 +259,7 @@ function CandidateWorkspacePage() {
 
     console.log("Assign Requisition Clicked");
 
-    setAssignmentOpen(true);
+    setAssignmentDialogOpen(true);
 
     return;
 
@@ -233,9 +290,18 @@ if (
 
   const handleToolbarOverflow = useCallback(
     (action) => {
-      showToast(`${action.charAt(0).toUpperCase()}${action.slice(1)} view — preview placeholder.`, "info");
+      if (action === "history") {
+        setTimelineView("activity");
+        setActiveTab("timeline");
+        return;
+      }
+
+      if (action === "audit") {
+        setTimelineView("audit");
+        setActiveTab("timeline");
+      }
     },
-    [showToast]
+    [setActiveTab]
   );
 
   const handleSaveNotes = useCallback(
@@ -306,12 +372,27 @@ if (
     }
   };
 
+  const clearSidebarOperational =
+    isDesktopSidebar && sidebarOperationalMount
+      ? createPortal(<Box aria-hidden sx={{ display: "none" }} />, sidebarOperationalMount)
+      : null;
+
   if (isLoadingProfile) {
-    return <LoadingState message="Loading candidate workspace..." />;
+    return (
+      <>
+        {clearSidebarOperational}
+        <LoadingState message="Loading candidate workspace..." />
+      </>
+    );
   }
 
   if (error && !candidate?.candidate_id) {
-    return <ErrorState title="Unable to load candidate" message={error} />;
+    return (
+      <>
+        {clearSidebarOperational}
+        <ErrorState title="Unable to load candidate" message={error} />
+      </>
+    );
   }
 
   const tabPanel = (() => {
@@ -340,7 +421,10 @@ if (
           <CandidateSkillsPanel
             skills={skills}
             masterData={masterData}
-            onSaveSkills={saveSkills}
+            onAddSkillsBatch={addSkillsBatch}
+            onUpdateSkill={updateSkill}
+            onDeleteSkill={deleteSkill}
+            isSaving={isSaving}
             onOpenAddDialog={() => setOpenSkillDialog(true)}
             forceOpenDialog={openSkillDialog}
             onDialogClose={() => setOpenSkillDialog(false)}
@@ -382,7 +466,13 @@ if (
           />
         );
       case "timeline":
-        return <CandidateTimelinePanel events={timelineEvents} />;
+        return (
+          <CandidateTimelinePanel
+            events={timelineEvents}
+            view={timelineView}
+            auditEvents={candidateAuditEvents}
+          />
+        );
       default:
         return (
           <CandidateOverviewPanel
@@ -391,13 +481,33 @@ if (
             masterLabels={masterLabels}
             profileCompletion={profileCompletion}
             profileCompletionBreakdown={profileCompletionBreakdown}
-            timelineEvents={timelineEvents}
-            onUpdateStage={updateCandidateStage}
-            isSaving={isSaving}
           />
         );
     }
   })();
+
+  const operationalSections = (
+    <Stack spacing={1.5} sx={{ p: 1.5, minWidth: 0 }}>
+      <CandidateOwnershipCard
+        ownerDisplayName={ownerDisplayName}
+        isOwner={isOwner}
+        pendingRequest={pendingRequest}
+        mapping={activeAssignmentMapping}
+        candidateContainer={candidate?.candidate_container}
+        ownerEmployeeCode={candidate?.owner_employee_code}
+        onRequestOwnership={() => setOwnershipDialogOpen(true)}
+        onMapRequisition={() => handleWorkspaceAction("map-requisition")}
+        onReturnToTalentPool={() => setReturnPoolDialogOpen(true)}
+      />
+      <CandidateAssignmentCard
+        candidate={candidate}
+        mapping={activeAssignmentMapping}
+        isOwner={isOwner}
+        onAssign={() => handleWorkspaceAction("map-requisition")}
+        onRelease={() => setReleaseDialogOpen(true)}
+      />
+    </Stack>
+  );
 
   return (
     <Box
@@ -408,14 +518,24 @@ if (
         minHeight: 0,
         minWidth: 0,
         maxWidth: "100%",
-        overflowX: "hidden",
+        width: "100%",
         pb: { xs: 12, sm: 10 }
       }}
     >
       <WorkspaceHeader
         dense
-        title={displayName}
-        subtitle={`${candidate.candidate_code || "—"} · Candidate Workspace`}
+        title={
+          <PersonIdentityText
+            candidate={candidate}
+            noWrap
+            primarySx={{
+              ...theme.tokens.typography.pageTitle,
+              color: "text.primary"
+            }}
+            idSx={{ fontSize: theme.tokens.typography.secondary.fontSize }}
+          />
+        }
+        subtitle="Candidate Workspace"
         breadcrumbs={[
           { label: "Dashboard" },
           { label: "Recruitment" },
@@ -433,8 +553,7 @@ if (
         }
       />
 
-      <Stack direction={{ xs: "column", lg: "row" }} spacing={1.5} alignItems="flex-start">
-        <Box flex={1} minWidth={0}>
+      <Box sx={{ minWidth: 0, maxWidth: "100%", width: "100%", boxSizing: "border-box" }}>
           <CandidateDraftRegisterPanel
             candidate={candidate}
             onRegistered={async (updatedCandidate) => {
@@ -461,26 +580,6 @@ if (
             masterLabels={masterLabels}
             onAction={handleWorkspaceAction}
           />
-          <CandidateOwnershipCard
-            ownerDisplayName={ownerDisplayName}
-            isOwner={isOwner}
-            pendingRequest={pendingRequest}
-            mapping={activeAssignmentMapping}
-            candidateContainer={candidate?.candidate_container}
-            ownerEmployeeCode={candidate?.owner_employee_code}
-            onRequestOwnership={() => setOwnershipDialogOpen(true)}
-            onMapRequisition={() => handleWorkspaceAction("map-requisition")}
-            onReturnToTalentPool={() => setReturnPoolDialogOpen(true)}
-          />
-          <CandidateAssignmentCard
-            candidate={candidate}
-            mapping={activeAssignmentMapping}
-            isOwner={isOwner}
-            onAssign={() =>
-              handleWorkspaceAction("map-requisition")
-            }
-            onRelease={() => setReleaseDialogOpen(true)}
-          />
           <Box
             sx={{
               borderBottom: 1,
@@ -494,7 +593,12 @@ if (
           >
             <EnterpriseTabs
               value={activeTab}
-              onChange={(_, value) => setActiveTab(value)}
+              onChange={(_, value) => {
+                setActiveTab(value);
+                if (value === "timeline") {
+                  setTimelineView("activity");
+                }
+              }}
               variant="scrollable"
               scrollButtons="auto"
               allowScrollButtonsMobile
@@ -506,9 +610,18 @@ if (
             </EnterpriseTabs>
           </Box>
 
-          <Box sx={{ minHeight: 280 }}>{tabPanel}</Box>
-        </Box>
+          <Box sx={{ minHeight: 280, minWidth: 0, maxWidth: "100%", width: "100%" }}>
+            {tabPanel}
+          </Box>
 
+          {!isDesktopSidebar ? (
+            <Box sx={{ mt: 2 }}>{operationalSections}</Box>
+          ) : null}
+
+          <CandidateRecentActivitySection timelineEvents={timelineEvents} />
+      </Box>
+
+      <Box sx={{ display: { xs: "block", lg: "none" }, mt: 2 }}>
         <CandidateAiInsightsPanel
           open={aiPanelOpen}
           onToggle={() => setAiPanelOpen((prev) => !prev)}
@@ -520,8 +633,9 @@ if (
             profile?.mapping?.requisition_code ||
             null
           }
+          onMapRequisition={() => setAssignmentDialogOpen(true)}
         />
-      </Stack>
+      </Box>
 
       <Box sx={{ display: { xs: "block", lg: "none" }, mt: 1 }}>
         <Typography variant="caption" color="text.secondary">
@@ -529,13 +643,13 @@ if (
         </Typography>
       </Box>
       <CandidateAssignmentDialog
-      open={assignmentOpen}
-      onClose={() => setAssignmentOpen(false)}
+      open={assignmentDialogOpen}
+      onClose={() => setAssignmentDialogOpen(false)}
       candidate={candidate}
       candidateId={candidate.candidate_id}
       onAssigned={async () => {
 
-          setAssignmentOpen(false);
+          setAssignmentDialogOpen(false);
 
           await workspace.loadCandidates();
 
@@ -545,8 +659,13 @@ if (
   />
       <CandidateOwnershipDialog
         open={ownershipDialogOpen}
-        candidateName={displayName}
-        currentOwner={ownerDisplayName}
+        candidateName={<PersonIdentityText candidate={candidate} />}
+        currentOwner={
+          <PersonIdentityText
+            name={ownerDisplayName}
+            id={candidate?.owner_employee_code}
+          />
+        }
         loading={isSaving}
         onClose={() => setOwnershipDialogOpen(false)}
         onSubmit={async (reason) => {
@@ -587,6 +706,9 @@ if (
         onClose={handleCloseReturnPoolDialog}
       />
         <CandidateWorkspaceFab onAction={handleWorkspaceAction} />
+      {isDesktopSidebar && sidebarOperationalMount
+        ? createPortal(operationalSections, sidebarOperationalMount)
+        : null}
       </Box>
     );
   }

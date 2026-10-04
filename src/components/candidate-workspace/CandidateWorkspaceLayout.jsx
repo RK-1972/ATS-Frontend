@@ -1,18 +1,21 @@
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate, useParams } from "react-router-dom";
 
 import { Box, IconButton } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import MenuOutlinedIcon from "@mui/icons-material/MenuOutlined";
 
 import WorkspaceLayout from "@/components/enterprise/WorkspaceLayout";
 import AdminNavRail from "@/components/layout/AdminNavRail";
 import RecruiterNavRail from "@/components/layout/RecruiterNavRail";
 import CandidateListSidebar from "@/components/candidate-workspace/CandidateListSidebar";
+import CandidateAiInsightsPanel from "@/components/candidate-workspace/CandidateAiInsightsPanel";
 import CandidateNewDialog from "@/components/candidate-workspace/CandidateNewDialog";
 import { CANDIDATE_MOBILE_ICON_BUTTON_SX } from "@/components/candidate-workspace/candidateWorkspaceTokens";
 import useCandidateWorkspace from "@/hooks/useCandidateWorkspace";
 
 function CandidateWorkspaceLayout() {
   const navigate = useNavigate();
+  const { candidateId: routeCandidateId } = useParams();
   const workspace = useCandidateWorkspace();
   const {
     user,
@@ -25,8 +28,16 @@ function CandidateWorkspaceLayout() {
     mobileSidebarOpen,
     setMobileSidebarOpen,
     resumeInputRef,
-    handleResumeSelected
+    handleResumeSelected,
+    candidate,
+    profile,
+    mapping,
+    aiPanelOpen,
+    setAiPanelOpen,
+    setAssignmentDialogOpen
   } = workspace;
+
+  const showDesktopAiColumn = Boolean(routeCandidateId);
 
   let enterpriseWorkspace = {};
 
@@ -37,9 +48,64 @@ function CandidateWorkspaceLayout() {
     enterpriseWorkspace = {};
   }
 
+  const { layout } = useTheme().tokens;
+  const workspaceMinHeight = `calc(100vh - ${layout.headerHeight}px)`;
+
   return (
     <WorkspaceLayout
-      maxWidth={1680}
+      maxWidth="100%"
+      workspaceBodySx={{
+        minHeight: workspaceMinHeight,
+        flex: "1 1 auto",
+        alignItems: "flex-start",
+        minWidth: 0,
+        maxWidth: "100%",
+        width: "100%"
+      }}
+      workspaceRowSx={{
+        minHeight: workspaceMinHeight,
+        flex: "1 1 auto",
+        alignItems: "flex-start",
+        width: "100%",
+        minWidth: 0,
+        maxWidth: "100%",
+        overflow: "visible"
+      }}
+      workspaceMainSx={{
+        flex: "1 1 0%",
+        minWidth: 0,
+        maxWidth: "100%"
+      }}
+      workspaceRightPanelSx={
+        showDesktopAiColumn
+          ? {
+              width: aiPanelOpen ? 320 : 44,
+              maxWidth: aiPanelOpen ? 320 : 44,
+              borderLeft: 1,
+              borderColor: "divider",
+              bgcolor: "background.default"
+            }
+          : {}
+      }
+      rightPanel={
+        showDesktopAiColumn
+          ? (
+            <CandidateAiInsightsPanel
+              open={aiPanelOpen}
+              onToggle={() => setAiPanelOpen((prev) => !prev)}
+              candidateId={candidate?.candidate_id}
+              requisitionCode={
+                mapping?.req_code ||
+                mapping?.requisition_code ||
+                profile?.mapping?.req_code ||
+                profile?.mapping?.requisition_code ||
+                null
+              }
+              onMapRequisition={() => setAssignmentDialogOpen(true)}
+            />
+          )
+          : null
+      }
       navRail={
         enterpriseWorkspace.showRecruitmentWorkspace ? (
           <RecruiterNavRail loggedInUser={user} />
@@ -67,7 +133,8 @@ function CandidateWorkspaceLayout() {
           isLoading={workspace.isLoadingList}
           mobileOpen={mobileSidebarOpen}
           onMobileClose={() => setMobileSidebarOpen(false)}
-/>
+          onOperationalMount={workspace.setSidebarOperationalMount}
+        />
       }
       toast={
         toast.message

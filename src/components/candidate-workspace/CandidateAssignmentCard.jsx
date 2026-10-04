@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useOutletContext } from "react-router-dom";
 
 import {
   Box,
@@ -16,6 +17,7 @@ import WorkOutlineOutlinedIcon from "@mui/icons-material/WorkOutlineOutlined";
 import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
 import AddTaskOutlinedIcon from "@mui/icons-material/AddTaskOutlined";
 import EnterpriseModuleIcon from "@/components/enterprise/EnterpriseModuleIcon";
+import PersonIdentityText from "@/components/candidate-workspace/PersonIdentityText";
 
 const OWNERSHIP_TOOLTIP =
   "Request ownership before assigning this candidate.";
@@ -28,6 +30,31 @@ function CandidateAssignmentCard({
   onRelease
 }) {
   const isAssigned = Boolean(mapping?.req_id);
+  const workspace = useOutletContext() || {};
+  const ownerDisplayName = workspace.ownerDisplayName || "";
+
+  const recruiterId = mapping?.recruiter_id || candidate.recruiter_id;
+  const recruiterName = useMemo(() => {
+    if (candidate.recruiter_name || mapping?.recruiter_name) {
+      return candidate.recruiter_name || mapping?.recruiter_name;
+    }
+
+    const ownerCode = String(candidate.owner_employee_code || "").trim();
+    const recruiterCode = String(recruiterId || "").trim();
+
+    if (ownerCode && recruiterCode && ownerCode === recruiterCode && ownerDisplayName) {
+      return ownerDisplayName;
+    }
+
+    return undefined;
+  }, [
+    candidate.recruiter_name,
+    mapping?.recruiter_name,
+    candidate.owner_employee_code,
+    recruiterId,
+    ownerDisplayName
+  ]);
+
   const container = String(candidate.candidate_container || "")
     .trim()
     .toUpperCase();
@@ -189,8 +216,8 @@ function CandidateAssignmentCard({
               Recruiter
             </Typography>
 
-            <Typography fontWeight={600}>
-              {mapping?.recruiter_id || "—"}
+            <Typography component="div" fontWeight={600} sx={{ minWidth: 0 }}>
+              <PersonIdentityText name={recruiterName} id={recruiterId} noWrap />
             </Typography>
 
           </Box>

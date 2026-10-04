@@ -9,7 +9,7 @@ import EventOutlinedIcon from "@mui/icons-material/EventOutlined";
 import RateReviewOutlinedIcon from "@mui/icons-material/RateReviewOutlined";
 import WorkOutlineOutlinedIcon from "@mui/icons-material/WorkOutlineOutlined";
 
-import { EnterpriseSurface } from "@/components/enterprise";
+import { ActivityTimeline, EnterpriseSurface } from "@/components/enterprise";
 
 const ICON_MAP = {
   person_add: PersonAddOutlinedIcon,
@@ -30,13 +30,30 @@ const TONE_COLOR = {
   muted: "text.disabled"
 };
 
-function CandidateTimelinePanel({ events = [] }) {
+function CandidateTimelinePanel({ events = [], view = "activity", auditEvents = [] }) {
   const theme = useTheme();
   const { radius } = theme.tokens;
   const realEvents = events.filter((event) => !event.placeholder);
+  const showActivity = view !== "audit";
+  const showAudit = view === "audit";
 
   return (
     <EnterpriseSurface>
+      {showAudit ? (
+        <>
+          <Typography variant="subtitle1" fontWeight={700} mb={2}>
+            Enterprise Audit
+          </Typography>
+          <ActivityTimeline
+            events={auditEvents}
+            maxItems={50}
+            emptyMessage="No enterprise audit entries are recorded for this candidate in the current session."
+          />
+        </>
+      ) : null}
+
+      {showActivity ? (
+        <>
       <Typography variant="subtitle1" fontWeight={700} mb={2}>
         Activity Timeline
       </Typography>
@@ -111,6 +128,8 @@ function CandidateTimelinePanel({ events = [] }) {
           })}
         </Stack>
       )}
+        </>
+      ) : null}
     </EnterpriseSurface>
   );
 }
