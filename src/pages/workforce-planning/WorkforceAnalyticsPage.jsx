@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useOutletContext } from "react-router-dom";
 
 import { Grid, Stack, Typography, Box } from "@mui/material";
@@ -8,11 +9,15 @@ import ConfigMetricSlab from "../../components/platform-config/ConfigMetricSlab"
 import DepartmentUtilizationChart from "../../components/workforce-planning/DepartmentUtilizationChart";
 import BudgetTrendChart from "../../components/workforce-planning/BudgetTrendChart";
 import { formatCurrency } from "@/utils/formatCurrency";
+import { deriveWorkforceAnalyticsView } from "@/utils/deriveWorkforceAnalyticsView";
 
 function WorkforceAnalyticsPage() {
 
   const { data } = useOutletContext();
-  const { analytics } = data;
+  const analytics = useMemo(
+    () => deriveWorkforceAnalyticsView(data),
+    [data]
+  );
 
   const summaryMetrics = [
     {

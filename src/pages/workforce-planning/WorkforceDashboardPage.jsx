@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useOutletContext } from "react-router-dom";
 
 import {
@@ -18,6 +19,7 @@ import ConfigMetricSlab from "../../components/platform-config/ConfigMetricSlab"
 import BudgetUtilizationBar from "../../components/workforce-planning/BudgetUtilizationBar";
 import { formatCurrency } from "@/utils/formatCurrency";
 import WorkforceStatusChip from "../../components/workforce-planning/WorkforceStatusChip";
+import { deriveWorkforceDashboardView } from "@/utils/deriveWorkforceDashboardView";
 
 function SectionTitle({ children }) {
 
@@ -36,7 +38,11 @@ function SectionTitle({ children }) {
 function WorkforceDashboardPage() {
 
   const { data } = useOutletContext();
-  const { dashboard, meta } = data;
+  const { meta } = data;
+  const dashboard = useMemo(
+    () => deriveWorkforceDashboardView(data),
+    [data]
+  );
 
   const metrics = [
     {
@@ -48,7 +54,9 @@ function WorkforceDashboardPage() {
       key: "filled",
       label: "Filled positions",
       value: dashboard.filled_positions,
-      subtitle: `${Math.round((dashboard.filled_positions / dashboard.approved_headcount) * 100)}% filled`
+      subtitle: dashboard.approved_headcount > 0
+        ? `${Math.round((dashboard.filled_positions / dashboard.approved_headcount) * 100)}% filled`
+        : "0% filled"
     },
     {
       key: "vacant",

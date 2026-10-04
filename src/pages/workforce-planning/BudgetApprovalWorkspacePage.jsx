@@ -15,6 +15,7 @@ import BudgetRequestCard from "../../components/workforce-planning/BudgetRequest
 import ApprovalWorkspacePanel from "../../components/workforce-planning/ApprovalWorkspacePanel";
 
 import { sortApprovalQueueByLatestActivity } from "@/utils/budgetApprovalHistoryUtils";
+import { countPendingApprovalQueueItems } from "@/utils/deriveWorkforceDashboardView";
 
 
 
@@ -148,15 +149,7 @@ function BudgetApprovalWorkspacePage() {
 
 
 
-  const pendingCount = approvalQueue.filter(
-
-    (r) =>
-
-      r.status !== "Approved" &&
-
-      r.status !== "Rejected"
-
-  ).length;
+  const pendingCount = countPendingApprovalQueueItems(approvalQueue);
 
 
 

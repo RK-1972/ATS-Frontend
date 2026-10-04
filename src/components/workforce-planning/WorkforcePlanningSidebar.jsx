@@ -22,6 +22,11 @@ import {
 } from "react-icons/md";
 
 import AuthorizationService from "../../services/authorizationService";
+import useEnterpriseStore from "@/store/enterpriseStore";
+import {
+  countPendingApprovalQueueItems,
+  countPendingBudgetExceptions
+} from "@/utils/deriveWorkforceDashboardView";
 
 const WORKFORCE_PLANNING_SECTIONS = [
   {
@@ -41,7 +46,7 @@ const WORKFORCE_PLANNING_SECTIONS = [
     label: "Approval Workspace",
     path: "/workforce-planning/approvals",
     icon: MdFactCheck,
-    badge: 2
+    badgeKey: "approvals"
   },
   {
     key: "catalogue",
@@ -54,7 +59,7 @@ const WORKFORCE_PLANNING_SECTIONS = [
     label: "Budget Exceptions",
     path: "/workforce-planning/exceptions",
     icon: MdWarningAmber,
-    badge: 1
+    badgeKey: "exceptions"
   },
   {
     key: "analytics",
@@ -67,6 +72,12 @@ const WORKFORCE_PLANNING_SECTIONS = [
 function WorkforcePlanningSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const workforce = useEnterpriseStore((state) => state.workforce);
+
+  const sectionBadges = {
+    approvals: countPendingApprovalQueueItems(workforce?.approval_queue),
+    exceptions: countPendingBudgetExceptions(workforce?.budget_exceptions)
+  };
 
   const [canRaiseBudgetRequest, setCanRaiseBudgetRequest] = useState(false);
   const [canRaiseRequisition, setCanRaiseRequisition] = useState(false);
@@ -211,9 +222,9 @@ function WorkforcePlanningSidebar() {
                 }}
               />
 
-              {section.badge ? (
+              {section.badgeKey && sectionBadges[section.badgeKey] > 0 ? (
                 <Chip
-                  label={section.badge}
+                  label={sectionBadges[section.badgeKey]}
                   size="small"
                   color="error"
                   sx={{

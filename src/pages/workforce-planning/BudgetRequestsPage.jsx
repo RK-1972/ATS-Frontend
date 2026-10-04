@@ -287,26 +287,6 @@ function BudgetRequestsPage() {
         </ConfigSurface>
       )}
 
-      {data.budget_requests[0] ? (
-        <ConfigSurface sx={{ mt: 1.5 }}>
-          <Typography
-            variant="body2"
-            fontWeight={700}
-            sx={{ fontSize: 14, mb: 0.5 }}
-          >
-            Sample justification — {data.budget_requests[0].id}
-          </Typography>
-
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{ fontSize: 13, lineHeight: 1.45 }}
-          >
-            {data.budget_requests[0].justification}
-          </Typography>
-        </ConfigSurface>
-      ) : null}
-
       <BudgetRequestFormDialog
         key={editingRequest?.id || "new-budget-request"}
         open={formOpen}

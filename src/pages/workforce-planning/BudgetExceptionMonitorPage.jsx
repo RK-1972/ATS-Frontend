@@ -4,14 +4,13 @@ import { Chip } from "@mui/material";
 
 import ConfigPageHeader from "../../components/platform-config/ConfigPageHeader";
 import BudgetExceptionTable from "../../components/workforce-planning/BudgetExceptionTable";
+import { countPendingBudgetExceptions } from "@/utils/deriveWorkforceDashboardView";
 
 function BudgetExceptionMonitorPage() {
 
   const { data } = useOutletContext();
 
-  const pending = data.budget_exceptions.filter(
-    (e) => e.workflow_status.includes("Pending")
-  ).length;
+  const pending = countPendingBudgetExceptions(data.budget_exceptions);
 
   return (
 

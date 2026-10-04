@@ -220,20 +220,6 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
   const [submitErrorMessage, setSubmitErrorMessage] = useState("");
   const [approvedPositions, setApprovedPositions] = useState([]);
 
-  const isDraftSubmitted =
-    String(draftStatus || "").toUpperCase() === "SUBMITTED";
-  /** Existing operational requisition opened for edit (not a blank NEW create). */
-  const isEditMode = Boolean(resultRequisitionCode);
-  const isApprovedRequisition =
-    String(formData.req_status || "").trim() === REQUISITION_STATUS.APPROVED;
-  const draftActionsDisabled =
-    isSavingDraft ||
-    isSubmittingDraft ||
-    isLoadingDraft ||
-    isDraftSubmitted ||
-    isApprovedRequisition;
-  const loggedInEmployeeCode = loggedInUser?.employee_code ?? null;
-
   const [formData, setFormData] = useState({
     client_id: "",
     client_name: "",
@@ -259,6 +245,20 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
     budget_approved: "",
     created_by: loggedInUser?.full_name || ""
   });
+
+  const isDraftSubmitted =
+    String(draftStatus || "").toUpperCase() === "SUBMITTED";
+  /** Existing operational requisition opened for edit (not a blank NEW create). */
+  const isEditMode = Boolean(resultRequisitionCode);
+  const isApprovedRequisition =
+    String(formData.req_status || "").trim() === REQUISITION_STATUS.APPROVED;
+  const draftActionsDisabled =
+    isSavingDraft ||
+    isSubmittingDraft ||
+    isLoadingDraft ||
+    isDraftSubmitted ||
+    isApprovedRequisition;
+  const loggedInEmployeeCode = loggedInUser?.employee_code ?? null;
 
   useEffect(() => {
     setCurrentPage("Requisitions");

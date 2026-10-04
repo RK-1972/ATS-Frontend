@@ -10,80 +10,54 @@ import {
 
 import OptalynxLogo from "../../assets/OptalynxLogo";
 
-function BrandLogo({ compact = false }) {
+function BrandLogo({ compact = false, showTagline }) {
+  const shouldShowTagline = showTagline ?? !compact;
 
   return (
-
     <Box
-
       sx={{
-
-        display:"flex",
-
-        alignItems:"center",
-
-        gap: compact ? 1 : 1.8
-
+        display: "flex",
+        alignItems: "center",
+        gap: compact ? 0.75 : 1.8,
+        minWidth: 0,
+        flexShrink: 0
       }}
-
     >
-
-      <OptalynxLogo
-
-        size={compact ? 40 : 56}
-
-      />
-
-      <Box>
-
-        <Typography
-
-          sx={{
-
-            color:"#FFFFFF",
-
-            fontWeight:700,
-
-            fontSize: compact ? 20 : 30,
-
-            letterSpacing: compact ? 1.2 : 2,
-
-            lineHeight:1
-
-          }}
-
-        >
-
-          OPTALYNX
-
-        </Typography>
-
-        {!compact ? (
-        <Typography
-
-          sx={{
-
-            color:"#DBEAFE",
-
-            fontSize:13,
-
-            mt:.4
-
-          }}
-
-        >
-
-          Linking Talent with Opportunity
-
-        </Typography>
-        ) : null}
-
+      <Box sx={{ flexShrink: 0, lineHeight: 0 }}>
+        <OptalynxLogo size={compact ? 32 : 56} />
       </Box>
 
+      <Box sx={{ minWidth: 0 }}>
+        <Typography
+          sx={{
+            color: "#FFFFFF",
+            fontWeight: 700,
+            fontSize: compact ? 15 : 30,
+            letterSpacing: compact ? 0.5 : 2,
+            lineHeight: 1,
+            whiteSpace: "nowrap"
+          }}
+        >
+          OPTALYNX
+        </Typography>
+
+        {shouldShowTagline ? (
+          <Typography
+            sx={{
+              color: "#DBEAFE",
+              fontSize: compact ? 10 : 13,
+              mt: compact ? 0.15 : 0.4,
+              lineHeight: 1.25,
+              whiteSpace: compact ? "normal" : "nowrap",
+              maxWidth: compact ? "min(100vw - 120px, 280px)" : "none"
+            }}
+          >
+            Linking Talent with Opportunity
+          </Typography>
+        ) : null}
+      </Box>
     </Box>
-
   );
-
 }
 
 export default BrandLogo;

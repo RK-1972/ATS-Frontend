@@ -100,8 +100,8 @@ function resolveWorkAssignmentLabel(userRole) {
  */
 const mobileIconButtonSx = {
   color: "#FFFFFF",
-  width: 44,
-  height: 44,
+  width: 40,
+  height: 40,
   "&:hover": {
     backgroundColor: "rgba(255,255,255,.08)"
   }
@@ -118,6 +118,7 @@ function AppHeader({
   const theme = useTheme();
   const { brand, layout } = theme.tokens;
   const isMobileViewport = useMediaQuery(theme.breakpoints.down("md"));
+  const isNarrowMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const navigate = useNavigate();
 
   const storedUser = readStoredUser();
@@ -134,6 +135,10 @@ function AppHeader({
     showUserActions !== undefined
       ? Boolean(showUserActions)
       : isAuthenticated;
+
+  const showLoginBrandTagline = !shouldShowUserActions;
+  const mobileHeaderHeight =
+    showLoginBrandTagline && isMobileViewport ? 80 : layout.headerHeight;
 
   const [ownershipNotifications, setOwnershipNotifications] = useState([]);
   const [budgetNotifications, setBudgetNotifications] = useState([]);
@@ -633,7 +638,7 @@ function AppHeader({
       elevation={2}
       sx={{
         backgroundColor: brand.headerBg,
-        height: layout.headerHeight,
+        height: isMobileViewport ? mobileHeaderHeight : layout.headerHeight,
         justifyContent: "center",
         borderBottom: `1px solid ${brand.headerBorder}`
       }}
@@ -642,10 +647,10 @@ function AppHeader({
         <Toolbar
           sx={{
             px: 1,
-            minHeight: `${layout.headerHeight}px !important`,
+            minHeight: `${mobileHeaderHeight}px !important`,
             display: "flex",
             alignItems: "center",
-            gap: 0.5,
+            gap: 0.25,
             minWidth: 0
           }}
         >
@@ -658,7 +663,13 @@ function AppHeader({
               <MenuOutlinedIcon />
             </IconButton>
           ) : (
-            <Box sx={{ width: 44, flexShrink: 0 }} aria-hidden />
+            <Box
+              sx={{
+                width: showMobileNavMenu ? 40 : 0,
+                flexShrink: 0
+              }}
+              aria-hidden
+            />
           )}
 
           <Box
@@ -667,19 +678,29 @@ function AppHeader({
               minWidth: 0,
               display: "flex",
               justifyContent: "center",
-              overflow: "hidden"
+              overflow: "visible",
+              px: 0.25
             }}
           >
-            <BrandLogo compact />
+            <Box
+              sx={{
+                transform:
+                  isNarrowMobile && shouldShowUserActions
+                    ? "scale(0.9)"
+                    : "none",
+                transformOrigin: "center center"
+              }}
+            >
+              <BrandLogo compact showTagline={showLoginBrandTagline} />
+            </Box>
           </Box>
 
           <Box
             sx={{
               display: "flex",
               alignItems: "center",
-              gap: 0.25,
-              flexShrink: 0,
-              minWidth: 0
+              gap: 0.125,
+              flexShrink: 0
             }}
           >
             {mobileUserCluster}

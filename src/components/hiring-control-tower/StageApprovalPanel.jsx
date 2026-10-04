@@ -193,7 +193,7 @@ function ApprovalWorkspaceContent({
             />
 
             <TextField
-              label="Attach Document (mock)"
+              label="Attach Document"
               size="small"
               fullWidth
               value={clarificationDraft.document}

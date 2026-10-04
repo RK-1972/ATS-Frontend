@@ -12,11 +12,10 @@ function BudgetTrendChart({ monthlyTrend }) {
 
 
 
-  const maxValue = Math.max(
-
-    ...monthlyTrend.flatMap((m) => [m.budget, m.actual])
-
-  );
+  const trendValues = monthlyTrend.flatMap((m) => [m.budget, m.actual]);
+  const maxValue = trendValues.length
+    ? Math.max(...trendValues)
+    : 1;
 
 
 
