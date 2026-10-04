@@ -256,6 +256,7 @@ function UserManagementPage() {
   const [accessDenied, setAccessDenied] = useState(false);
   const [canCreateUser, setCanCreateUser] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [createDialogStep, setCreateDialogStep] = useState("form");
   const [isCreatingUser, setIsCreatingUser] = useState(false);
   const [masterAssignments, setMasterAssignments] = useState([]);
   const [createForm, setCreateForm] = useState({
@@ -284,6 +285,17 @@ function UserManagementPage() {
   const [statusChangeReason, setStatusChangeReason] = useState("");
   const [statusChangeError, setStatusChangeError] = useState("");
   const [isChangingStatus, setIsChangingStatus] = useState(false);
+  const [profileForm, setProfileForm] = useState({ full_name: "", email_id: "" });
+  const [profileFormError, setProfileFormError] = useState("");
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  const syncProfileFormFromEmployee = (employee) => {
+    setProfileForm({
+      full_name: employee?.full_name || "",
+      email_id: employee?.email_id || ""
+    });
+    setProfileFormError("");
+  };
 
   const loadUsers = async () => {
     setIsLoading(true);
@@ -295,7 +307,16 @@ function UserManagementPage() {
       setUsers(rows);
 
       if (rows.length > 0) {
-        setSelectedUserId((current) => current || rows[0].user_id);
+        const nextId =
+          selectedUserId && rows.some((row) => row.user_id === selectedUserId)
+            ? selectedUserId
+            : rows[0].user_id;
+
+        setSelectedUserId(nextId);
+        syncProfileFormFromEmployee(rows.find((row) => row.user_id === nextId));
+      } else {
+        setSelectedUserId(null);
+        syncProfileFormFromEmployee(null);
       }
     } catch (error) {
       setLoadError(
@@ -525,6 +546,7 @@ function UserManagementPage() {
     }
 
     setSelectedUserId(userId);
+    syncProfileFormFromEmployee(users.find((employee) => employee.user_id === userId));
   };
 
   const resetCreateForm = () => {
@@ -538,6 +560,7 @@ function UserManagementPage() {
       work_assignments: []
     });
     setCreateFormError("");
+    setCreateDialogStep("form");
   };
 
   const handleOpenCreateDialog = () => {
@@ -552,6 +575,109 @@ function UserManagementPage() {
 
     setCreateDialogOpen(false);
     resetCreateForm();
+  };
+
+  const validateCreateFormFields = () => {
+    const employeeCode = createForm.employee_code.trim();
+    const fullName = createForm.full_name.trim();
+    const emailId = createForm.email_id.trim();
+    const password = createForm.password;
+    const confirmPassword = createForm.confirm_password;
+
+    if (!employeeCode || !fullName || !emailId || !password) {
+      return "Employee Code, Full Name, Email, and Password are required.";
+    }
+
+    if (password.length < 8) {
+      return "Password must be at least 8 characters.";
+    }
+
+    if (password !== confirmPassword) {
+      return "Password and Confirm Password must match.";
+    }
+
+    return "";
+  };
+
+  const handleProceedToCreateReview = () => {
+    setCreateFormError("");
+    const validationMessage = validateCreateFormFields();
+
+    if (validationMessage) {
+      setCreateFormError(validationMessage);
+      return;
+    }
+
+    setCreateDialogStep("review");
+  };
+
+  const handleBackToCreateEdit = () => {
+    if (isCreatingUser) {
+      return;
+    }
+
+    setCreateFormError("");
+    setCreateDialogStep("form");
+  };
+
+  const handleSaveProfile = async () => {
+    const employeeCode = selectedEmployee?.employee_code;
+
+    if (!employeeCode) {
+      return;
+    }
+
+    setProfileFormError("");
+
+    const fullName = profileForm.full_name.trim();
+    const emailId = profileForm.email_id.trim();
+
+    if (!fullName || !emailId) {
+      setProfileFormError("Full Name and Email are required.");
+      return;
+    }
+
+    setIsSavingProfile(true);
+
+    try {
+      const response = await API.put(
+        `/users/${encodeURIComponent(employeeCode)}`,
+        {
+          full_name: fullName,
+          email_id: emailId
+        }
+      );
+
+      const updatedUser = response.data?.data?.user;
+
+      if (updatedUser?.user_id) {
+        setUsers((current) =>
+          current.map((employee) =>
+            employee.user_id === updatedUser.user_id
+              ? {
+                  ...employee,
+                  full_name: updatedUser.full_name,
+                  email_id: updatedUser.email_id
+                }
+              : employee
+          )
+        );
+        syncProfileFormFromEmployee(updatedUser);
+      } else {
+        await loadUsers();
+      }
+
+      setToast({
+        message: response.data?.message || "Profile updated successfully.",
+        severity: "success"
+      });
+    } catch (error) {
+      setProfileFormError(
+        error.response?.data?.message || "Failed to update profile."
+      );
+    } finally {
+      setIsSavingProfile(false);
+    }
   };
 
   const handleOpenChangeRoleDialog = (presetRoleName = null) => {
@@ -729,28 +855,24 @@ function UserManagementPage() {
   };
 
   const handleCreateUser = async () => {
+    if (isCreatingUser) {
+      return;
+    }
+
     setCreateFormError("");
+
+    const validationMessage = validateCreateFormFields();
+
+    if (validationMessage) {
+      setCreateFormError(validationMessage);
+      setCreateDialogStep("form");
+      return;
+    }
 
     const employeeCode = createForm.employee_code.trim();
     const fullName = createForm.full_name.trim();
     const emailId = createForm.email_id.trim();
     const password = createForm.password;
-    const confirmPassword = createForm.confirm_password;
-
-    if (!employeeCode || !fullName || !emailId || !password) {
-      setCreateFormError("Employee Code, Full Name, Email, and Password are required.");
-      return;
-    }
-
-    if (password.length < 8) {
-      setCreateFormError("Password must be at least 8 characters.");
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setCreateFormError("Password and Confirm Password must match.");
-      return;
-    }
 
     setIsCreatingUser(true);
 
@@ -803,10 +925,18 @@ function UserManagementPage() {
   }
 
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "background.default", display: "flex", flexDirection: "column" }}>
+    <Box
+      sx={{
+        height: "100vh",
+        overflow: "hidden",
+        bgcolor: "background.default",
+        display: "flex",
+        flexDirection: "column"
+      }}
+    >
       <Header />
 
-      <Box sx={{ display: "flex", flex: 1, minHeight: 0 }}>
+      <Box sx={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden" }}>
         <AdminNavRail />
 
       <Box
@@ -815,6 +945,7 @@ function UserManagementPage() {
           display: "flex",
           minHeight: 0,
           minWidth: 0,
+          overflow: "hidden",
           maxWidth: 1680,
           width: "100%",
           mx: "auto",
@@ -834,10 +965,19 @@ function UserManagementPage() {
             bgcolor: "background.paper",
             display: { xs: "none", md: "flex" },
             flexDirection: "column",
-            minHeight: 0
+            minHeight: 0,
+            overflow: "hidden",
+            alignSelf: "stretch"
           }}
         >
-          <Box sx={{ p: 1.5, borderBottom: 1, borderColor: "divider" }}>
+          <Box
+            sx={{
+              flexShrink: 0,
+              p: 1.5,
+              borderBottom: 1,
+              borderColor: "divider"
+            }}
+          >
             <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
               Employee Directory
             </Typography>
@@ -863,7 +1003,15 @@ function UserManagementPage() {
             />
           </Box>
 
-          <List disablePadding dense sx={{ flex: 1, overflow: "auto" }}>
+          <Box
+            sx={{
+              flex: 1,
+              minHeight: 0,
+              overflowY: "auto",
+              overflowX: "hidden"
+            }}
+          >
+          <List disablePadding dense component="div">
             {isLoading ? (
               <Box sx={{ display: "flex", justifyContent: "center", py: 3 }}>
                 <CircularProgress size={22} />
@@ -933,6 +1081,7 @@ function UserManagementPage() {
                 })
               : null}
           </List>
+          </Box>
         </Box>
 
         {/* Right — Permissions Workspace (~72%) */}
@@ -940,6 +1089,7 @@ function UserManagementPage() {
           sx={{
             flex: 1,
             minWidth: 0,
+            minHeight: 0,
             pl: { md: 2 },
             overflow: "auto"
           }}
@@ -993,7 +1143,6 @@ function UserManagementPage() {
                     }
                   >
                     <InfoField label="Employee Code" value={selectedEmployee?.employee_code} />
-                    <InfoField label="Employee Name" value={selectedEmployee?.full_name} />
                     <InfoField
                       label="Status"
                       value={
@@ -1005,6 +1154,66 @@ function UserManagementPage() {
                       }
                     />
                   </Stack>
+
+                  <Stack
+                    direction={{ xs: "column", sm: "row" }}
+                    spacing={{ xs: 1.25, sm: 2 }}
+                    alignItems={{ xs: "stretch", sm: "flex-start" }}
+                  >
+                    <TextField
+                      label="Full Name"
+                      size="small"
+                      fullWidth
+                      value={profileForm.full_name}
+                      disabled={!selectedEmployee || isSavingProfile}
+                      onChange={(event) =>
+                        setProfileForm((current) => ({
+                          ...current,
+                          full_name: event.target.value
+                        }))
+                      }
+                      sx={createUserDenseFieldSx}
+                    />
+                    <TextField
+                      label="Email"
+                      type="email"
+                      size="small"
+                      fullWidth
+                      value={profileForm.email_id}
+                      disabled={!selectedEmployee || isSavingProfile}
+                      onChange={(event) =>
+                        setProfileForm((current) => ({
+                          ...current,
+                          email_id: event.target.value
+                        }))
+                      }
+                      sx={createUserDenseFieldSx}
+                      slotProps={{
+                        htmlInput: { autoComplete: "off", inputMode: "email" }
+                      }}
+                    />
+                  </Stack>
+
+                  {profileFormError ? (
+                    <Alert severity="error" sx={{ py: 0.25, "& .MuiAlert-message": { fontSize: 13 } }}>
+                      {profileFormError}
+                    </Alert>
+                  ) : null}
+
+                  <Box>
+                    <Button
+                      variant="contained"
+                      onClick={handleSaveProfile}
+                      disabled={!selectedEmployee || isSavingProfile}
+                      sx={{
+                        textTransform: "none",
+                        fontWeight: 600,
+                        minHeight: 40
+                      }}
+                    >
+                      {isSavingProfile ? "Saving…" : "Save Changes"}
+                    </Button>
+                  </Box>
 
                   {canChangeUserStatus ? (
                     <Box>
@@ -1324,7 +1533,7 @@ function UserManagementPage() {
             fontWeight={700}
             sx={{ lineHeight: 1.25, letterSpacing: 0.1 }}
           >
-            Create User
+            {createDialogStep === "review" ? "Review New User" : "Create User"}
           </Typography>
           <Typography
             variant="caption"
@@ -1332,11 +1541,58 @@ function UserManagementPage() {
             display="block"
             sx={{ mt: 0.25, lineHeight: 1.3 }}
           >
-            Provision a new employee account and optional work assignments.
+            {createDialogStep === "review"
+              ? "Confirm details before provisioning. No changes are saved until you confirm."
+              : "Provision a new employee account and optional work assignments."}
           </Typography>
         </DialogTitle>
 
         <DialogContent sx={{ px: 2, pt: 0, pb: 0.75, overflow: "visible" }}>
+          {createDialogStep === "review" ? (
+            <Stack spacing={1.25} sx={{ pt: 0.5 }}>
+              <InfoField label="Employee Code" value={createForm.employee_code.trim()} />
+              <InfoField label="Full Name" value={createForm.full_name.trim()} />
+              <InfoField label="Email" value={createForm.email_id.trim()} />
+              <InfoField label="Primary Role" value={createForm.role_name} />
+              <Box>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ display: "block", lineHeight: 1.2 }}
+                >
+                  Work Assignments
+                </Typography>
+                {createForm.work_assignments.length === 0 ? (
+                  <Typography variant="body2" fontWeight={600}>
+                    None
+                  </Typography>
+                ) : (
+                  <Stack spacing={0.5} sx={{ mt: 0.25 }}>
+                    {createForm.work_assignments.map((row) => (
+                      <Typography key={row.work_assignment_id} variant="body2" fontWeight={600}>
+                        {row.assignment_name}
+                        {row.assignment_code
+                          ? ` (${row.assignment_code})`
+                          : ""}
+                      </Typography>
+                    ))}
+                  </Stack>
+                )}
+              </Box>
+              {createFormError ? (
+                <Alert
+                  severity="error"
+                  sx={{
+                    py: 0.25,
+                    alignItems: "center",
+                    "& .MuiAlert-message": { fontSize: 13 }
+                  }}
+                >
+                  {createFormError}
+                </Alert>
+              ) : null}
+            </Stack>
+          ) : (
           <Box
             component="form"
             autoComplete="off"
@@ -1555,6 +1811,7 @@ function UserManagementPage() {
             ) : null}
             </Grid>
           </Box>
+          )}
         </DialogContent>
 
         <DialogActions
@@ -1567,6 +1824,43 @@ function UserManagementPage() {
             borderColor: "divider"
           }}
         >
+          {createDialogStep === "review" ? (
+            <>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={handleBackToCreateEdit}
+                disabled={isCreatingUser}
+                sx={{ ...createUserDialogButtonSx, minWidth: 96 }}
+              >
+                Back to Edit
+              </Button>
+              <Button
+                variant="contained"
+                size="small"
+                onClick={handleCreateUser}
+                disabled={isCreatingUser}
+                startIcon={
+                  <CircularProgress
+                    size={14}
+                    color="inherit"
+                    sx={{
+                      opacity: isCreatingUser ? 1 : 0,
+                      transition:
+                        "opacity var(--optalynx-motion-duration-fast) var(--optalynx-motion-easing-standard)",
+                      "@media (prefers-reduced-motion: reduce)": {
+                        transition: "none"
+                      }
+                    }}
+                  />
+                }
+                sx={{ ...createUserDialogButtonSx, minWidth: 128 }}
+              >
+                {isCreatingUser ? "Creating…" : "Confirm & Create"}
+              </Button>
+            </>
+          ) : (
+            <>
           <Button
             variant="outlined"
             size="small"
@@ -1579,50 +1873,14 @@ function UserManagementPage() {
           <Button
             variant="contained"
             size="small"
-            onClick={handleCreateUser}
+            onClick={handleProceedToCreateReview}
             disabled={isCreatingUser}
-            startIcon={
-              <CircularProgress
-                size={14}
-                color="inherit"
-                sx={{
-                  opacity: isCreatingUser ? 1 : 0,
-                  transition:
-                    "opacity var(--optalynx-motion-duration-fast) var(--optalynx-motion-easing-standard)",
-                  "@media (prefers-reduced-motion: reduce)": {
-                    transition: "none"
-                  }
-                }}
-              />
-            }
-            sx={{
-              ...createUserDialogButtonSx,
-              minWidth: 112,
-              "& .MuiButton-startIcon": {
-                marginRight: isCreatingUser ? 0.75 : 0,
-                marginLeft: 0,
-                transition:
-                  "margin-right var(--optalynx-motion-duration-fast) var(--optalynx-motion-easing-standard)",
-                "@media (prefers-reduced-motion: reduce)": {
-                  transition: "none"
-                }
-              }
-            }}
+            sx={{ ...createUserDialogButtonSx, minWidth: 72 }}
           >
-            <Box
-              component="span"
-              sx={{
-                opacity: isCreatingUser ? 0.9 : 1,
-                transition:
-                  "opacity var(--optalynx-motion-duration-fast) var(--optalynx-motion-easing-standard)",
-                "@media (prefers-reduced-motion: reduce)": {
-                  transition: "none"
-                }
-              }}
-            >
-              {isCreatingUser ? "Creating..." : "Create User"}
-            </Box>
+            Review
           </Button>
+            </>
+          )}
         </DialogActions>
       </Dialog>
 
