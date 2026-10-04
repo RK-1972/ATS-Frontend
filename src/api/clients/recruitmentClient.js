@@ -422,6 +422,13 @@ const recruitmentClient = {
     );
   },
 
+  listCandidateSkillMap(candidateId) {
+    return httpGet(
+      `${ENDPOINTS.recruitment}/candidates/${encodeURIComponent(candidateId)}/skill-map`,
+      () => ({ success: true, data: [] })
+    );
+  },
+
   getCandidateOwnership(candidateId) {
     return httpGet(
       `${ENDPOINTS.recruitment}/candidates/${encodeURIComponent(candidateId)}/ownership`,

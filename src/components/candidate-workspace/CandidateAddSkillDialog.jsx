@@ -1,17 +1,24 @@
-import { useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 
 import {
+  Autocomplete,
   Button,
+  Chip,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
   Grid,
   MenuItem,
-  TextField
+  TextField,
+  Typography
 } from "@mui/material";
 
 import { getPublishedRecords } from "@/enterprise/masterDataHelpers";
+import {
+  validateSkillExperienceMonths,
+  validateSkillExperienceYears
+} from "@/enterprise/candidateWorkspaceUtils";
 
 const PROFICIENCY_OPTIONS = [
   "Beginner",
@@ -20,8 +27,7 @@ const PROFICIENCY_OPTIONS = [
   "Expert"
 ];
 
-const emptyForm = {
-  skill_code: "",
+const emptyMetadata = {
   years: "",
   months: "",
   proficiency_code: "",
@@ -32,43 +38,95 @@ function CandidateAddSkillDialog({
   open,
   onClose,
   masterData,
-  onSave,
-  initialValue = null
+  onSaveAdd,
+  onSaveEdit,
+  initialValue = null,
+  assignedSkillCodes = [],
+  isSaving = false
 }) {
-  const [form, setForm] = useState(emptyForm);
-
   const skillOptions = getPublishedRecords(masterData, "skills");
   const isEdit = Boolean(initialValue);
 
-  useEffect(() => {
-    if (open && initialValue) {
-      setForm({
-        skill_code: initialValue.skill_code || "",
-        years: initialValue.years ?? "",
-        months: initialValue.months ?? "",
-        proficiency_code: initialValue.proficiency_code || "",
-        last_used_on: initialValue.last_used_on
-          ? String(initialValue.last_used_on).slice(0, 10)
-          : ""
-      });
-    } else if (open) {
-      setForm(emptyForm);
-    }
-  }, [open, initialValue]);
+  const [metadata, setMetadata] = useState(() =>
+    initialValue
+      ? {
+          years: initialValue.years ?? "",
+          months: initialValue.months ?? "",
+          proficiency_code: initialValue.proficiency_code || "",
+          last_used_on: initialValue.last_used_on
+            ? String(initialValue.last_used_on).slice(0, 10)
+            : ""
+        }
+      : emptyMetadata
+  );
+  const [selectedCodes, setSelectedCodes] = useState([]);
+  const [editSkillCode, setEditSkillCode] = useState(
+    () => initialValue?.skill_code || ""
+  );
+
+  const assignedSet = useMemo(
+    () => new Set(assignedSkillCodes.map((code) => String(code).toLowerCase())),
+    [assignedSkillCodes]
+  );
+
+  const selectableOptions = useMemo(
+    () =>
+      skillOptions.filter(
+        (option) => !assignedSet.has(String(option.code).toLowerCase())
+      ),
+    [skillOptions, assignedSet]
+  );
 
   const handleClose = () => {
-    setForm(emptyForm);
+    setMetadata(emptyMetadata);
+    setSelectedCodes([]);
+    setEditSkillCode("");
     onClose();
   };
 
-  const handleSave = () => {
-    if (!form.skill_code) {
-      return;
+  const handleSave = async () => {
+    if (isEdit) {
+      if (!editSkillCode) {
+        return;
+      }
+
+      await onSaveEdit?.({
+        skill_code: editSkillCode,
+        ...metadata
+      });
+    } else {
+      if (!selectedCodes.length) {
+        return;
+      }
+
+      await onSaveAdd?.({
+        skillCodes: selectedCodes,
+        ...metadata
+      });
     }
 
-    onSave?.(form);
-    setForm(emptyForm);
+    setMetadata(emptyMetadata);
+    setSelectedCodes([]);
+    setEditSkillCode("");
   };
+
+  const selectedSkillLabels = useMemo(
+    () =>
+      selectedCodes.map((code) => {
+        const match = skillOptions.find((option) => option.code === code);
+        return match?.name || code;
+      }),
+    [selectedCodes, skillOptions]
+  );
+
+  const yearsValidation = validateSkillExperienceYears(metadata.years);
+  const monthsValidation = validateSkillExperienceMonths(metadata.months);
+  const experienceFieldsValid = yearsValidation.valid && monthsValidation.valid;
+
+  const saveDisabled =
+    isSaving ||
+    !experienceFieldsValid ||
+    (isEdit ? !editSkillCode : selectedCodes.length === 0);
 
   return (
     <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
@@ -76,33 +134,72 @@ function CandidateAddSkillDialog({
       <DialogContent dividers>
         <Grid container spacing={2} sx={{ pt: 0.5 }}>
           <Grid item xs={12}>
-            <TextField
-              select
-              fullWidth
-              size="small"
-              label="Skill"
-              value={form.skill_code}
-              onChange={(event) =>
-                setForm((prev) => ({ ...prev, skill_code: event.target.value }))
-              }
-            >
-              {skillOptions.map((option) => (
-                <MenuItem key={option.code} value={option.code}>
-                  {option.name}
-                </MenuItem>
-              ))}
-            </TextField>
+            {isEdit ? (
+              <TextField
+                select
+                fullWidth
+                size="small"
+                label="Skill"
+                value={editSkillCode}
+                onChange={(event) => setEditSkillCode(event.target.value)}
+                disabled={isSaving}
+              >
+                {skillOptions.map((option) => (
+                  <MenuItem key={option.code} value={option.code}>
+                    {option.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+            ) : (
+              <Autocomplete
+                multiple
+                size="small"
+                options={selectableOptions}
+                getOptionLabel={(option) => option.name || option.code}
+                value={selectableOptions.filter((option) =>
+                  selectedCodes.includes(option.code)
+                )}
+                onChange={(_event, newValue) => {
+                  setSelectedCodes(newValue.map((option) => option.code));
+                }}
+                isOptionEqualToValue={(option, value) => option.code === value.code}
+                disabled={isSaving}
+                renderInput={(params) => (
+                  <TextField {...params} label="Search skills" placeholder="Type to search" />
+                )}
+              />
+            )}
           </Grid>
+
+          {!isEdit && selectedSkillLabels.length > 0 ? (
+            <Grid item xs={12}>
+              <Typography variant="caption" color="text.secondary" display="block" mb={0.5}>
+                Selected skills
+              </Typography>
+              <Chip
+                size="small"
+                label={selectedSkillLabels.join(", ")}
+                sx={{ height: "auto", py: 0.5, "& .MuiChip-label": { whiteSpace: "normal" } }}
+              />
+            </Grid>
+          ) : null}
+
           <Grid item xs={6}>
             <TextField
               fullWidth
               size="small"
               label="Years"
               type="number"
-              value={form.years}
+              value={metadata.years}
               onChange={(event) =>
-                setForm((prev) => ({ ...prev, years: event.target.value }))
+                setMetadata((prev) => ({ ...prev, years: event.target.value }))
               }
+              disabled={isSaving}
+              error={!yearsValidation.valid}
+              helperText={yearsValidation.error || " "}
+              slotProps={{
+                htmlInput: { min: 0, step: 1 }
+              }}
             />
           </Grid>
           <Grid item xs={6}>
@@ -111,10 +208,16 @@ function CandidateAddSkillDialog({
               size="small"
               label="Months"
               type="number"
-              value={form.months}
+              value={metadata.months}
               onChange={(event) =>
-                setForm((prev) => ({ ...prev, months: event.target.value }))
+                setMetadata((prev) => ({ ...prev, months: event.target.value }))
               }
+              disabled={isSaving}
+              error={!monthsValidation.valid}
+              helperText={monthsValidation.error || " "}
+              slotProps={{
+                htmlInput: { min: 0, max: 11, step: 1 }
+              }}
             />
           </Grid>
           <Grid item xs={12}>
@@ -123,13 +226,14 @@ function CandidateAddSkillDialog({
               fullWidth
               size="small"
               label="Proficiency"
-              value={form.proficiency_code}
+              value={metadata.proficiency_code}
               onChange={(event) =>
-                setForm((prev) => ({
+                setMetadata((prev) => ({
                   ...prev,
                   proficiency_code: event.target.value
                 }))
               }
+              disabled={isSaving}
             >
               <MenuItem value="">
                 <em>Select proficiency</em>
@@ -147,10 +251,11 @@ function CandidateAddSkillDialog({
               size="small"
               label="Last Updated"
               type="date"
-              value={form.last_used_on}
+              value={metadata.last_used_on}
               onChange={(event) =>
-                setForm((prev) => ({ ...prev, last_used_on: event.target.value }))
+                setMetadata((prev) => ({ ...prev, last_used_on: event.target.value }))
               }
+              disabled={isSaving}
               slotProps={{
                 inputLabel: { shrink: true }
               }}
@@ -170,9 +275,11 @@ function CandidateAddSkillDialog({
         </Grid>
       </DialogContent>
       <DialogActions>
-        <Button onClick={handleClose}>Cancel</Button>
-        <Button variant="contained" onClick={handleSave}>
-          {isEdit ? "Update Skill" : "Add Skill"}
+        <Button onClick={handleClose} disabled={isSaving}>
+          Cancel
+        </Button>
+        <Button variant="contained" onClick={handleSave} disabled={saveDisabled}>
+          {isSaving ? "Saving..." : isEdit ? "Update Skill" : "Add Skill"}
         </Button>
       </DialogActions>
     </Dialog>

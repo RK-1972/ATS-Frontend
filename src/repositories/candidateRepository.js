@@ -736,6 +736,93 @@ async function updateExperience(candidateId, experienceId, experience) {
   }
 }
 
+function mapSkillMapRecord(row, skillNameByCode = new Map()) {
+  const skillCode = row.skill_code || "";
+
+  return {
+    id: String(row.skill_map_id),
+    skill_map_id: row.skill_map_id,
+    skill_code: skillCode,
+    skill_name: skillNameByCode.get(skillCode) || skillCode,
+    years: row.experience_years ?? "",
+    months: row.experience_months ?? "",
+    proficiency_code: row.proficiency || "",
+    last_used_on: row.last_used ? String(row.last_used).slice(0, 10) : ""
+  };
+}
+
+async function listSkillMap(candidateId, skillNameByCode = new Map()) {
+  try {
+    const response = await recruitmentClient.listCandidateSkillMap(candidateId);
+
+    if (response?.success === false) {
+      throw new Error(response.message || "Failed to load skill records");
+    }
+
+    return (response?.data || []).map((row) => mapSkillMapRecord(row, skillNameByCode));
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error, "Failed to load skill records"), {
+      cause: error
+    });
+  }
+}
+
+async function createSkillMapBatch(candidateId, skillPayloads = []) {
+  try {
+    const response = (
+      await API.post(`/candidate/${candidateId}/skill-map/batch`, {
+        skills: skillPayloads
+      })
+    ).data;
+
+    if (response?.success === false) {
+      throw new Error(response.message || "Failed to add skills");
+    }
+
+    return response?.data || {};
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error, "Failed to add skills"), {
+      cause: error
+    });
+  }
+}
+
+async function updateSkillMap(candidateId, skillMapId, payload) {
+  try {
+    const response = (
+      await API.put(`/candidate/${candidateId}/skill-map/${skillMapId}`, payload)
+    ).data;
+
+    if (response?.success === false) {
+      throw new Error(response.message || "Failed to update skill");
+    }
+
+    return response?.data || {};
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error, "Failed to update skill"), {
+      cause: error
+    });
+  }
+}
+
+async function deleteSkillMap(candidateId, skillMapId) {
+  try {
+    const response = (
+      await API.delete(`/candidate/${candidateId}/skill-map/${skillMapId}`)
+    ).data;
+
+    if (response?.success === false) {
+      throw new Error(response.message || "Failed to delete skill");
+    }
+
+    return response?.data || {};
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error, "Failed to delete skill"), {
+      cause: error
+    });
+  }
+}
+
 async function deleteExperience(candidateId, experienceId) {
   try {
     const response = (
@@ -785,7 +872,11 @@ const candidateRepository = {
   listExperience,
   createExperience,
   updateExperience,
-  deleteExperience
+  deleteExperience,
+  listSkillMap,
+  createSkillMapBatch,
+  updateSkillMap,
+  deleteSkillMap
 };
 
 export default candidateRepository;

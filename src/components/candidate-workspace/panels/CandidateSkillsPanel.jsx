@@ -11,6 +11,7 @@ import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
 
 import { EmptyState, EnterpriseSurface } from "@/components/enterprise";
 import { getPublishedRecords } from "@/enterprise/masterDataHelpers";
+import { buildSkillMapApiPayload } from "@/enterprise/candidateWorkspaceUtils";
 import CandidateAddSkillDialog from "../CandidateAddSkillDialog";
 
 function SkillChip({ skill, skillNameByCode, onEdit, onDelete }) {
@@ -38,10 +39,13 @@ function SkillChip({ skill, skillNameByCode, onEdit, onDelete }) {
 function CandidateSkillsPanel({
   skills = [],
   masterData,
-  onSaveSkills,
+  onAddSkillsBatch,
+  onUpdateSkill,
+  onDeleteSkill,
   onOpenAddDialog,
   forceOpenDialog = false,
-  onDialogClose
+  onDialogClose,
+  isSaving = false
 }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSkill, setEditingSkill] = useState(null);
@@ -62,31 +66,36 @@ function CandidateSkillsPanel({
     return map;
   }, [masterData]);
 
-  const handleSave = async (skillRow) => {
-    let nextSkills;
+  const assignedSkillCodes = useMemo(
+    () => skills.map((row) => row.skill_code).filter(Boolean),
+    [skills]
+  );
 
-    if (editingSkill) {
-      nextSkills = skills.map((row) =>
-        row.id === editingSkill.id ? { ...row, ...skillRow } : row
-      );
-    } else {
-      nextSkills = [
-        ...skills,
-        {
-          ...skillRow,
-          id: `skill-${Date.now()}`,
-          skill_name: skillNameByCode.get(skillRow.skill_code) || skillRow.skill_code
-        }
-      ];
+  const handleAdd = async ({ skillCodes, years, months, proficiency_code, last_used_on }) => {
+    await onAddSkillsBatch?.({
+      skillCodes,
+      years,
+      months,
+      proficiency_code,
+      last_used_on
+    });
+    setDialogOpen(false);
+    setEditingSkill(null);
+  };
+
+  const handleEdit = async (form) => {
+    if (!editingSkill?.id) {
+      return;
     }
 
-    await onSaveSkills?.(nextSkills);
+    const payload = buildSkillMapApiPayload(form);
+    await onUpdateSkill?.(editingSkill.id, payload);
     setDialogOpen(false);
     setEditingSkill(null);
   };
 
   const handleDelete = async (id) => {
-    await onSaveSkills?.(skills.filter((row) => row.id !== id));
+    await onDeleteSkill?.(id);
   };
 
   return (
@@ -115,6 +124,7 @@ function CandidateSkillsPanel({
               setDialogOpen(true);
               onOpenAddDialog?.();
             }}
+            disabled={isSaving}
           >
             Add Skill
           </Button>
@@ -146,6 +156,7 @@ function CandidateSkillsPanel({
       </EnterpriseSurface>
 
       <CandidateAddSkillDialog
+        key={editingSkill ? `edit-${editingSkill.id}` : "add"}
         open={dialogOpen}
         onClose={() => {
           setDialogOpen(false);
@@ -153,7 +164,10 @@ function CandidateSkillsPanel({
         }}
         masterData={masterData}
         initialValue={editingSkill}
-        onSave={handleSave}
+        assignedSkillCodes={assignedSkillCodes}
+        isSaving={isSaving}
+        onSaveAdd={handleAdd}
+        onSaveEdit={handleEdit}
       />
     </>
   );

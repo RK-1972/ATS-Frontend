@@ -7,12 +7,13 @@ import { executeLegacyCandidateRegistration } from "@/utils/legacyCandidateRegis
 import { getPublishedRecords } from "@/enterprise/masterDataHelpers";
 import { useNavigationFilters } from "@/copilot/core/useNavigationFilters";
 import {
+  buildSkillMapApiPayload,
   buildTimelineEvents,
   calculateProfileCompletion,
   calculateProfileCompletionBreakdown,
   getCandidateDisplayName,
+  mergeCandidateWorkspaceSkills,
   parseSkillChips,
-  parseSkillsFromCandidate,
   resolveMasterLabel,
   skillsToPrimaryString
 } from "@/enterprise/candidateWorkspaceUtils";
@@ -43,6 +44,8 @@ function useCandidateWorkspace() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [newDialogOpen, setNewDialogOpen] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
+  const [sidebarOperationalMount, setSidebarOperationalMount] = useState(null);
   const [toast, setToast] = useState({ message: "", severity: "success" });
   const [skills, setSkills] = useState([]);
   const [localNotes, setLocalNotes] = useState({});
@@ -125,12 +128,19 @@ function useCandidateWorkspace() {
 
       setOwnership(ownershipData);
 
-      setOwnerDisplayName(
-        ownershipData?.owner_display_name || ""
+      setOwnerDisplayName(ownershipData?.full_name || "");
+
+      const structuredSkills = await candidateRepository.listSkillMap(
+        id,
+        skillNameByCode
       );
 
       setSkills(
-        parseSkillsFromCandidate(nextProfile.master || {}, skillNameByCode)
+        mergeCandidateWorkspaceSkills(
+          nextProfile.master || {},
+          structuredSkills,
+          skillNameByCode
+        )
       );
       setLocalNotes({});
       setLocalEducation([]);
@@ -310,9 +320,7 @@ const requestOwnership = useCallback(
 
       setOwnership(ownershipData);
 
-      setOwnerDisplayName(
-        ownershipData?.owner_display_name || ""
-      );
+      setOwnerDisplayName(ownershipData?.full_name || "");
 
     } catch (ex) {
 
@@ -479,12 +487,154 @@ const updateCandidateStage = useCallback(
 // ======================================================
 
 
-  const saveSkills = useCallback(
-    async (nextSkills) => {
-      setSkills(nextSkills);
-      await saveCandidate({ primary_skill: skillsToPrimaryString(nextSkills) });
+  const applySyncedPrimarySkill = useCallback((primarySkill) => {
+    setProfile((prev) => {
+      if (!prev?.master) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        master: {
+          ...prev.master,
+          primary_skill: primarySkill
+        }
+      };
+    });
+  }, []);
+
+  const reloadStructuredSkills = useCallback(
+    async (id) => {
+      const rows = await candidateRepository.listSkillMap(id, skillNameByCode);
+      setSkills(rows);
+      return rows;
     },
-    [saveCandidate]
+    [skillNameByCode]
+  );
+
+  const addSkillsBatch = useCallback(
+    async ({ skillCodes, years, months, proficiency_code, last_used_on }) => {
+      if (!candidateId || !skillCodes?.length) {
+        return;
+      }
+
+      setIsSaving(true);
+
+      try {
+        const payloads = skillCodes.map((skillCode) =>
+          buildSkillMapApiPayload({
+            skill_code: skillCode,
+            years,
+            months,
+            proficiency_code,
+            last_used_on
+          })
+        );
+
+        const result = await candidateRepository.createSkillMapBatch(
+          candidateId,
+          payloads
+        );
+
+        if (result.primary_skill === undefined) {
+          throw new Error("Skill save did not synchronize primary_skill.");
+        }
+
+        applySyncedPrimarySkill(result.primary_skill);
+        await reloadStructuredSkills(candidateId);
+        await loadCandidates({ preserveSelection: true });
+        showToast("Skills added successfully.");
+      } catch (saveError) {
+        showToast(saveError.message || "Failed to add skills.", "error");
+        throw saveError;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [
+      applySyncedPrimarySkill,
+      candidateId,
+      loadCandidates,
+      reloadStructuredSkills,
+      showToast
+    ]
+  );
+
+  const updateSkill = useCallback(
+    async (skillMapId, payload) => {
+      if (!candidateId || !skillMapId) {
+        return;
+      }
+
+      setIsSaving(true);
+
+      try {
+        const result = await candidateRepository.updateSkillMap(
+          candidateId,
+          skillMapId,
+          payload
+        );
+
+        if (result.primary_skill === undefined) {
+          throw new Error("Skill update did not synchronize primary_skill.");
+        }
+
+        applySyncedPrimarySkill(result.primary_skill);
+        await reloadStructuredSkills(candidateId);
+        await loadCandidates({ preserveSelection: true });
+        showToast("Skill updated successfully.");
+      } catch (saveError) {
+        showToast(saveError.message || "Failed to update skill.", "error");
+        throw saveError;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [
+      applySyncedPrimarySkill,
+      candidateId,
+      loadCandidates,
+      reloadStructuredSkills,
+      showToast
+    ]
+  );
+
+  const deleteSkill = useCallback(
+    async (skillMapId) => {
+      if (!candidateId || !skillMapId) {
+        return;
+      }
+
+      setIsSaving(true);
+
+      try {
+        const result = await candidateRepository.deleteSkillMap(
+          candidateId,
+          skillMapId
+        );
+
+        if (result.primary_skill === undefined) {
+          throw new Error("Skill delete did not synchronize primary_skill.");
+        }
+
+        applySyncedPrimarySkill(result.primary_skill);
+        await reloadStructuredSkills(candidateId);
+        await loadCandidates({ preserveSelection: true });
+        showToast("Skill removed successfully.");
+      } catch (saveError) {
+        showToast(saveError.message || "Failed to delete skill.", "error");
+        throw saveError;
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [
+      applySyncedPrimarySkill,
+      candidateId,
+      loadCandidates,
+      reloadStructuredSkills,
+      showToast
+    ]
   );
 
   const triggerResumeUpload = useCallback(() => {
@@ -519,7 +669,9 @@ const updateCandidateStage = useCallback(
     skillChips,
     skills,
     setSkills,
-    saveSkills,
+    addSkillsBatch,
+    updateSkill,
+    deleteSkill,
     timelineEvents,
     pipelineHistory,
     masterLabels,
@@ -536,6 +688,10 @@ const updateCandidateStage = useCallback(
     setNewDialogOpen,
     mobileSidebarOpen,
     setMobileSidebarOpen,
+    assignmentDialogOpen,
+    setAssignmentDialogOpen,
+    sidebarOperationalMount,
+    setSidebarOperationalMount,
     isLoadingList,
     isLoadingProfile,
     isSaving,
