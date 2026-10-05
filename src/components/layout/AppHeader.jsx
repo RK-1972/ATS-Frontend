@@ -136,9 +136,7 @@ function AppHeader({
       ? Boolean(showUserActions)
       : isAuthenticated;
 
-  const showLoginBrandTagline = !shouldShowUserActions;
-  const mobileHeaderHeight =
-    showLoginBrandTagline && isMobileViewport ? 80 : layout.headerHeight;
+  const mobileHeaderHeight = isMobileViewport ? 80 : layout.headerHeight;
 
   const [ownershipNotifications, setOwnershipNotifications] = useState([]);
   const [budgetNotifications, setBudgetNotifications] = useState([]);
@@ -691,7 +689,7 @@ function AppHeader({
                 transformOrigin: "center center"
               }}
             >
-              <BrandLogo compact showTagline={showLoginBrandTagline} />
+              <BrandLogo compact showTagline />
             </Box>
           </Box>
 
