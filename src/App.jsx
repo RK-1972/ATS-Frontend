@@ -28,6 +28,7 @@ import MyDraftsPage from "./pages/talent-demand/MyDraftsPage";
 import RecruiterAssignmentWorkspacePage from "./pages/requisitions/RecruiterAssignmentWorkspacePage";
 import MyApprovalsPage from "./pages/approvals/MyApprovalsPage";
 import UserManagementPage from "./pages/UserManagementPage";
+import ResponsibilityClearancePage from "./pages/ResponsibilityClearancePage";
 import EmployeeWorkAssignmentPage from "./pages/EmployeeWorkAssignmentPage";
 import WorkAssignmentMasterPage from "./pages/WorkAssignmentMasterPage";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -484,6 +485,14 @@ function App() {
 
           }
 
+        />
+        <Route
+          path="/responsibility-clearance"
+          element={
+            <ProtectedRoute>
+              <ResponsibilityClearancePage />
+            </ProtectedRoute>
+          }
         />
         <Route
           path="/employee-work-assignments"

@@ -157,6 +157,9 @@ function CandidateProfilePage() {
                   <ProfileField label="Mobile" value={profile.mobile} />
                 </Grid>
                 <Grid size={{ xs: 12, sm: 6 }}>
+                  <ProfileField label="PAN" value={profile.pan_number} />
+                </Grid>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <ProfileField label="Current Company" value={profile.current_company} />
                 </Grid>
                 <Grid size={{ xs: 12, sm: 6 }}>

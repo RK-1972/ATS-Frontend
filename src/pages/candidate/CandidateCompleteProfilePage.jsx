@@ -1,10 +1,14 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import {
   Alert,
   Box,
   Button,
   Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Paper,
   Stack,
   TextField,
@@ -22,6 +26,10 @@ import {
   buildProfileSavePayload,
   validateProfileFields
 } from "../../utils/candidateProfileUtils";
+import {
+  PAN_IMMUTABILITY_NOTICE,
+  normalizePan
+} from "../../utils/candidatePanUtils";
 
 const COMPACT_FIELD_PROPS = {
   size: "small",
@@ -70,6 +78,45 @@ function CandidateCompleteProfilePage() {
   const [successMessage, setSuccessMessage] = useState("");
   const [step, setStep] = useState("upload");
   const [isBusy, setIsBusy] = useState(false);
+  const [isResubmit, setIsResubmit] = useState(false);
+  const [panConfirmOpen, setPanConfirmOpen] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadExistingProfile = async () => {
+      try {
+        const response = await candidatePortalClient.getProfile();
+        const payload = response.data || response;
+        const candidate = payload?.candidate;
+        const status = String(candidate?.candidate_status || "")
+          .trim()
+          .toUpperCase();
+
+        if (!active || status !== "REGISTERED") {
+          return;
+        }
+
+        setIsResubmit(true);
+        setEditableCandidate(
+          buildEditableCandidate({
+            ...payload?.profile,
+            ...candidate,
+            pan_number: candidate?.pan_number
+          })
+        );
+        setStep("review");
+      } catch {
+        // New candidates start on upload step.
+      }
+    };
+
+    loadExistingProfile();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const canUpload = useMemo(
     () => resumeFile && resumeFile.name.toLowerCase().endsWith(".pdf"),
@@ -140,27 +187,21 @@ function CandidateCompleteProfilePage() {
     }
   };
 
-  const handleSaveProfile = async () => {
-    setErrorMessage("");
-    setSuccessMessage("");
-
-    const errors = validateProfileFields(editableCandidate);
-
-    if (Object.keys(errors).length > 0) {
-      setValidationErrors(errors);
-      return;
-    }
-
-    setValidationErrors({});
+  const submitProfileSave = async () => {
     setIsBusy(true);
 
     try {
-      await candidatePortalClient.saveProfile(
-        buildProfileSavePayload(editableCandidate)
-      );
+      const payload = {
+        ...buildProfileSavePayload(editableCandidate),
+        ...(isResubmit ? { resubmit: true } : {})
+      };
+
+      await candidatePortalClient.saveProfile(payload);
 
       setSuccessMessage(
-        "Your profile has been saved and submitted for recruiter review."
+        isResubmit
+          ? "Your updated profile has been submitted for recruiter review."
+          : "Your profile has been saved and submitted for recruiter review."
       );
       setStep("success");
     } catch (error) {
@@ -175,6 +216,32 @@ function CandidateCompleteProfilePage() {
     } finally {
       setIsBusy(false);
     }
+  };
+
+  const handleSaveProfile = () => {
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    const errors = validateProfileFields(editableCandidate);
+
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+
+    setValidationErrors({});
+
+    if (isResubmit) {
+      submitProfileSave();
+      return;
+    }
+
+    setPanConfirmOpen(true);
+  };
+
+  const handleConfirmPanAndSave = () => {
+    setPanConfirmOpen(false);
+    submitProfileSave();
   };
 
   if (step === "success") {
@@ -332,6 +399,26 @@ function CandidateCompleteProfilePage() {
                     fullWidth
                   />
                   <TextField
+                    label="PAN"
+                    value={editableCandidate.pan_number}
+                    onChange={(event) =>
+                      handleFieldChange(
+                        "pan_number",
+                        normalizePan(event.target.value)
+                      )
+                    }
+                    error={Boolean(validationErrors.pan_number)}
+                    helperText={
+                      validationErrors.pan_number ||
+                      (isResubmit
+                        ? "PAN cannot be changed after registration."
+                        : PAN_IMMUTABILITY_NOTICE)
+                    }
+                    disabled={isResubmit}
+                    {...COMPACT_FIELD_PROPS}
+                    fullWidth
+                  />
+                  <TextField
                     label="Current Company"
                     value={editableCandidate.current_company}
                     onChange={(event) =>
@@ -401,6 +488,41 @@ function CandidateCompleteProfilePage() {
           </Paper>
         </Stack>
       </Container>
+
+      <Dialog
+        open={panConfirmOpen}
+        onClose={() => !isBusy && setPanConfirmOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>Confirm PAN before submitting</DialogTitle>
+        <DialogContent>
+          <Stack spacing={1.5}>
+            <Alert severity="warning">{PAN_IMMUTABILITY_NOTICE}</Alert>
+            <Typography variant="body2" color="text.secondary">
+              PAN on file:{" "}
+              <strong>{normalizePan(editableCandidate.pan_number) || "—"}</strong>
+            </Typography>
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => setPanConfirmOpen(false)}
+            disabled={isBusy}
+            sx={{ textTransform: "none" }}
+          >
+            Go back
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleConfirmPanAndSave}
+            disabled={isBusy}
+            sx={{ textTransform: "none", fontWeight: 600 }}
+          >
+            {isBusy ? <OptalynxLoader size={22} /> : "Submit profile"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

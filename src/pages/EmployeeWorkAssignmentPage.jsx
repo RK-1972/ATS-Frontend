@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Header from "../components/Header";
 import AdminNavRail from "../components/layout/AdminNavRail";
 import API from "../api/axios";
+import { refreshWorkspaceSession } from "../utils/sessionWorkspaceRefresh";
 import {
   Alert,
   Box,
@@ -37,6 +38,17 @@ function InfoField({ label, value }) {
   );
 }
 
+async function maybeRefreshSelfWorkspace(employeeCode) {
+  try {
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    if (user.employee_code === employeeCode) {
+      await refreshWorkspaceSession();
+    }
+  } catch (_error) {
+    // ignore parse errors
+  }
+}
+
 function EmployeeWorkAssignmentPage() {
   const [employees, setEmployees] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState(null);
@@ -61,7 +73,9 @@ function EmployeeWorkAssignmentPage() {
       try {
         // Existing admin employee directory API (no /employees endpoint).
         const response = await API.get("/users");
-        const rows = response.data?.data || [];
+        const rows = (response.data?.data || []).filter(
+          (employee) => employee.is_active === true
+        );
         setEmployees(rows);
 
         if (rows.length > 0) {
@@ -198,6 +212,7 @@ function EmployeeWorkAssignmentPage() {
         severity: "success"
       });
       await loadEmployeeAssignments(employeeCode);
+      await maybeRefreshSelfWorkspace(employeeCode);
     } catch (error) {
       setToast({
         message:
@@ -226,6 +241,7 @@ function EmployeeWorkAssignmentPage() {
         severity: "success"
       });
       await loadEmployeeAssignments(selectedEmployee?.employee_code);
+      await maybeRefreshSelfWorkspace(selectedEmployee?.employee_code);
     } catch (error) {
       setToast({
         message:

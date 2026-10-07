@@ -1,3 +1,5 @@
+import { validatePanNumber } from "./candidatePanUtils";
+
 export function normalizeNumericExperience(value) {
   if (value === null || value === undefined || value === "") {
     return value;
@@ -27,6 +29,8 @@ export function buildDraftUpdatePayload(
     last_name: editableCandidate.last_name,
     email_id: editableCandidate.email || editableCandidate.email_id,
     mobile_number: editableCandidate.mobile || editableCandidate.mobile_number,
+    pan_number:
+      editableCandidate.pan_number || editableCandidate.pan || undefined,
     current_company: editableCandidate.current_company,
     current_designation:
       editableCandidate.designation || editableCandidate.current_designation,
@@ -56,10 +60,20 @@ export function validateRegisterCandidate(editableCandidate) {
     editableCandidate?.mobile || editableCandidate?.mobile_number || ""
   ).trim();
 
-  if (!email && !mobile) {
-    const contactMessage = "Enter email or mobile.";
-    errors.email = contactMessage;
-    errors.mobile = contactMessage;
+  if (!email) {
+    errors.email = "Email is required.";
+  }
+
+  if (!mobile) {
+    errors.mobile = "Mobile is required.";
+  }
+
+  const panError = validatePanNumber(
+    editableCandidate?.pan_number || editableCandidate?.pan
+  );
+
+  if (panError) {
+    errors.pan_number = panError;
   }
 
   return errors;
@@ -74,6 +88,8 @@ export function candidateMasterToEditableCandidate(candidate = {}) {
     current_company: candidate.current_company || "",
     designation: candidate.current_designation || "",
     experience: candidate.total_experience ?? "",
-    skills: candidate.primary_skill || ""
+    skills: candidate.primary_skill || "",
+    pan_number: candidate.pan_number || "",
+    pan: candidate.pan_number || ""
   };
 }

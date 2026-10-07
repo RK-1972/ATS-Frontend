@@ -1,3 +1,5 @@
+import { validatePanNumber } from "./candidatePanUtils";
+
 export function buildEditableCandidate(parsedCandidate) {
   if (!parsedCandidate) {
     return {
@@ -9,7 +11,8 @@ export function buildEditableCandidate(parsedCandidate) {
       designation: "",
       experience: "",
       skills: "",
-      education: ""
+      education: "",
+      pan_number: ""
     };
   }
 
@@ -39,7 +42,8 @@ export function buildEditableCandidate(parsedCandidate) {
     designation: String(parsedCandidate.designation || parsedCandidate.role || ""),
     experience: String(parsedCandidate.experience || parsedCandidate.total_experience || ""),
     skills: String(skills || parsedCandidate.primary_skill || ""),
-    education: String(parsedCandidate.education || "")
+    education: String(parsedCandidate.education || ""),
+    pan_number: String(parsedCandidate.pan_number || parsedCandidate.pan || "")
   };
 }
 
@@ -72,7 +76,8 @@ export function buildProfileSavePayload(editableCandidate = {}) {
     current_company: editableCandidate.current_company,
     designation: editableCandidate.designation,
     experience: normalizeNumericExperience(editableCandidate.experience),
-    skills: editableCandidate.skills
+    skills: editableCandidate.skills,
+    pan_number: editableCandidate.pan_number
   };
 }
 
@@ -90,10 +95,18 @@ export function validateProfileFields(editableCandidate) {
   const email = String(editableCandidate?.email || "").trim();
   const mobile = String(editableCandidate?.mobile || "").trim();
 
-  if (!email && !mobile) {
-    const contactMessage = "Enter email or mobile.";
-    errors.email = contactMessage;
-    errors.mobile = contactMessage;
+  if (!email) {
+    errors.email = "Email is required.";
+  }
+
+  if (!mobile) {
+    errors.mobile = "Mobile is required.";
+  }
+
+  const panError = validatePanNumber(editableCandidate?.pan_number);
+
+  if (panError) {
+    errors.pan_number = panError;
   }
 
   return errors;

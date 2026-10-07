@@ -59,6 +59,11 @@ const ADMIN_NAV_ITEMS = [
     icon: PeopleAltOutlinedIcon
   },
   {
+    label: "Responsibility Clearance",
+    path: "/responsibility-clearance",
+    icon: AssignmentTurnedInOutlinedIcon
+  },
+  {
     type: "section",
     label: "Master Data"
   },

@@ -40,6 +40,7 @@ import { useTheme } from "@mui/material/styles";
 import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
 import { FramerDialogTransition } from "../theme/motionRenderer";
+import EmployeeDeactivateClearanceDialog from "../components/employee-lifecycle/EmployeeDeactivateClearanceDialog";
 
 const CREATE_USER_DIALOG_MAX_WIDTH = 680;
 
@@ -281,6 +282,7 @@ function UserManagementPage() {
   const [isChangingRole, setIsChangingRole] = useState(false);
   const [statusHistory, setStatusHistory] = useState([]);
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [deactivateClearanceOpen, setDeactivateClearanceOpen] = useState(false);
   const [statusDialogMode, setStatusDialogMode] = useState("deactivate");
   const [statusChangeReason, setStatusChangeReason] = useState("");
   const [statusChangeError, setStatusChangeError] = useState("");
@@ -787,10 +789,42 @@ function UserManagementPage() {
       return;
     }
 
+    if (mode === "deactivate") {
+      setDeactivateClearanceOpen(true);
+      return;
+    }
+
     setStatusDialogMode(mode);
     setStatusChangeReason("");
     setStatusChangeError("");
     setStatusDialogOpen(true);
+  };
+
+  const handleDeactivateClearanceCompleted = async (responseData) => {
+    const updatedUser = responseData?.data?.user;
+    const employeeCode = selectedEmployee?.employee_code;
+
+    if (updatedUser?.user_id) {
+      setUsers((current) =>
+        current.map((employee) =>
+          employee.user_id === updatedUser.user_id
+            ? { ...employee, is_active: updatedUser.is_active }
+            : employee
+        )
+      );
+    } else {
+      await loadUsers();
+    }
+
+    if (employeeCode) {
+      await refreshStatusHistory(employeeCode);
+    }
+
+    setToast({
+      message:
+        responseData?.message || "User deactivated successfully.",
+      severity: "success"
+    });
   };
 
   const handleCloseStatusDialog = () => {
@@ -943,6 +977,7 @@ function UserManagementPage() {
         sx={{
           flex: 1,
           display: "flex",
+          flexDirection: { xs: "column", md: "row" },
           minHeight: 0,
           minWidth: 0,
           overflow: "hidden",
@@ -959,11 +994,11 @@ function UserManagementPage() {
             width: { xs: "100%", md: "28%" },
             maxWidth: { md: 320 },
             minWidth: { md: 260 },
-            flexShrink: 0,
+            flex: { xs: 1, md: "0 0 auto" },
             borderRight: { md: 1 },
             borderColor: "divider",
             bgcolor: "background.paper",
-            display: { xs: "none", md: "flex" },
+            display: "flex",
             flexDirection: "column",
             minHeight: 0,
             overflow: "hidden",
@@ -2073,6 +2108,14 @@ function UserManagementPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <EmployeeDeactivateClearanceDialog
+        open={deactivateClearanceOpen}
+        employeeCode={selectedEmployee?.employee_code}
+        employeeName={selectedEmployee?.full_name}
+        onClose={() => setDeactivateClearanceOpen(false)}
+        onCompleted={handleDeactivateClearanceCompleted}
+      />
 
       <Snackbar
         open={Boolean(toast.message)}

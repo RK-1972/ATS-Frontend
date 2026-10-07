@@ -1,12 +1,16 @@
+import { useEffect, useState } from "react";
 import {
+  Alert,
   Box,
   Button,
   Card,
   CardActionArea,
+  Checkbox,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControlLabel,
   Stack,
   Typography
 } from "@mui/material";
@@ -14,6 +18,7 @@ import PersonIcon from "@mui/icons-material/Person";
 import PublicIcon from "@mui/icons-material/Public";
 
 import EnterpriseModuleIcon from "@/components/enterprise/EnterpriseModuleIcon";
+import { PAN_IMMUTABILITY_NOTICE } from "@/utils/candidatePanUtils";
 
 function RegisterCandidateDestinationDialog({
   open = false,
@@ -23,6 +28,14 @@ function RegisterCandidateDestinationDialog({
   onConfirm,
   isSubmitting = false
 }) {
+  const [panAcknowledged, setPanAcknowledged] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setPanAcknowledged(false);
+    }
+  }, [open]);
+
   let ownerLabel = "Logged-in recruiter";
 
   try {
@@ -125,6 +138,19 @@ function RegisterCandidateDestinationDialog({
             );
           })}
         </Stack>
+        <Alert severity="warning" sx={{ mt: 1.5, borderRadius: 2 }}>
+          {PAN_IMMUTABILITY_NOTICE}
+        </Alert>
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={panAcknowledged}
+              onChange={(event) => setPanAcknowledged(event.target.checked)}
+            />
+          }
+          label="I understand PAN cannot be edited after registration."
+          sx={{ alignItems: "flex-start", mx: 0 }}
+        />
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
         <Button onClick={onClose} sx={{ textTransform: "none" }}>
@@ -132,7 +158,7 @@ function RegisterCandidateDestinationDialog({
         </Button>
         <Button
           variant="contained"
-          disabled={!hasSelection || isSubmitting}
+          disabled={!hasSelection || !panAcknowledged || isSubmitting}
           onClick={onConfirm}
           sx={{ textTransform: "none", fontWeight: 600 }}
         >

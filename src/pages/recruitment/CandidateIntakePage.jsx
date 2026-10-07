@@ -7,6 +7,7 @@ import {
   Button,
   Card,
   CardActionArea,
+  Checkbox,
   Chip,
   Dialog,
   DialogActions,
@@ -14,6 +15,7 @@ import {
   DialogTitle,
   Divider,
   FormControl,
+  FormControlLabel,
   Grid,
   IconButton,
   InputAdornment,
@@ -80,6 +82,7 @@ import {
   buildDraftUpdatePayload,
   validateRegisterCandidate
 } from "@/utils/candidateRegistrationUtils";
+import { PAN_IMMUTABILITY_NOTICE } from "@/utils/candidatePanUtils";
 import resolveResumeViewerUrl from "@/utils/resolveResumeViewerUrl";
 
 const RegistrationStepConnector = styled(StepConnector)(({ theme }) => ({
@@ -387,6 +390,12 @@ const EDITABLE_CANDIDATE_FIELDS = [
     grid: { xs: 12, sm: 6, md: 4 }
   },
   {
+    label: "PAN",
+    key: "pan_number",
+    Icon: BadgeOutlinedIcon,
+    grid: { xs: 12, sm: 6, md: 4 }
+  },
+  {
     label: "Current Company",
     key: "current_company",
     Icon: WorkOutlineOutlinedIcon,
@@ -419,6 +428,7 @@ function buildEditableCandidate(parsedCandidate) {
       last_name: "",
       email: "",
       mobile: "",
+      pan_number: "",
       current_company: "",
       designation: "",
       experience: "",
@@ -446,6 +456,7 @@ function buildEditableCandidate(parsedCandidate) {
     last_name: String(parsedCandidate.last_name || fallbackLastName || ""),
     email: String(parsedCandidate.email || parsedCandidate.email_id || ""),
     mobile: String(parsedCandidate.mobile || parsedCandidate.mobile_number || ""),
+    pan_number: String(parsedCandidate.pan_number || parsedCandidate.pan || ""),
     current_company: String(
       parsedCandidate.current_company || parsedCandidate.company || ""
     ),
@@ -461,6 +472,7 @@ function buildEditableCandidateFromMaster(candidate = {}) {
     last_name: String(candidate.last_name || ""),
     email: String(candidate.email_id || candidate.email || ""),
     mobile: String(candidate.mobile_number || candidate.mobile || ""),
+    pan_number: String(candidate.pan_number || ""),
     current_company: String(candidate.current_company || ""),
     designation: String(candidate.current_designation || candidate.designation || ""),
     experience:
@@ -640,7 +652,13 @@ function CandidateDetailsCard({
                     size="small"
                     variant="outlined"
                     value={value}
-                    onChange={(event) => onChange?.(key, event.target.value)}
+                    onChange={(event) => {
+                      const raw = event.target.value;
+                      onChange?.(
+                        key,
+                        key === "pan_number" ? raw.toUpperCase() : raw
+                      );
+                    }}
                     placeholder={`Enter ${label.toLowerCase()}`}
                     multiline={key === "skills"}
                     minRows={key === "skills" ? 2 : undefined}
@@ -648,7 +666,8 @@ function CandidateDetailsCard({
                       key === "first_name" ||
                       key === "last_name" ||
                       key === "email" ||
-                      key === "mobile"
+                      key === "mobile" ||
+                      key === "pan_number"
                     }
                     error={Boolean(fieldError)}
                     helperText={fieldError || undefined}
@@ -924,6 +943,7 @@ function buildValidationChecklist(editableCandidate = {}) {
     Boolean(String(editableCandidate.last_name || "").trim());
   const hasEmail = Boolean(String(editableCandidate.email || "").trim());
   const hasMobile = Boolean(String(editableCandidate.mobile || "").trim());
+  const hasPan = Boolean(String(editableCandidate.pan_number || "").trim());
   const hasCompany = Boolean(
     String(editableCandidate.current_company || "").trim()
   );
@@ -946,6 +966,12 @@ function buildValidationChecklist(editableCandidate = {}) {
       label: "Mobile",
       ok: hasMobile,
       Icon: PhoneOutlinedIcon
+    },
+    {
+      key: "pan",
+      label: "PAN",
+      ok: hasPan,
+      Icon: BadgeOutlinedIcon
     },
     {
       key: "linkedin",
@@ -1229,6 +1255,14 @@ function RegisterCandidateDestinationDialog({
   onSelectContainer,
   onConfirm
 }) {
+  const [panAcknowledged, setPanAcknowledged] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setPanAcknowledged(false);
+    }
+  }, [open]);
+
   let ownerLabel = "Logged-in recruiter";
 
   try {
@@ -1367,6 +1401,19 @@ function RegisterCandidateDestinationDialog({
             );
           })}
         </Stack>
+        <Alert severity="warning" sx={{ mt: 1.5, borderRadius: 2 }}>
+          {PAN_IMMUTABILITY_NOTICE}
+        </Alert>
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={panAcknowledged}
+              onChange={(event) => setPanAcknowledged(event.target.checked)}
+            />
+          }
+          label="I understand PAN cannot be edited after registration."
+          sx={{ alignItems: "flex-start", mx: 0, mt: 0.5 }}
+        />
       </DialogContent>
       <DialogActions sx={{ px: 2.5, pb: 2, pt: 1, gap: 1 }}>
         <Button onClick={onClose} sx={{ borderRadius: "12px" }}>
@@ -1374,7 +1421,7 @@ function RegisterCandidateDestinationDialog({
         </Button>
         <Button
           variant="contained"
-          disabled={!hasSelection}
+          disabled={!hasSelection || !panAcknowledged}
           onClick={onConfirm}
           sx={{ borderRadius: "12px" }}
         >
@@ -1386,6 +1433,10 @@ function RegisterCandidateDestinationDialog({
 }
 
 function getReviewQueueSourceLabel(row) {
+  if (row.submission_label) {
+    return row.submission_label;
+  }
+
   return (
     row.source_name ||
     (row.source_code === "PORTAL" ? "Career Portal" : row.source_code) ||
@@ -1409,6 +1460,7 @@ function buildReviewQueueSearchHaystack(row) {
     row.candidate_id != null ? String(row.candidate_id) : "",
     row.source_code,
     sourceLabel,
+    row.submission_label,
     String(completion),
     `${completion}%`,
     `${completion}% complete`
@@ -1996,9 +2048,11 @@ function CandidateIntakePage() {
   };
 
   const handleEditableCandidateChange = (field, value) => {
+    const nextValue =
+      field === "pan_number" ? String(value || "").toUpperCase() : value;
     const nextCandidate = {
       ...editableCandidate,
-      [field]: value
+      [field]: nextValue
     };
 
     setEditableCandidate(nextCandidate);

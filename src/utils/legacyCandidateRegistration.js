@@ -1,4 +1,5 @@
 import API from "../api/axios";
+import { PAN_IMMUTABILITY_NOTICE } from "./candidatePanUtils";
 
 /**
  * Legacy Candidate Registration create workflow (Single Source of Truth).
@@ -11,7 +12,7 @@ export async function executeLegacyCandidateRegistration(
 ) {
   if (!skipConfirm) {
     const confirmSave = window.confirm(
-      "Are you sure you want to save this candidate?"
+      `${PAN_IMMUTABILITY_NOTICE}\n\nContinue with registration?`
     );
 
     if (!confirmSave) {
