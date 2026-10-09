@@ -24,6 +24,7 @@ import {
   List,
   ListItemButton,
   MenuItem,
+  Select,
   Snackbar,
   Alert,
   Stack,
@@ -252,6 +253,7 @@ function UserManagementPage() {
   const [users, setUsers] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [directoryStatusFilter, setDirectoryStatusFilter] = useState("active");
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [accessDenied, setAccessDenied] = useState(false);
@@ -411,8 +413,13 @@ function UserManagementPage() {
     return Boolean(actorCode && subjectCode && actorCode === subjectCode);
   }, [loggedInUser?.employee_code, selectedEmployee?.employee_code]);
 
+  const isSelectedEmployeeInactive = selectedEmployee?.is_active === false;
+
   const canChangePrimaryRole = Boolean(
-    selectedEmployee && !isSelfSelectedEmployee && canCreateUser
+    selectedEmployee &&
+      !isSelfSelectedEmployee &&
+      canCreateUser &&
+      !isSelectedEmployeeInactive
   );
 
   const canChangeUserStatus = canChangePrimaryRole;
@@ -525,11 +532,17 @@ function UserManagementPage() {
   const filteredEmployees = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
 
+    const statusFiltered = users.filter((employee) =>
+      directoryStatusFilter === "inactive"
+        ? employee.is_active === false
+        : employee.is_active !== false
+    );
+
     if (!query) {
-      return users;
+      return statusFiltered;
     }
 
-    return users.filter((employee) => {
+    return statusFiltered.filter((employee) => {
       const name = String(employee.full_name || "").toLowerCase();
       const code = String(employee.employee_code || "").toLowerCase();
       const role = String(employee.role_name || "").toLowerCase();
@@ -540,7 +553,7 @@ function UserManagementPage() {
         role.includes(query)
       );
     });
-  }, [users, searchQuery]);
+  }, [users, searchQuery, directoryStatusFilter]);
 
   const handleEmployeeSelect = (userId) => {
     if (userId === selectedUserId) {
@@ -846,6 +859,13 @@ function UserManagementPage() {
       return;
     }
 
+    if (statusDialogMode === "activate" && !reason) {
+      setStatusChangeError(
+        "A reason is required to reactivate an inactive employee."
+      );
+      return;
+    }
+
     setIsChangingStatus(true);
     setStatusChangeError("");
 
@@ -1016,6 +1036,16 @@ function UserManagementPage() {
             <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1 }}>
               Employee Directory
             </Typography>
+            <Select
+              size="small"
+              fullWidth
+              value={directoryStatusFilter}
+              onChange={(event) => setDirectoryStatusFilter(event.target.value)}
+              sx={{ mb: 1, fontSize: 13 }}
+            >
+              <MenuItem value="active" dense>Active</MenuItem>
+              <MenuItem value="inactive" dense>Inactive</MenuItem>
+            </Select>
             <TextField
               size="small"
               fullWidth
@@ -1200,7 +1230,11 @@ function UserManagementPage() {
                       size="small"
                       fullWidth
                       value={profileForm.full_name}
-                      disabled={!selectedEmployee || isSavingProfile}
+                      disabled={
+                        !selectedEmployee ||
+                        isSavingProfile ||
+                        isSelectedEmployeeInactive
+                      }
                       onChange={(event) =>
                         setProfileForm((current) => ({
                           ...current,
@@ -1215,7 +1249,11 @@ function UserManagementPage() {
                       size="small"
                       fullWidth
                       value={profileForm.email_id}
-                      disabled={!selectedEmployee || isSavingProfile}
+                      disabled={
+                        !selectedEmployee ||
+                        isSavingProfile ||
+                        isSelectedEmployeeInactive
+                      }
                       onChange={(event) =>
                         setProfileForm((current) => ({
                           ...current,
@@ -1239,7 +1277,11 @@ function UserManagementPage() {
                     <Button
                       variant="contained"
                       onClick={handleSaveProfile}
-                      disabled={!selectedEmployee || isSavingProfile}
+                      disabled={
+                        !selectedEmployee ||
+                        isSavingProfile ||
+                        isSelectedEmployeeInactive
+                      }
                       sx={{
                         textTransform: "none",
                         fontWeight: 600,
@@ -2056,7 +2098,7 @@ function UserManagementPage() {
             sx={{ mt: 0.25, lineHeight: 1.3 }}
           >
             {statusDialogMode === "activate"
-              ? "Restore this employee's account access and login ability."
+              ? "Re-enable login for this employee. Work assignments and operational access are not restored automatically—you must re-establish them after activation."
               : "Deactivate this employee's account. Active sessions will no longer be authorized."}
           </Typography>
         </DialogTitle>
@@ -2072,7 +2114,10 @@ function UserManagementPage() {
               value={statusChangeReason}
               onChange={(event) => setStatusChangeReason(event.target.value)}
               disabled={isChangingStatus}
-              placeholder="Optional"
+              placeholder={
+                statusDialogMode === "activate" ? "Required" : "Optional"
+              }
+              required={statusDialogMode === "activate"}
               sx={createUserDenseFieldSx}
             />
 
@@ -2097,7 +2142,11 @@ function UserManagementPage() {
             variant="contained"
             color={statusDialogMode === "activate" ? "primary" : "error"}
             onClick={handleChangeUserStatus}
-            disabled={isChangingStatus}
+            disabled={
+              isChangingStatus ||
+              (statusDialogMode === "activate" &&
+                !String(statusChangeReason || "").trim())
+            }
             sx={createUserDialogButtonSx}
           >
             {isChangingStatus

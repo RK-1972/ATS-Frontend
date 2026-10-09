@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Autocomplete, TextField } from "@mui/material";
 
 import recruitmentRepository from "@/repositories/recruitmentRepository";
+import { filterActiveEmployeeRecords } from "@/utils/activeEmployeeFilters";
 
 /**
  * Recruiter Autocomplete for Copilot Assign Recruiter.
@@ -27,7 +28,7 @@ function AssignRecruiterRecruiterPicker({
       try {
         const rows = await recruitmentRepository.listFormRecruiters();
         if (!cancelled) {
-          setOptions(Array.isArray(rows) ? rows : []);
+          setOptions(filterActiveEmployeeRecords(rows));
         }
       } catch (error) {
         if (!cancelled) {

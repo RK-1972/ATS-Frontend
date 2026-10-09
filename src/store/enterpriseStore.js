@@ -20,6 +20,7 @@ import {
 } from "../repositories";
 import generatedDocumentRepository from "../repositories/generatedDocumentRepository";
 import { buildPendingApprovalQueue } from "../utils/offerApprovalUtils";
+import { filterActiveEmployeeRecords } from "../utils/activeEmployeeFilters";
 
 const platformConfigInitial = platformConfigRepository.getInitialState();
 const businessRulesInitial = businessRulesRepository.getInitialState();
@@ -295,7 +296,9 @@ const useEnterpriseStore = create((set, get) => ({
             ...get().requisitionManagement.formOptions,
             clients: clientsResult.status === "fulfilled" ? clientsResult.value : [],
             recruiters:
-              recruitersResult.status === "fulfilled" ? recruitersResult.value : [],
+              recruitersResult.status === "fulfilled"
+                ? filterActiveEmployeeRecords(recruitersResult.value)
+                : [],
             projects: [],
             hiringManagers: []
           }

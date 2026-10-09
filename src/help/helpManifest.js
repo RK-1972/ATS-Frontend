@@ -33,7 +33,10 @@ export const HELP_TOPIC_MANIFEST = [
     summary:
       "Key fields and approval expectations when raising a new requisition.",
     displayOrder: 10,
-    roles: ["Admin", "Recruiter"]
+    roles: ["Admin", "Recruiter"],
+    video: {
+      localAsset: "requisitions/req-create-basics.mp4"
+    }
   },
   {
     moduleKey: "candidates",

@@ -27,6 +27,7 @@ import {
 
 import API from "@/api/axios";
 import useApprovalRoutes from "@/hooks/useApprovalRoutes";
+import { filterActiveEmployeeRecords } from "@/utils/activeEmployeeFilters";
 
 function formatDateValue(value) {
   if (!value) {
@@ -355,7 +356,7 @@ function ApprovalRouteManagementPage() {
         const rows = response.data?.data || [];
 
         if (!cancelled) {
-          setUsers(Array.isArray(rows) ? rows : []);
+          setUsers(filterActiveEmployeeRecords(rows));
         }
       } catch (_error) {
         if (!cancelled) {

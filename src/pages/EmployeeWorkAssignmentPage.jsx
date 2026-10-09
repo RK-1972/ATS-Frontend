@@ -20,6 +20,7 @@ import {
   Typography
 } from "@mui/material";
 import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
+import { filterActiveEmployeeRecords } from "../utils/activeEmployeeFilters";
 
 function InfoField({ label, value }) {
   return (
@@ -73,9 +74,7 @@ function EmployeeWorkAssignmentPage() {
       try {
         // Existing admin employee directory API (no /employees endpoint).
         const response = await API.get("/users");
-        const rows = (response.data?.data || []).filter(
-          (employee) => employee.is_active === true
-        );
+        const rows = filterActiveEmployeeRecords(response.data?.data || []);
         setEmployees(rows);
 
         if (rows.length > 0) {
