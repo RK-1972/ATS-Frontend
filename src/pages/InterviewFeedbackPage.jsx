@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import useMediaQuery from "@mui/material/useMediaQuery";
+import { useTheme } from "@mui/material/styles";
 import API from "../api/axios";
 import WorkspaceLayout from "../components/enterprise/WorkspaceLayout";
 import { ErrorState } from "../components/enterprise";
@@ -20,6 +22,8 @@ function hasSkillRating(value) {
 function InterviewFeedbackPage() {
 
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobileLayout = useMediaQuery(theme.breakpoints.down("md"));
 
   const { scheduleId } = useParams();
 
@@ -381,7 +385,12 @@ function InterviewFeedbackPage() {
 
       {/* CONTENT */}
 
-      <div style={styles.container}>
+      <div
+        style={{
+          ...styles.container,
+          ...(isMobileLayout ? styles.containerMobile : null)
+        }}
+      >
 
         <button
           style={styles.backButton}
@@ -398,7 +407,12 @@ function InterviewFeedbackPage() {
 
         {/* Candidate Information */}
 
-        <div style={styles.panel}>
+        <div
+          style={{
+            ...styles.panel,
+            ...(isMobileLayout ? styles.panelMobile : null)
+          }}
+        >
 
           <div style={styles.panelHeader}>
             Candidate Information
@@ -452,22 +466,40 @@ function InterviewFeedbackPage() {
 
         {/* Assessment */}
 
-        <div style={styles.panel}>
+        <div
+          style={{
+            ...styles.panel,
+            ...(isMobileLayout ? styles.panelMobile : null)
+          }}
+        >
 
           <div style={styles.panelHeader}>
             Evaluation
           </div>
 
-          <div style={styles.formRow}>
+          <div
+            style={{
+              ...styles.formRow,
+              ...(isMobileLayout ? styles.formRowMobile : null)
+            }}
+          >
 
-            <div style={styles.fieldBlock}>
+            <div
+              style={{
+                ...styles.fieldBlock,
+                ...(isMobileLayout ? styles.fieldBlockMobile : null)
+              }}
+            >
 
               <label style={styles.formLabel}>
                   Area Of Interview
                 </label>
               
               <select
-                style={styles.select}
+                style={{
+                  ...styles.select,
+                  ...(isMobileLayout ? styles.selectMobile : null)
+                }}
                 value={areaOfInterview}
                 onChange={(e) => {
                   setAreaOfInterview(e.target.value);
@@ -500,14 +532,22 @@ function InterviewFeedbackPage() {
 
             </div>
 
-            <div style={styles.fieldBlock}>
+            <div
+              style={{
+                ...styles.fieldBlock,
+                ...(isMobileLayout ? styles.fieldBlockMobile : null)
+              }}
+            >
 
               <label style={styles.formLabel}>
                 Overall Rating
               </label>
 
               <select
-                style={styles.select}
+                style={{
+                  ...styles.select,
+                  ...(isMobileLayout ? styles.selectMobile : null)
+                }}
                 value={overallRating}
                 onChange={(e) => {
                   setOverallRating(e.target.value);
@@ -559,14 +599,20 @@ function InterviewFeedbackPage() {
 
     <div
       key={index}
-      style={styles.skillRow}
+      style={{
+        ...styles.skillRow,
+        ...(isMobileLayout ? styles.skillRowMobile : null)
+      }}
     >
 
       <input
         ref={(el) => {
           skillInputRefs.current[index] = el;
         }}
-        style={styles.input}
+        style={{
+          ...styles.input,
+          ...(isMobileLayout ? styles.skillFieldMobile : null)
+        }}
         placeholder="Skill"
         value={row.skill_name}
         onChange={(e) =>
@@ -581,6 +627,7 @@ function InterviewFeedbackPage() {
       <div
         style={{
           ...styles.starRow,
+          ...(isMobileLayout ? styles.starRowMobile : null),
           cursor: skillEnabled ? "pointer" : "not-allowed",
           opacity: skillEnabled ? 1 : 0.55
         }}
@@ -611,21 +658,44 @@ function InterviewFeedbackPage() {
   ))}
 
 </div>
-      <input
-        style={styles.input}
-        placeholder="Comments"
-        value={row.comments}
-        onChange={(e) =>
-          updateSkill(
-            index,
-            "comments",
-            e.target.value
-          )
-        }
-      />
+      {isMobileLayout ? (
+        <textarea
+          style={{
+            ...styles.textArea,
+            ...styles.skillCommentsMobile,
+            marginBottom: 0
+          }}
+          placeholder="Comments"
+          rows={3}
+          value={row.comments}
+          onChange={(e) =>
+            updateSkill(
+              index,
+              "comments",
+              e.target.value
+            )
+          }
+        />
+      ) : (
+        <input
+          style={styles.input}
+          placeholder="Comments"
+          value={row.comments}
+          onChange={(e) =>
+            updateSkill(
+              index,
+              "comments",
+              e.target.value
+            )
+          }
+        />
+      )}
 
       <button
-        style={styles.removeButton}
+        style={{
+          ...styles.removeButton,
+          ...(isMobileLayout ? styles.removeButtonMobile : null)
+        }}
         onClick={() =>
           removeSkillRow(index)
         }
@@ -657,7 +727,10 @@ function InterviewFeedbackPage() {
           </button>
 
           <textarea
-            style={styles.textArea}
+            style={{
+              ...styles.textArea,
+              ...(isMobileLayout ? styles.textAreaMobile : null)
+            }}
             placeholder="Strengths"
             value={strengths}
             onChange={(e) =>
@@ -668,7 +741,10 @@ function InterviewFeedbackPage() {
           />
 
           <textarea
-            style={styles.textArea}
+            style={{
+              ...styles.textArea,
+              ...(isMobileLayout ? styles.textAreaMobile : null)
+            }}
             placeholder="Improvement Areas"
             value={improvementAreas}
             onChange={(e) =>
@@ -679,7 +755,10 @@ function InterviewFeedbackPage() {
           />
 
           <textarea
-            style={styles.textArea}
+            style={{
+              ...styles.textArea,
+              ...(isMobileLayout ? styles.textAreaMobile : null)
+            }}
             placeholder="Overall Comments"
             value={overallComments}
             onChange={(e) =>
@@ -690,7 +769,10 @@ function InterviewFeedbackPage() {
           />
 
           <select
-            style={styles.select}
+            style={{
+              ...styles.select,
+              ...(isMobileLayout ? styles.selectMobile : null)
+            }}
             value={finalOutcome}
             onChange={(e) => {
               setFinalOutcome(e.target.value);
@@ -726,7 +808,10 @@ function InterviewFeedbackPage() {
           ) : null}
 
           <button
-            style={styles.submitButton}
+            style={{
+              ...styles.submitButton,
+              ...(isMobileLayout ? styles.submitButtonMobile : null)
+            }}
             onClick={
               handleSubmit
             }
@@ -781,6 +866,88 @@ const styles = {
     maxWidth: "1600px",
     fontFamily: '"Roboto", "Segoe UI", Arial, sans-serif',
     color: "#202124"
+  },
+
+  containerMobile: {
+    padding: "8px 0 24px",
+    maxWidth: "100%",
+    width: "100%",
+    minWidth: 0,
+    boxSizing: "border-box",
+    overflowX: "hidden"
+  },
+
+  panelMobile: {
+    padding: "16px",
+    boxSizing: "border-box",
+    maxWidth: "100%"
+  },
+
+  formRowMobile: {
+    flexDirection: "column",
+    gap: "16px"
+  },
+
+  fieldBlockMobile: {
+    width: "100%",
+    minWidth: 0
+  },
+
+  selectMobile: {
+    width: "100%"
+  },
+
+  skillRowMobile: {
+    gridTemplateColumns: "1fr",
+    alignItems: "stretch",
+    gap: "10px",
+    padding: "12px",
+    border: "1px solid rgba(31, 59, 99, 0.12)",
+    borderRadius: "10px",
+    boxSizing: "border-box",
+    width: "100%",
+    maxWidth: "100%",
+    minWidth: 0
+  },
+
+  skillFieldMobile: {
+    minHeight: "44px",
+    fontSize: "16px"
+  },
+
+  skillCommentsMobile: {
+    minHeight: "88px",
+    fontSize: "16px",
+    lineHeight: 1.45,
+    width: "100%",
+    maxWidth: "100%"
+  },
+
+  starRowMobile: {
+    fontSize: "28px",
+    gap: "6px",
+    flexWrap: "wrap",
+    minHeight: "44px",
+    alignItems: "center"
+  },
+
+  removeButtonMobile: {
+    width: "100%",
+    maxWidth: "120px",
+    minHeight: "44px",
+    justifySelf: "flex-end"
+  },
+
+  textAreaMobile: {
+    minHeight: "112px",
+    fontSize: "16px",
+    lineHeight: 1.45
+  },
+
+  submitButtonMobile: {
+    width: "100%",
+    minHeight: "48px",
+    marginTop: "16px"
   },
 
   pageTitle: {
