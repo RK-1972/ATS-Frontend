@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import {
@@ -18,6 +18,7 @@ import {
 import EventAvailableOutlinedIcon from "@mui/icons-material/EventAvailableOutlined";
 
 import API from "../api/axios";
+import { filterInterviewSchedules } from "./interviewScheduleSearch";
 import masterDataClient from "../api/clients/masterDataClient";
 import { getPublishedRecords } from "../enterprise/masterDataHelpers";
 import AppHeader from "../components/layout/AppHeader";
@@ -142,7 +143,11 @@ function InterviewSchedulePage() {
   const [interviewers, setInterviewers] = useState([]);
   const [roundOptions, setRoundOptions] = useState([]);
   const [schedules, setSchedules] = useState([]);
-  const [searchText, setSearchText] = useState("");
+  const [search, setSearch] = useState("");
+  const [schedulePaginationModel, setSchedulePaginationModel] = useState({
+    page: 0,
+    pageSize: 10
+  });
 
   const [formData, setFormData] = useState({
     req_id: "",
@@ -157,7 +162,7 @@ function InterviewSchedulePage() {
   // Generic navigation filters (any producer may set location.state.filters).
   useNavigationFilters((filters) => {
     if (filters.search != null && filters.search !== "") {
-      setSearchText(String(filters.search));
+      setSearch(String(filters.search));
     }
   });
 
@@ -219,18 +224,28 @@ function InterviewSchedulePage() {
     }
   };
 
-  const searchValue = searchText.toLowerCase();
+  const scheduleRows = Array.isArray(schedules) ? schedules : [];
 
-  const filteredSchedules = schedules.filter(
-    (s) =>
-      (s.req_code || "").toLowerCase().includes(searchValue) ||
-      (s.job_title || "").toLowerCase().includes(searchValue) ||
-      (s.candidate_code || "").toLowerCase().includes(searchValue) ||
-      (s.candidate_name || "").toLowerCase().includes(searchValue) ||
-      (s.interviewer_name || "").toLowerCase().includes(searchValue) ||
-      (s.round_type || "").toLowerCase().includes(searchValue) ||
-      (s.interview_date || "").toLowerCase().includes(searchValue)
+  const filteredSchedules = useMemo(
+    () => filterInterviewSchedules(scheduleRows, search),
+    [scheduleRows, search]
   );
+
+  const scheduleGridKey = useMemo(() => {
+    if (filteredSchedules.length === scheduleRows.length) {
+      return "schedule-grid-all";
+    }
+
+    return `schedule-grid-filtered-${filteredSchedules
+      .map((row) => row.schedule_id)
+      .join("-")}`;
+  }, [filteredSchedules, scheduleRows.length]);
+
+  useEffect(() => {
+    setSchedulePaginationModel((prev) =>
+      prev.page === 0 ? prev : { ...prev, page: 0 }
+    );
+  }, [filteredSchedules]);
 
   useEffect(() => {
     fetchRequisitions();
@@ -771,22 +786,39 @@ function InterviewSchedulePage() {
                     Scheduled Interviews
                   </Typography>
                   <SearchBar
-                    value={searchText}
-                    onChange={(e) => setSearchText(e.target.value)}
-                    placeholder="Search requisition, position, candidate, interviewer…"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    onInput={(event) => setSearch(event.target.value)}
+                    autoComplete="off"
+                    placeholder="Search requisition, position, candidate, status, schedule ID…"
                     width={360}
                   />
                 </Stack>
 
-                <EnterpriseDataGrid
-                  rows={filteredSchedules}
-                  columns={scheduleColumns}
-                  getRowId={(row) =>
-                    row.schedule_id ??
-                    `${row.req_id ?? ""}-${row.candidate_code ?? ""}-${row.interview_date ?? ""}-${row.interview_time ?? ""}`
-                  }
-                  height={420}
-                />
+                {scheduleRows.length > 0 && filteredSchedules.length === 0 ? (
+                  <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+                    No matching scheduled interviews. Try a different search term.
+                  </Typography>
+                ) : (
+                  <EnterpriseDataGrid
+                    key={scheduleGridKey}
+                    rows={filteredSchedules}
+                    columns={scheduleColumns}
+                    paginationModel={schedulePaginationModel}
+                    onPaginationModelChange={setSchedulePaginationModel}
+                    getRowId={(row) =>
+                      row.schedule_id ??
+                      `${row.req_id ?? ""}-${row.candidate_code ?? ""}-${row.interview_date ?? ""}-${row.interview_time ?? ""}`
+                    }
+                    height={420}
+                    sx={{
+                      overflowX: "auto",
+                      "& .MuiDataGrid-root": {
+                        minWidth: "max-content"
+                      }
+                    }}
+                  />
+                )}
               </Box>
             </Stack>
           </Container>

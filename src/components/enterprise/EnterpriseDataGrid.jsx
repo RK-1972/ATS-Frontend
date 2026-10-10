@@ -16,6 +16,8 @@ function EnterpriseDataGrid({
 }) {
   const theme = useTheme();
   const { typography } = theme.tokens;
+  const usesControlledPagination =
+    props.pagination != null || props.paginationModel != null;
 
   return (
     <EnterpriseSurface
@@ -24,8 +26,6 @@ function EnterpriseDataGrid({
       sx={{ ...ENTERPRISE_DATA_GRID_SURFACE_SX, ...sx }}
     >
       <DataGrid
-        rows={rows}
-        columns={columns}
         loading={loading}
         checkboxSelection={checkboxSelection}
         disableRowSelectionOnClick={!checkboxSelection}
@@ -35,9 +35,11 @@ function EnterpriseDataGrid({
         columnHeaderHeight={36}
         hideFooterSelectedRowCount
         pageSizeOptions={[10, 25, 50]}
-        initialState={{
-          pagination: { paginationModel: { pageSize: 10 } }
-        }}
+        initialState={
+          usesControlledPagination
+            ? undefined
+            : { pagination: { paginationModel: { pageSize: 10 } } }
+        }
         sx={{
           height,
           width: "100%",
@@ -56,6 +58,8 @@ function EnterpriseDataGrid({
           }
         }}
         {...props}
+        rows={rows}
+        columns={columns}
       />
     </EnterpriseSurface>
   );

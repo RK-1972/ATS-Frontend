@@ -13,14 +13,19 @@ function SearchBar({
   const theme = useTheme();
   const { radius } = theme.tokens;
 
+  const { slotProps: slotPropsFromProps, sx: sxFromProps, ...restProps } = props;
+
   return (
     <TextField
+      {...restProps}
       value={value}
       onChange={onChange}
       placeholder={placeholder}
       size={size}
       slotProps={{
+        ...slotPropsFromProps,
         input: {
+          ...slotPropsFromProps?.input,
           startAdornment: (
             <InputAdornment position="start">
               <SearchOutlinedIcon sx={{ fontSize: 18, color: "text.secondary" }} />
@@ -29,12 +34,12 @@ function SearchBar({
           sx: {
             borderRadius: `${radius.sm}px`,
             fontSize: theme.tokens.typography.secondary.fontSize,
-            height: 32
+            height: 32,
+            ...slotPropsFromProps?.input?.sx
           }
         }
       }}
-      sx={{ width: { xs: "100%", sm: width } }}
-      {...props}
+      sx={{ width: { xs: "100%", sm: width }, ...sxFromProps }}
     />
   );
 }
