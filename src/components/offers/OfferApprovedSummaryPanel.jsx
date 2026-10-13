@@ -73,8 +73,15 @@ function OfferApprovedSummaryPanel({ offer }) {
 
       <OfferApprovalHistory
         steps={offer.approvalSteps || []}
-        subtitle="From existing offer approval records"
+        subtitle="Current submission approval steps"
       />
+      {offer.approvalHistorySteps?.length ? (
+        <OfferApprovalHistory
+          steps={offer.approvalHistorySteps}
+          title="Prior submission approvals"
+          subtitle="Historical steps retained after correction or resubmission"
+        />
+      ) : null}
     </Stack>
   );
 }

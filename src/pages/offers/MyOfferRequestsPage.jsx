@@ -16,6 +16,8 @@ function MyOfferRequestsPage() {
     negotiateOffer,
     reviseOffer,
     withdrawOffer,
+    correctPendingApproval,
+    amendApprovedOffer,
     refreshOffers
   } = useOutletContext();
   const [busy, setBusy] = useState(false);
@@ -64,6 +66,16 @@ function MyOfferRequestsPage() {
       onAccept={(offerId) => run(() => acceptOffer(offerId))}
       onNegotiate={(offerId, payload) => run(() => negotiateOffer(offerId, payload))}
       onRevise={(offerId, payload) => run(() => reviseOffer(offerId, payload))}
+      onCorrectPendingApproval={(offerId, payload) =>
+        run(() => correctPendingApproval(offerId, payload), "Offer corrected and resubmitted.")
+      }
+      onAmendApproved={(offerId, payload) =>
+        run(
+          () => amendApprovedOffer(offerId, payload),
+          "Offer amended and resubmitted for approval."
+        )
+      }
+      loggedInUser={loggedInUser}
       onWithdraw={(offerId, reason) =>
         run(() => withdrawOffer(offerId, reason), "Offer withdrawn.")
       }

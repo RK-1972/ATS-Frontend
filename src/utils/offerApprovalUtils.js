@@ -1,3 +1,30 @@
+export function resolveMirrorVersionStatus(step = {}) {
+  return String(step.version_status || step.versionStatus || "Published");
+}
+
+export function resolveMirrorSubmissionVersion(step = {}, offer = {}) {
+  const raw = step.version ?? step.submission_version ?? offer.version ?? offer.offerVersion ?? 1;
+  const numeric = Number(raw);
+  return Number.isFinite(numeric) ? numeric : 1;
+}
+
+export function isCurrentSubmissionApprovalRow(step, offer = {}) {
+  if (resolveMirrorVersionStatus(step) === "Superseded") {
+    return false;
+  }
+
+  const offerVersion = Number(offer.version ?? offer.offerVersion ?? 1);
+  const rowVersion = resolveMirrorSubmissionVersion(step, offer);
+  return rowVersion === offerVersion;
+}
+
+export function splitApprovalMirrorRows(approvals, offerId, offer = {}) {
+  const all = normalizeApprovals(approvals, offerId);
+  const current = all.filter((row) => isCurrentSubmissionApprovalRow(row, offer));
+  const historical = all.filter((row) => !isCurrentSubmissionApprovalRow(row, offer));
+  return { current, historical, all };
+}
+
 export function normalizeApprovals(approvals, offerId) {
   return (approvals || [])
     .filter((row) => String(row.offer_id || row.offerId) === String(offerId))
@@ -38,12 +65,17 @@ export function buildPendingApprovalQueue(bundle) {
   return offers
     .filter((offer) => isPendingApprovalStatus(resolveOfferStatus(offer)))
     .map((offer) => {
-      const steps = normalizeApprovals(approvals, offer.offerId);
+      const { current: steps, historical } = splitApprovalMirrorRows(
+        approvals,
+        offer.offerId,
+        offer
+      );
       const pending = currentPendingStep(steps);
 
       return {
         ...offer,
         approvalSteps: steps,
+        approvalHistorySteps: historical,
         currentApprovalStep:
           pending?.approval_step || pending?.approvalStep || null,
         currentApproverRole:
@@ -66,10 +98,18 @@ export function buildApprovedOffersList(bundle) {
         String(offer.offerStatus || "") === "Approved" &&
         !excludedOfferIds.has(offer.offerId)
     )
-    .map((offer) => ({
-      ...offer,
-      approvalSteps: normalizeApprovals(approvals, offer.offerId)
-    }));
+    .map((offer) => {
+      const { current, historical } = splitApprovalMirrorRows(
+        approvals,
+        offer.offerId,
+        offer
+      );
+      return {
+        ...offer,
+        approvalSteps: current,
+        approvalHistorySteps: historical
+      };
+    });
 }
 
 export function buildAwaitingLettersList(bundle) {
@@ -97,9 +137,15 @@ function isOfferOwnedByUser(offer, user = {}) {
 }
 
 function enrichOfferWithApprovals(bundle, offer) {
+  const { current, historical } = splitApprovalMirrorRows(
+    bundle?.approvals,
+    offer.offerId,
+    offer
+  );
   return {
     ...offer,
-    approvalSteps: normalizeApprovals(bundle?.approvals, offer.offerId)
+    approvalSteps: current,
+    approvalHistorySteps: historical
   };
 }
 
@@ -139,6 +185,8 @@ function cloneAwaitingLetters(items) {
 export function mapApprovalStepRow(step) {
   const status = String(step.approval_status || step.approvalStatus || "");
   const approvedOn = step.approved_on || step.approvedOn || null;
+  const versionStatus = resolveMirrorVersionStatus(step);
+  const submissionVersion = resolveMirrorSubmissionVersion(step);
 
   let decision = "—";
   if (/approved/i.test(status)) {
@@ -153,9 +201,14 @@ export function mapApprovalStepRow(step) {
     decision = "Waiting";
   }
 
+  const stepLabel =
+    versionStatus === "Superseded"
+      ? `${step.approval_step || step.approvalStep || "—"} (submission v${submissionVersion})`
+      : step.approval_step || step.approvalStep || "—";
+
   return {
-    key: `${step.approval_id || step.approvalId || step.approval_step}-${step.sequence_order || step.sequenceOrder}`,
-    step: step.approval_step || step.approvalStep || "—",
+    key: `${step.approval_id || step.approvalId || step.approval_step}-${step.sequence_order || step.sequenceOrder}-${versionStatus}`,
+    step: stepLabel,
     approver: step.approver_name || step.approverName || "—",
     role: step.approver_role || step.approverRole || "—",
     decision,
@@ -168,6 +221,8 @@ export function mapApprovalStepRow(step) {
           minute: "2-digit"
         })
       : "—",
-    status
+    status,
+    versionStatus,
+    submissionVersion
   };
 }

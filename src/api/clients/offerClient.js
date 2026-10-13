@@ -82,6 +82,24 @@ const offerClient = {
       success: true,
       toastMessage: "Offer withdrawn."
     }));
+  },
+
+  correctPendingApproval(offerId, payload) {
+    return httpPost(
+      `${ENDPOINTS.offers}/${offerId}/correct-pending-approval`,
+      payload,
+      () => ({
+        success: true,
+        toastMessage: "Offer corrected and resubmitted for approval."
+      })
+    );
+  },
+
+  amendApprovedOffer(offerId, payload) {
+    return httpPost(`${ENDPOINTS.offers}/${offerId}/amend-approved`, payload, () => ({
+      success: true,
+      toastMessage: "Offer amended and resubmitted for approval."
+    }));
   }
 };
 

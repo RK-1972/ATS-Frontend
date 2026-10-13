@@ -23,6 +23,9 @@ function OfferStatusWorkspacePage({
   onNegotiate,
   onRevise,
   onWithdraw,
+  onCorrectPendingApproval,
+  onAmendApproved,
+  loggedInUser = null,
   busy = false
 }) {
   const [selectedOfferId, setSelectedOfferId] = useState(null);
@@ -90,6 +93,9 @@ function OfferStatusWorkspacePage({
               onNegotiate={onNegotiate}
               onRevise={onRevise}
               onWithdraw={onWithdraw}
+              onCorrectPendingApproval={onCorrectPendingApproval}
+              onAmendApproved={onAmendApproved}
+              loggedInUser={loggedInUser}
               busy={busy}
             />
           </Grid>

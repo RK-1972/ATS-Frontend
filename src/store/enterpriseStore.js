@@ -1724,6 +1724,36 @@ const useEnterpriseStore = create((set, get) => ({
     });
   },
 
+  correctPendingApproval(offerId, payload = {}) {
+    return Promise.resolve(
+      offerRepository.correctPendingApproval(get().offers, offerId, payload)
+    ).then((result) => {
+      set({
+        offers: result.offers,
+        offerUi: {
+          ...get().offerUi,
+          toastMessage: result.toastMessage
+        }
+      });
+      return result;
+    });
+  },
+
+  amendApprovedOffer(offerId, payload = {}) {
+    return Promise.resolve(
+      offerRepository.amendApprovedOffer(get().offers, offerId, payload)
+    ).then((result) => {
+      set({
+        offers: result.offers,
+        offerUi: {
+          ...get().offerUi,
+          toastMessage: result.toastMessage
+        }
+      });
+      return result;
+    });
+  },
+
   // ─── Hiring Control Tower ───────────────────────────────────────────────────
 
   setHiringTowerUi(updater) {

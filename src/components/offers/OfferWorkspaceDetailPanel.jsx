@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import {
+  Alert,
   Box,
   Button,
   Dialog,
@@ -8,7 +9,8 @@ import {
   DialogContent,
   DialogTitle,
   Stack,
-  TextField
+  TextField,
+  Typography
 } from "@mui/material";
 import CheckCircleOutlinedIcon from "@mui/icons-material/CheckCircleOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
@@ -17,7 +19,12 @@ import SendOutlinedIcon from "@mui/icons-material/SendOutlined";
 import UndoOutlinedIcon from "@mui/icons-material/UndoOutlined";
 
 import EnterpriseConfirmationDialog from "@/components/enterprise/EnterpriseConfirmationDialog";
-import { canWithdrawOfferStatus } from "@/utils/offerApprovalUtils";
+import {
+  canWithdrawOfferStatus,
+  isPendingApprovalStatus,
+  resolveOfferStatus
+} from "@/utils/offerApprovalUtils";
+import { canWritePendingApprovalOffer } from "@/utils/offerWorkspaceAuth";
 
 import OfferApprovedSummaryPanel from "./OfferApprovedSummaryPanel";
 
@@ -28,27 +35,161 @@ function OfferWorkspaceDetailPanel({
   onNegotiate,
   onRevise,
   onWithdraw,
+  onCorrectPendingApproval,
+  onAmendApproved,
+  loggedInUser = null,
   busy = false
 }) {
   const [negotiateOpen, setNegotiateOpen] = useState(false);
   const [reviseOpen, setReviseOpen] = useState(false);
+  const [correctOpen, setCorrectOpen] = useState(false);
+  const [amendOpen, setAmendOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [withdrawReason, setWithdrawReason] = useState("");
   const [proposedCtc, setProposedCtc] = useState("");
   const [negotiationNotes, setNegotiationNotes] = useState("");
   const [revisedCtc, setRevisedCtc] = useState("");
   const [reviseReason, setReviseReason] = useState("");
+  const [correctionReason, setCorrectionReason] = useState("");
+  const [amendmentReason, setAmendmentReason] = useState("");
+  const [amendForm, setAmendForm] = useState({
+    offeredCtc: "",
+    expectedJoiningDate: "",
+    variablePay: "",
+    variablePayFrequency: "Yearly",
+    joiningBonus: "",
+    joiningBonusFrequency: "One Time"
+  });
+  const [correctForm, setCorrectForm] = useState({
+    offeredCtc: "",
+    expectedJoiningDate: "",
+    variablePay: "",
+    variablePayFrequency: "Yearly",
+    joiningBonus: "",
+    joiningBonusFrequency: "One Time"
+  });
+
+  const user = useMemo(() => {
+    if (loggedInUser) {
+      return loggedInUser;
+    }
+    try {
+      return JSON.parse(localStorage.getItem("user") || "null") || {};
+    } catch {
+      return {};
+    }
+  }, [loggedInUser]);
+
+  const correctionSummary = useMemo(() => {
+    if (!offer || !correctOpen) {
+      return null;
+    }
+
+    return {
+      ctc: {
+        from: offer.offeredCtc ?? offer.offered_ctc,
+        to: correctForm.offeredCtc
+      },
+      joiningDate: {
+        from: offer.expectedJoiningDate || offer.expected_joining_date,
+        to: correctForm.expectedJoiningDate
+      },
+      variablePay: {
+        from: offer.variablePay ?? offer.variable_pay,
+        to: correctForm.variablePay
+      },
+      joiningBonus: {
+        from: offer.joiningBonus ?? offer.joining_bonus,
+        to: correctForm.joiningBonus
+      }
+    };
+  }, [correctOpen, correctForm, offer]);
+
+  const amendmentSummary = useMemo(() => {
+    if (!offer || !amendOpen) {
+      return null;
+    }
+
+    return {
+      ctc: {
+        from: offer.offeredCtc ?? offer.offered_ctc,
+        to: amendForm.offeredCtc
+      },
+      joiningDate: {
+        from: offer.expectedJoiningDate || offer.expected_joining_date,
+        to: amendForm.expectedJoiningDate
+      },
+      variablePay: {
+        from: offer.variablePay ?? offer.variable_pay,
+        to: amendForm.variablePay
+      },
+      joiningBonus: {
+        from: offer.joiningBonus ?? offer.joining_bonus,
+        to: amendForm.joiningBonus
+      }
+    };
+  }, [amendOpen, amendForm, offer]);
 
   if (!offer) {
     return <OfferApprovedSummaryPanel offer={null} />;
   }
 
-  const status = String(offer.offerStatus || offer.offer_status || "");
+  const status = resolveOfferStatus(offer);
   const canRelease = status === "Approved";
-  const canRevise = ["Draft", "Approved", "Pending Approval"].includes(status);
+  const canRevise = status === "Draft";
+  const canCorrectPending =
+    isPendingApprovalStatus(status)
+    && Boolean(onCorrectPendingApproval)
+    && canWritePendingApprovalOffer(offer, user);
+  const canAmendApproved =
+    status === "Approved"
+    && Boolean(onAmendApproved)
+    && canWritePendingApprovalOffer(offer, user);
   const canNegotiate = ["Approved", "Released"].includes(status);
   const canAccept = status === "Released";
-  const canWithdraw = Boolean(onWithdraw) && canWithdrawOfferStatus(status);
+  const canWithdraw =
+    Boolean(onWithdraw)
+    && canWithdrawOfferStatus(status)
+    && (!isPendingApprovalStatus(status) || canWritePendingApprovalOffer(offer, user));
+
+  const openCorrectDialog = () => {
+    setCorrectForm({
+      offeredCtc: String(offer.offeredCtc ?? offer.offered_ctc ?? ""),
+      expectedJoiningDate: offer.expectedJoiningDate || offer.expected_joining_date || "",
+      variablePay: String(offer.variablePay ?? offer.variable_pay ?? 0),
+      variablePayFrequency: offer.variablePayFrequency || offer.variable_pay_frequency || "Yearly",
+      joiningBonus: String(offer.joiningBonus ?? offer.joining_bonus ?? 0),
+      joiningBonusFrequency: offer.joiningBonusFrequency || offer.joining_bonus_frequency || "One Time"
+    });
+    setCorrectionReason("");
+    setCorrectOpen(true);
+  };
+
+  const openAmendDialog = () => {
+    setAmendForm({
+      offeredCtc: String(offer.offeredCtc ?? offer.offered_ctc ?? ""),
+      expectedJoiningDate: offer.expectedJoiningDate || offer.expected_joining_date || "",
+      variablePay: String(offer.variablePay ?? offer.variable_pay ?? 0),
+      variablePayFrequency: offer.variablePayFrequency || offer.variable_pay_frequency || "Yearly",
+      joiningBonus: String(offer.joiningBonus ?? offer.joining_bonus ?? 0),
+      joiningBonusFrequency: offer.joiningBonusFrequency || offer.joining_bonus_frequency || "One Time"
+    });
+    setAmendmentReason("");
+    setAmendOpen(true);
+  };
+
+  const handleAmend = async () => {
+    await onAmendApproved?.(offer.offerId, {
+      offered_ctc: Number(amendForm.offeredCtc),
+      expected_joining_date: amendForm.expectedJoiningDate,
+      variable_pay: Number(amendForm.variablePay || 0),
+      variable_pay_frequency: amendForm.variablePayFrequency,
+      joining_bonus: Number(amendForm.joiningBonus || 0),
+      joining_bonus_frequency: amendForm.joiningBonusFrequency,
+      reason: amendmentReason
+    });
+    setAmendOpen(false);
+  };
 
   const handleNegotiate = async () => {
     await onNegotiate?.(offer.offerId, {
@@ -70,11 +211,31 @@ function OfferWorkspaceDetailPanel({
     setReviseReason("");
   };
 
+  const handleCorrect = async () => {
+    await onCorrectPendingApproval?.(offer.offerId, {
+      offered_ctc: Number(correctForm.offeredCtc),
+      expected_joining_date: correctForm.expectedJoiningDate,
+      variable_pay: Number(correctForm.variablePay || 0),
+      variable_pay_frequency: correctForm.variablePayFrequency,
+      joining_bonus: Number(correctForm.joiningBonus || 0),
+      joining_bonus_frequency: correctForm.joiningBonusFrequency,
+      reason: correctionReason
+    });
+    setCorrectOpen(false);
+  };
+
   return (
     <Stack spacing={1.5}>
       <OfferApprovedSummaryPanel offer={offer} />
 
-      {(canRelease || canRevise || canNegotiate || canAccept || canWithdraw) ? (
+      {isPendingApprovalStatus(status) && !canCorrectPending ? (
+        <Alert severity="info" variant="outlined">
+          Pending-approval correction and discard are limited to the assigned recruiter, TA Lead, or
+          Admin. If an approver requested clarification, resolve it before correcting.
+        </Alert>
+      ) : null}
+
+      {(canRelease || canRevise || canCorrectPending || canAmendApproved || canNegotiate || canAccept || canWithdraw) ? (
         <Box
           sx={{
             display: "flex",
@@ -96,6 +257,28 @@ function OfferWorkspaceDetailPanel({
               onClick={() => onRelease?.(offer.offerId)}
             >
               Release Offer
+            </Button>
+          ) : null}
+          {canCorrectPending ? (
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<EditOutlinedIcon />}
+              disabled={busy}
+              onClick={openCorrectDialog}
+            >
+              Correct & Resubmit
+            </Button>
+          ) : null}
+          {canAmendApproved ? (
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<EditOutlinedIcon />}
+              disabled={busy}
+              onClick={openAmendDialog}
+            >
+              Amend & Resubmit
             </Button>
           ) : null}
           {canRevise ? (
@@ -150,7 +333,7 @@ function OfferWorkspaceDetailPanel({
                 setWithdrawOpen(true);
               }}
             >
-              Withdraw Offer
+              {isPendingApprovalStatus(status) ? "Discard Request" : "Withdraw Offer"}
             </Button>
           ) : null}
         </Box>
@@ -158,9 +341,17 @@ function OfferWorkspaceDetailPanel({
 
       <EnterpriseConfirmationDialog
         open={withdrawOpen}
-        title="Withdraw this offer request?"
-        message="The offer will move to Withdrawn and leave active approval or release queues."
-        confirmLabel="Withdraw"
+        title={
+          isPendingApprovalStatus(status)
+            ? "Discard this pending offer request?"
+            : "Withdraw this offer request?"
+        }
+        message={
+          isPendingApprovalStatus(status)
+            ? "Active approval work will be cancelled and the offer will move to Withdrawn. A new request will need a new offer ID."
+            : "The offer will move to Withdrawn and leave active approval or release queues."
+        }
+        confirmLabel={isPendingApprovalStatus(status) ? "Discard" : "Withdraw"}
         confirmColor="error"
         loading={busy}
         onClose={() => {
@@ -178,15 +369,218 @@ function OfferWorkspaceDetailPanel({
         }}
       >
         <TextField
-          label="Reason for withdrawal"
+          label="Reason"
           value={withdrawReason}
           onChange={(event) => setWithdrawReason(event.target.value)}
           fullWidth
           multiline
           minRows={2}
           sx={{ mt: 2 }}
+          required
         />
       </EnterpriseConfirmationDialog>
+
+      <Dialog open={amendOpen} onClose={() => !busy && setAmendOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Amend Approved Offer</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            <Alert severity="warning" variant="outlined">
+              Amended terms require a full new approval cycle. The offer will return to Pending
+              Approval and prior approval decisions are kept for audit only.
+            </Alert>
+            <TextField
+              label="Offered CTC"
+              type="number"
+              value={amendForm.offeredCtc}
+              onChange={(event) => setAmendForm((prev) => ({ ...prev, offeredCtc: event.target.value }))}
+              fullWidth
+            />
+            <TextField
+              label="Expected joining date"
+              type="date"
+              value={amendForm.expectedJoiningDate || ""}
+              onChange={(event) =>
+                setAmendForm((prev) => ({ ...prev, expectedJoiningDate: event.target.value }))
+              }
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              label="Variable pay"
+              type="number"
+              value={amendForm.variablePay}
+              onChange={(event) =>
+                setAmendForm((prev) => ({ ...prev, variablePay: event.target.value }))
+              }
+              fullWidth
+            />
+            <TextField
+              label="Variable pay frequency"
+              value={amendForm.variablePayFrequency}
+              onChange={(event) =>
+                setAmendForm((prev) => ({ ...prev, variablePayFrequency: event.target.value }))
+              }
+              fullWidth
+            />
+            <TextField
+              label="Joining bonus"
+              type="number"
+              value={amendForm.joiningBonus}
+              onChange={(event) =>
+                setAmendForm((prev) => ({ ...prev, joiningBonus: event.target.value }))
+              }
+              fullWidth
+            />
+            <TextField
+              label="Joining bonus frequency"
+              value={amendForm.joiningBonusFrequency}
+              onChange={(event) =>
+                setAmendForm((prev) => ({ ...prev, joiningBonusFrequency: event.target.value }))
+              }
+              fullWidth
+            />
+            <TextField
+              label="Amendment reason"
+              value={amendmentReason}
+              onChange={(event) => setAmendmentReason(event.target.value)}
+              fullWidth
+              multiline
+              minRows={2}
+              required
+            />
+            {amendmentSummary ? (
+              <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: "action.hover" }}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Summary of changes
+                </Typography>
+                <Typography variant="body2">
+                  CTC: {amendmentSummary.ctc.from} → {amendmentSummary.ctc.to}
+                </Typography>
+                <Typography variant="body2">
+                  Joining date: {amendmentSummary.joiningDate.from || "—"} →{" "}
+                  {amendmentSummary.joiningDate.to || "—"}
+                </Typography>
+                <Typography variant="body2">
+                  Variable pay: {amendmentSummary.variablePay.from} → {amendmentSummary.variablePay.to}
+                </Typography>
+                <Typography variant="body2">
+                  Joining bonus: {amendmentSummary.joiningBonus.from} → {amendmentSummary.joiningBonus.to}
+                </Typography>
+              </Box>
+            ) : null}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAmendOpen(false)} disabled={busy}>Cancel</Button>
+          <Button
+            variant="contained"
+            disabled={busy || !amendmentReason.trim() || !amendForm.offeredCtc}
+            onClick={handleAmend}
+          >
+            Resubmit for approval
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={correctOpen} onClose={() => setCorrectOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Correct & Resubmit for Approval</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            <Alert severity="warning" variant="outlined">
+              Pending approval steps will restart from step 1. Completed approval history is kept for
+              audit.
+            </Alert>
+            <TextField
+              label="Offered CTC"
+              type="number"
+              value={correctForm.offeredCtc}
+              onChange={(event) => setCorrectForm((prev) => ({ ...prev, offeredCtc: event.target.value }))}
+              fullWidth
+            />
+            <TextField
+              label="Expected joining date"
+              type="date"
+              value={correctForm.expectedJoiningDate || ""}
+              onChange={(event) =>
+                setCorrectForm((prev) => ({ ...prev, expectedJoiningDate: event.target.value }))
+              }
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              label="Variable pay"
+              type="number"
+              value={correctForm.variablePay}
+              onChange={(event) =>
+                setCorrectForm((prev) => ({ ...prev, variablePay: event.target.value }))
+              }
+              fullWidth
+            />
+            <TextField
+              label="Variable pay frequency"
+              value={correctForm.variablePayFrequency}
+              onChange={(event) =>
+                setCorrectForm((prev) => ({ ...prev, variablePayFrequency: event.target.value }))
+              }
+              fullWidth
+            />
+            <TextField
+              label="Joining bonus"
+              type="number"
+              value={correctForm.joiningBonus}
+              onChange={(event) =>
+                setCorrectForm((prev) => ({ ...prev, joiningBonus: event.target.value }))
+              }
+              fullWidth
+            />
+            <TextField
+              label="Joining bonus frequency"
+              value={correctForm.joiningBonusFrequency}
+              onChange={(event) =>
+                setCorrectForm((prev) => ({ ...prev, joiningBonusFrequency: event.target.value }))
+              }
+              fullWidth
+            />
+            <TextField
+              label="Correction reason"
+              value={correctionReason}
+              onChange={(event) => setCorrectionReason(event.target.value)}
+              fullWidth
+              multiline
+              minRows={2}
+              required
+            />
+            {correctionSummary ? (
+              <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: "action.hover" }}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Summary of changes
+                </Typography>
+                <Typography variant="body2">CTC: {correctionSummary.ctc.from} → {correctionSummary.ctc.to}</Typography>
+                <Typography variant="body2">
+                  Joining date: {correctionSummary.joiningDate.from || "—"} →{" "}
+                  {correctionSummary.joiningDate.to || "—"}
+                </Typography>
+                <Typography variant="body2">
+                  Variable pay: {correctionSummary.variablePay.from} → {correctionSummary.variablePay.to}
+                </Typography>
+                <Typography variant="body2">
+                  Joining bonus: {correctionSummary.joiningBonus.from} → {correctionSummary.joiningBonus.to}
+                </Typography>
+              </Box>
+            ) : null}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCorrectOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            disabled={busy || !correctionReason.trim() || !correctForm.offeredCtc}
+            onClick={handleCorrect}
+          >
+            Resubmit
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog open={negotiateOpen} onClose={() => setNegotiateOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Record Negotiation</DialogTitle>

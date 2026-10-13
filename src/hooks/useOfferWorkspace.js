@@ -25,6 +25,8 @@ function useOfferWorkspace() {
   const negotiateOffer = useEnterpriseStore((state) => state.negotiateOffer);
   const reviseOffer = useEnterpriseStore((state) => state.reviseOffer);
   const withdrawOffer = useEnterpriseStore((state) => state.withdrawOffer);
+  const correctPendingApproval = useEnterpriseStore((state) => state.correctPendingApproval);
+  const amendApprovedOffer = useEnterpriseStore((state) => state.amendApprovedOffer);
   const generateOfferDocument = useEnterpriseStore((state) => state.generateOfferDocument);
 
   let loggedInUser = {};
@@ -89,6 +91,8 @@ function useOfferWorkspace() {
     negotiateOffer,
     reviseOffer,
     withdrawOffer,
+    correctPendingApproval,
+    amendApprovedOffer,
     refreshOffers,
     generateOfferDocument,
     toastMessage,

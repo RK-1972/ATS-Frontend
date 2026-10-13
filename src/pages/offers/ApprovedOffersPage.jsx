@@ -19,11 +19,14 @@ import OfferApprovalQueueCard from "@/components/offers/OfferApprovalQueueCard";
 import OfferWorkspaceDetailPanel from "@/components/offers/OfferWorkspaceDetailPanel";
 
 function ApprovedOffersPage() {
+  const loggedInUser = JSON.parse(localStorage.getItem("user") || "null");
   const {
     approvedOffers,
     releaseOffer,
     negotiateOffer,
-    reviseOffer
+    reviseOffer,
+    amendApprovedOffer,
+    refreshOffers
   } = useOutletContext();
   const [selectedOfferId, setSelectedOfferId] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -50,6 +53,7 @@ function ApprovedOffersPage() {
         message: result?.toastMessage || message,
         severity: "success"
       });
+      await refreshOffers?.();
     } catch (error) {
       setToast({
         open: true,
@@ -115,6 +119,13 @@ function ApprovedOffersPage() {
               onRevise={(offerId, payload) =>
                 run(() => reviseOffer(offerId, payload), "Offer revised.")
               }
+              onAmendApproved={(offerId, payload) =>
+                run(
+                  () => amendApprovedOffer(offerId, payload),
+                  "Offer amended and resubmitted for approval."
+                )
+              }
+              loggedInUser={loggedInUser}
             />
           </Grid>
         </Grid>
