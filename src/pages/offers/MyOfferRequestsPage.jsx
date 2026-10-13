@@ -18,6 +18,7 @@ function MyOfferRequestsPage() {
     withdrawOffer,
     correctPendingApproval,
     amendApprovedOffer,
+    submitOfferClarification,
     refreshOffers
   } = useOutletContext();
   const [busy, setBusy] = useState(false);
@@ -73,6 +74,12 @@ function MyOfferRequestsPage() {
         run(
           () => amendApprovedOffer(offerId, payload),
           "Offer amended and resubmitted for approval."
+        )
+      }
+      onSubmitClarification={(offerId, comments) =>
+        run(
+          () => submitOfferClarification(offerId, comments),
+          "Clarification submitted. Workflow resumed."
         )
       }
       loggedInUser={loggedInUser}

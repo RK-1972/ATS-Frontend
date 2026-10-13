@@ -19,6 +19,7 @@ import { StatusChip } from "@/components/enterprise";
 import { formatCurrency } from "@/utils/formatCurrency";
 import OfferApprovalHistory from "@/components/offers/OfferApprovalHistory";
 import OfferCommercialSummaryFields from "@/components/offers/OfferCommercialSummaryFields";
+import ClarificationTimeline from "@/components/workforce-planning/ClarificationTimeline";
 
 function SummaryField({ label, value }) {
   return (
@@ -60,7 +61,13 @@ function OfferApprovalWorkspacePanel({
     );
   }
 
-  const canAct = /pending/i.test(String(offer.offerStatus || ""));
+  const canAct =
+    /pending/i.test(String(offer.offerStatus || ""))
+    && !offer.workflowPausedForClarification;
+  const canRejectDuringClarification =
+    /pending/i.test(String(offer.offerStatus || ""))
+    && Boolean(offer.canRejectDuringClarification)
+    && Boolean(offer.clarificationHeldApprovalTaskId);
   const pendingStep = offer.currentApprovalStep || "HM Review";
   const candidateName = offer.candidateName || offer.candidate_name;
   const clientName = offer.businessUnit || offer.business_unit;
@@ -235,6 +242,56 @@ function OfferApprovalWorkspacePanel({
           title="Approval steps"
           subtitle="From existing offer approval records"
         />
+      ) : null}
+
+      {(offer.clarificationRounds || []).length ? (
+        <EnterpriseCard title="Clarification history">
+          <ClarificationTimeline
+            rounds={(offer.clarificationRounds || []).filter((round) => !round.pending)}
+            workflowTimeline={[]}
+            requestorName={offer.requestor || offer.createdBy || "Requester"}
+          />
+        </EnterpriseCard>
+      ) : null}
+
+      {offer.workflowPausedForClarification ? (
+        <Alert severity="warning" variant="outlined">
+          Clarification is outstanding. Approve and send back are paused until the requester
+          responds. You may still reject this offer request if needed.
+        </Alert>
+      ) : null}
+
+      {canRejectDuringClarification ? (
+        <EnterpriseCard title="Reject during clarification">
+          {actionError ? (
+            <Alert severity="error" sx={{ mb: 1.5 }}>
+              {actionError}
+            </Alert>
+          ) : null}
+
+          <TextField
+            fullWidth
+            multiline
+            minRows={2}
+            size="small"
+            placeholder="Rejection reason (required)…"
+            value={comment}
+            onChange={(event) => setComment(event.target.value)}
+            sx={{ mb: 1.5 }}
+          />
+
+          <Button
+            variant="outlined"
+            color="error"
+            size="small"
+            startIcon={<CancelOutlinedIcon />}
+            onClick={() => openDialog("reject")}
+            disabled={acting}
+            sx={{ fontWeight: 600 }}
+          >
+            Reject
+          </Button>
+        </EnterpriseCard>
       ) : null}
 
       {canAct ? (

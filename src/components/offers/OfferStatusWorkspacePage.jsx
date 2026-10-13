@@ -25,6 +25,7 @@ function OfferStatusWorkspacePage({
   onWithdraw,
   onCorrectPendingApproval,
   onAmendApproved,
+  onSubmitClarification,
   loggedInUser = null,
   busy = false
 }) {
@@ -95,6 +96,7 @@ function OfferStatusWorkspacePage({
               onWithdraw={onWithdraw}
               onCorrectPendingApproval={onCorrectPendingApproval}
               onAmendApproved={onAmendApproved}
+              onSubmitClarification={onSubmitClarification}
               loggedInUser={loggedInUser}
               busy={busy}
             />

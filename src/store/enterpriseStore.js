@@ -1754,6 +1754,21 @@ const useEnterpriseStore = create((set, get) => ({
     });
   },
 
+  submitOfferClarification(offerId, comments = "") {
+    return Promise.resolve(
+      offerRepository.submitOfferClarification(get().offers, offerId, comments)
+    ).then((result) => {
+      set({
+        offers: result.offers,
+        offerUi: {
+          ...get().offerUi,
+          toastMessage: result.toastMessage
+        }
+      });
+      return result;
+    });
+  },
+
   // ─── Hiring Control Tower ───────────────────────────────────────────────────
 
   setHiringTowerUi(updater) {

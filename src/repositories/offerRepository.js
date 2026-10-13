@@ -204,6 +204,20 @@ async function amendApprovedOffer(offers, offerId, payload) {
   };
 }
 
+async function submitOfferClarification(offers, offerId, comments) {
+  if (!isLiveMode()) {
+    return { offers, toastMessage: "Clarification submitted. Workflow resumed." };
+  }
+
+  const result = await offerClient.submitClarification(offerId, comments);
+  const bundle = await getAll();
+
+  return {
+    offers: bundle,
+    toastMessage: result.toastMessage || result.message
+  };
+}
+
 function getDefaultSelectedOfferId(offersBundle) {
   const pending = (offersBundle?.offers || []).find(
     (offer) => offer.offerStatus === "Pending Approval"
@@ -225,6 +239,7 @@ const offerRepository = {
   withdrawOffer,
   correctPendingApproval,
   amendApprovedOffer,
+  submitOfferClarification,
   generateOfferLetter
 };
 

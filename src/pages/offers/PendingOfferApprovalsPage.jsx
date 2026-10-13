@@ -13,6 +13,7 @@ import {
 import { ENDPOINTS } from "@/api/endpoints";
 import { httpPost } from "@/api/httpClient";
 import myApprovalsService from "@/services/myApprovalsService";
+import { dispatchApprovalNotificationsUpdated } from "@/utils/enterpriseNotificationEvents";
 import {
   EmptyState,
   WorkspaceHeader
@@ -55,10 +56,29 @@ function PendingOfferApprovalsPage() {
 
   const handleApprove = async (offerId, approvalStep, comment) => {
     await approveOffer(offerId, approvalStep, comment);
+    dispatchApprovalNotificationsUpdated();
     showToast(`${approvalStep} approved.`);
+    await refreshOffers?.();
   };
 
   const handleReject = async (offerId, reason) => {
+    const offerContext =
+      selectedOffer?.offerId === offerId
+        ? selectedOffer
+        : queue.find((item) => item.offerId === offerId);
+    const heldApprovalTaskId = offerContext?.clarificationHeldApprovalTaskId;
+
+    if (heldApprovalTaskId && offerContext?.canRejectDuringClarification) {
+      const result = await myApprovalsService.rejectApproval(
+        heldApprovalTaskId,
+        reason
+      );
+      showToast(result?.message || "Offer approval rejected.", "info");
+      dispatchApprovalNotificationsUpdated();
+      await refreshOffers?.();
+      return;
+    }
+
     const approvalsResponse = await myApprovalsService.listMyActiveApprovals();
     const rows = Array.isArray(approvalsResponse?.data) ? approvalsResponse.data : [];
     const match = rows.find((row) => {
@@ -79,6 +99,7 @@ function PendingOfferApprovalsPage() {
 
     const result = await myApprovalsService.rejectApproval(match.task_id, reason);
     showToast(result?.message || "Offer approval rejected.", "info");
+    dispatchApprovalNotificationsUpdated();
     await refreshOffers?.();
   };
 
@@ -88,10 +109,11 @@ function PendingOfferApprovalsPage() {
       { comments },
       () => ({
         success: true,
-        toastMessage: "Clarification requested via Workflow Engine."
+        toastMessage: "Clarification request sent. Workflow paused."
       })
     );
     showToast(result?.toastMessage || "Offer sent back for clarification.");
+    dispatchApprovalNotificationsUpdated();
     await refreshOffers?.();
   };
 

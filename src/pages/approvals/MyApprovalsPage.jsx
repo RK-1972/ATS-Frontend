@@ -36,6 +36,7 @@ import {
 } from "../../components/enterprise";
 import MyApprovalsService from "../../services/myApprovalsService";
 import workforcePlanningClient from "@/api/clients/workforcePlanningClient";
+import offerClient from "@/api/clients/offerClient";
 import ClarificationTimeline from "../../components/workforce-planning/ClarificationTimeline";
 import useEnterpriseStore from "../../store/enterpriseStore";
 import { formatCurrency } from "@/utils/formatCurrency";
@@ -277,6 +278,21 @@ function MyApprovalsPage() {
           || isRequisitionDocument(inspectorRow)
         ) {
           detail = await workforcePlanningClient.getRequisitionActionContext(documentId);
+        } else if (documentType === "OFFER") {
+          const offerResponse = await offerClient.getOffer(documentId);
+          const offer = offerResponse?.data || offerResponse;
+          const pending = offer?.clarificationPending || null;
+          detail = {
+            clarification_rounds: offer?.clarificationRounds || [],
+            clarification_pending: pending
+              ? {
+                  request_comments: pending.request_comments,
+                  requested_by: pending.requested_by,
+                  requested_on: pending.requested_on
+                }
+              : null,
+            can_resubmit: Boolean(pending)
+          };
         }
 
         if (!cancelled) {
@@ -873,7 +889,8 @@ function MyApprovalsPage() {
               value={inspectorRow.hiring_manager || "—"}
             />
 
-            {["BUDGET", "REQUISITION"].includes(resolveDocumentTypeKey(inspectorRow)) ? (
+            {["BUDGET", "REQUISITION", "OFFER"].includes(resolveDocumentTypeKey(inspectorRow))
+            && (approvalInspectorDetail?.clarification_rounds || []).length ? (
               <ClarificationTimeline
                 rounds={(approvalInspectorDetail?.clarification_rounds || []).filter(
                   (round) => !round.pending

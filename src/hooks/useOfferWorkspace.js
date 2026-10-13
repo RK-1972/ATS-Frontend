@@ -27,6 +27,7 @@ function useOfferWorkspace() {
   const withdrawOffer = useEnterpriseStore((state) => state.withdrawOffer);
   const correctPendingApproval = useEnterpriseStore((state) => state.correctPendingApproval);
   const amendApprovedOffer = useEnterpriseStore((state) => state.amendApprovedOffer);
+  const submitOfferClarification = useEnterpriseStore((state) => state.submitOfferClarification);
   const generateOfferDocument = useEnterpriseStore((state) => state.generateOfferDocument);
 
   let loggedInUser = {};
@@ -93,6 +94,7 @@ function useOfferWorkspace() {
     withdrawOffer,
     correctPendingApproval,
     amendApprovedOffer,
+    submitOfferClarification,
     refreshOffers,
     generateOfferDocument,
     toastMessage,

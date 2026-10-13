@@ -100,6 +100,17 @@ const offerClient = {
       success: true,
       toastMessage: "Offer amended and resubmitted for approval."
     }));
+  },
+
+  submitClarification(offerId, comments) {
+    return httpPost(
+      `${ENDPOINTS.offers}/${offerId}/submit-clarification`,
+      { comments },
+      () => ({
+        success: true,
+        toastMessage: "Clarification submitted. Workflow resumed."
+      })
+    );
   }
 };
 

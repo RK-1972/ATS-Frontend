@@ -24,9 +24,14 @@ import {
   isPendingApprovalStatus,
   resolveOfferStatus
 } from "@/utils/offerApprovalUtils";
-import { canWritePendingApprovalOffer } from "@/utils/offerWorkspaceAuth";
+import {
+  canRespondToOfferClarification,
+  canWritePendingApprovalOffer
+} from "@/utils/offerWorkspaceAuth";
 
 import OfferApprovedSummaryPanel from "./OfferApprovedSummaryPanel";
+import ClarificationTimeline from "@/components/workforce-planning/ClarificationTimeline";
+import { dispatchApprovalNotificationsUpdated } from "@/utils/enterpriseNotificationEvents";
 
 function OfferWorkspaceDetailPanel({
   offer,
@@ -37,6 +42,7 @@ function OfferWorkspaceDetailPanel({
   onWithdraw,
   onCorrectPendingApproval,
   onAmendApproved,
+  onSubmitClarification,
   loggedInUser = null,
   busy = false
 }) {
@@ -60,6 +66,7 @@ function OfferWorkspaceDetailPanel({
     joiningBonus: "",
     joiningBonusFrequency: "One Time"
   });
+  const [clarificationResponse, setClarificationResponse] = useState("");
   const [correctForm, setCorrectForm] = useState({
     offeredCtc: "",
     expectedJoiningDate: "",
@@ -137,10 +144,14 @@ function OfferWorkspaceDetailPanel({
   const status = resolveOfferStatus(offer);
   const canRelease = status === "Approved";
   const canRevise = status === "Draft";
+  const clarificationPending = offer.clarificationPending || null;
+  const canRespondToClarification =
+    Boolean(onSubmitClarification) && canRespondToOfferClarification(offer, user);
   const canCorrectPending =
     isPendingApprovalStatus(status)
     && Boolean(onCorrectPendingApproval)
-    && canWritePendingApprovalOffer(offer, user);
+    && canWritePendingApprovalOffer(offer, user)
+    && !clarificationPending;
   const canAmendApproved =
     status === "Approved"
     && Boolean(onAmendApproved)
@@ -211,6 +222,16 @@ function OfferWorkspaceDetailPanel({
     setReviseReason("");
   };
 
+  const handleSubmitClarification = async () => {
+    const comments = clarificationResponse.trim();
+    if (!comments) {
+      return;
+    }
+    await onSubmitClarification?.(offer.offerId, comments);
+    setClarificationResponse("");
+    dispatchApprovalNotificationsUpdated();
+  };
+
   const handleCorrect = async () => {
     await onCorrectPendingApproval?.(offer.offerId, {
       offered_ctc: Number(correctForm.offeredCtc),
@@ -228,11 +249,62 @@ function OfferWorkspaceDetailPanel({
     <Stack spacing={1.5}>
       <OfferApprovedSummaryPanel offer={offer} />
 
-      {isPendingApprovalStatus(status) && !canCorrectPending ? (
+      {isPendingApprovalStatus(status) && !canCorrectPending && !canRespondToClarification ? (
         <Alert severity="info" variant="outlined">
           Pending-approval correction and discard are limited to the assigned recruiter, TA Lead, or
           Admin. If an approver requested clarification, resolve it before correcting.
         </Alert>
+      ) : null}
+
+      {(offer.clarificationRounds || []).length ? (
+        <ClarificationTimeline
+          rounds={(offer.clarificationRounds || []).filter((round) => !round.pending)}
+          workflowTimeline={[]}
+          requestorName={user.full_name || user.email_id || "You"}
+        />
+      ) : null}
+
+      {canRespondToClarification ? (
+        <Box
+          sx={{
+            p: 1.5,
+            borderRadius: 2,
+            bgcolor: "action.hover",
+            border: 1,
+            borderColor: "warning.main"
+          }}
+        >
+          <Typography variant="body2" fontWeight={700} sx={{ fontSize: 14, mb: 1 }}>
+            Clarification required
+          </Typography>
+          {clarificationPending?.request_comments ? (
+            <Typography variant="body2" sx={{ fontSize: 13, mb: 1.5 }}>
+              {clarificationPending.request_comments}
+            </Typography>
+          ) : null}
+          <TextField
+            fullWidth
+            required
+            multiline
+            minRows={3}
+            size="small"
+            label="Your response"
+            value={clarificationResponse}
+            onChange={(event) => setClarificationResponse(event.target.value)}
+            disabled={busy}
+            sx={{ mb: 1 }}
+          />
+          <Button
+            variant="contained"
+            color="primary"
+            size="small"
+            disabled={busy || !clarificationResponse.trim()}
+            onClick={handleSubmitClarification}
+            sx={{ fontWeight: 600 }}
+          >
+            Submit clarification
+          </Button>
+        </Box>
       ) : null}
 
       {(canRelease || canRevise || canCorrectPending || canAmendApproved || canNegotiate || canAccept || canWithdraw) ? (

@@ -30,3 +30,11 @@ export function canWritePendingApprovalOffer(offer, user = {}) {
 
   return isOfferOwnedByUser(offer, user);
 }
+
+/** Matches backend assertCanWriteOfferRecord + OFFER clarification submit authorization. */
+export function canRespondToOfferClarification(offer, user = {}) {
+  return (
+    Boolean(offer?.clarificationPending)
+    && canWritePendingApprovalOffer(offer, user)
+  );
+}
