@@ -26,11 +26,11 @@ import EnterpriseWorkspaceHeader from "../components/enterprise/framework/Enterp
 import RecruiterAssignmentPanel from "../components/requisitions/RecruiterAssignmentPanel";
 import RequisitionHeadcountChangePanel from "../components/requisitions/RequisitionHeadcountChangePanel";
 import RequisitionBudgetChangePanel from "../components/requisitions/RequisitionBudgetChangePanel";
-import useApprovalRoutes from "../hooks/useApprovalRoutes";
 import useRequisitionManagement from "../hooks/useRequisitionManagement";
 import AuthorizationService from "../services/authorizationService";
 import TalentDemandDraftService from "../services/talentDemandDraftService";
 import ApprovedPositionService from "../services/approvedPositionService";
+import RequisitionFieldResolutionService from "../services/requisitionFieldResolutionService";
 import recruitmentRepository from "../repositories/recruitmentRepository";
 import { REQUISITION_STATUS } from "../constants/requisitionStatus";
 import { useCopilotContext } from "../components/copilot/CopilotContext";
@@ -199,7 +199,6 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
     closeRequisitionAsCancelled
   } = useRequisitionManagement();
 
-  const { approvalRoutes, loadApprovalRoutes } = useApprovalRoutes();
   const masterData = useEnterpriseStore((state) => state.masterData);
 
   const [authorizationDialogOpen, setAuthorizationDialogOpen] = useState(false);
@@ -219,6 +218,9 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
   const [submitErrorOpen, setSubmitErrorOpen] = useState(false);
   const [submitErrorMessage, setSubmitErrorMessage] = useState("");
   const [approvedPositions, setApprovedPositions] = useState([]);
+  const [fieldResolution, setFieldResolution] = useState(null);
+  const [fieldResolutionError, setFieldResolutionError] = useState("");
+  const [fieldResolutionLoading, setFieldResolutionLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     client_id: "",
@@ -250,6 +252,40 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
     String(draftStatus || "").toUpperCase() === "SUBMITTED";
   /** Existing operational requisition opened for edit (not a blank NEW create). */
   const isEditMode = Boolean(resultRequisitionCode);
+  const positionLocked =
+    isEditMode ||
+    Boolean(navApprovedPositionId) ||
+    fieldResolution?.position_locked;
+  const positionSelectionRequired =
+    fieldResolution?.position_selection_required === true ||
+    (approvedPositions.length > 1 && !positionLocked);
+  const resolvedPositionLabel = (() => {
+    const positionId = formData.approved_position_id;
+    if (!positionId) {
+      return "";
+    }
+    if (fieldResolution?.approved_position_id === positionId) {
+      const parts = [
+        fieldResolution.approved_position_title,
+        fieldResolution.approved_position_department,
+        fieldResolution.approved_position_grade
+          ? `(${fieldResolution.approved_position_grade})`
+          : ""
+      ].filter(Boolean);
+      if (parts.length) {
+        return parts.join(" — ");
+      }
+    }
+    const fromList = approvedPositions.find(
+      (row) => String(row.position_id) === String(positionId)
+    );
+    if (fromList) {
+      return `${fromList.position_title || positionId}${
+        fromList.department ? ` — ${fromList.department}` : ""
+      }${fromList.grade ? ` (${fromList.grade})` : ""}`;
+    }
+    return String(positionId);
+  })();
   const isApprovedRequisition =
     String(formData.req_status || "").trim() === REQUISITION_STATUS.APPROVED;
   const draftActionsDisabled =
@@ -263,12 +299,6 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
   useEffect(() => {
     setCurrentPage("Requisitions");
   }, [setCurrentPage]);
-
-  useEffect(() => {
-    loadApprovalRoutes({ applies_to: "Requisition" }).catch(() => {
-      // error already stored in hook state
-    });
-  }, [loadApprovalRoutes]);
 
   useEffect(() => {
     let cancelled = false;
@@ -294,6 +324,73 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadFieldResolution = async () => {
+      setFieldResolutionLoading(true);
+      setFieldResolutionError("");
+
+      try {
+        const params = {};
+        if (formData.approved_position_id) {
+          params.approved_position_id = formData.approved_position_id;
+        }
+        if (resultRequisitionCode) {
+          params.requisition_code = resultRequisitionCode;
+        }
+
+        const response =
+          await RequisitionFieldResolutionService.getTalentDemandFieldResolution(
+            params
+          );
+        const data = response?.data || null;
+
+        if (cancelled) {
+          return;
+        }
+
+        setFieldResolution(data);
+
+        if (
+          data?.approved_position_id &&
+          !formData.approved_position_id &&
+          !isEditMode &&
+          !navApprovedPositionId
+        ) {
+          setFormData((prev) => ({
+            ...prev,
+            approved_position_id: String(data.approved_position_id)
+          }));
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setFieldResolution(null);
+          setFieldResolutionError(
+            error.response?.data?.message ||
+              error.message ||
+              "Unable to resolve approval settings."
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setFieldResolutionLoading(false);
+        }
+      }
+    };
+
+    loadFieldResolution();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    formData.approved_position_id,
+    resultRequisitionCode,
+    isEditMode,
+    navApprovedPositionId
+  ]);
 
   useEffect(() => {
     if (!suppliedDraftId) {
@@ -584,14 +681,6 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
       return;
     }
 
-    if (!formData.route_id) {
-      setSubmitErrorMessage(
-        "Select an Approval Route before submitting."
-      );
-      setSubmitErrorOpen(true);
-      return;
-    }
-
     if (
       !formData.client_name.trim() ||
       !formData.job_title.trim() ||
@@ -680,14 +769,6 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
       return;
     }
 
-    if (!formData.route_id) {
-      setSubmitErrorMessage(
-        "Select an Approval Route before submitting."
-      );
-      setSubmitErrorOpen(true);
-      return;
-    }
-
     if (
       !formData.client_name.trim() ||
       !formData.job_title.trim() ||
@@ -707,7 +788,7 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
     setIsSubmittingDraft(true);
 
     try {
-      // Flush latest form values (including approval_route_id + approved_position_id)
+      // Flush latest form values (including approved_position_id)
       // before Submit so the backend never sees a stale draft.
       const savedDraft = await persistDraftFromForm();
       const submitDraftId = savedDraft.draft_id ?? draftId;
@@ -1250,73 +1331,97 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
 
           <EnterpriseCard
             title="Approval"
-            subtitle="Select approved position and approval route for this demand"
+            subtitle="Approved position and route are resolved from workforce planning and approval policy"
           >
+            {fieldResolutionError ? (
+              <Alert severity="warning" sx={{ mb: 1.5, borderRadius: 2 }}>
+                {fieldResolutionError}
+              </Alert>
+            ) : null}
+
             <div style={styles.row}>
-              <FormControl size="small" sx={{ flex: 1, minWidth: 0 }}>
-                <InputLabel id="approved-position-label">
-                  Approved Position
-                </InputLabel>
-                <Select
-                  labelId="approved-position-label"
-                  id="approved-position"
-                  name="approved_position_id"
-                  label="Approved Position"
-                  value={formData.approved_position_id}
-                  onChange={handleChange}
-                  disabled={draftActionsDisabled}
-                  sx={{
-                    borderRadius: 2,
-                    fontSize: 15,
-                    bgcolor: "background.paper"
-                  }}
-                >
-                  <MenuItem value="">
-                    <em>Select Approved Position</em>
-                  </MenuItem>
-                  {approvedPositions.map((position) => (
-                    <MenuItem
-                      key={position.position_id}
-                      value={position.position_id}
-                    >
-                      {position.position_title}
-                      {position.department
-                        ? ` — ${position.department}`
-                        : ""}
-                      {position.grade ? ` (${position.grade})` : ""}
+              {positionSelectionRequired && !positionLocked ? (
+                <FormControl size="small" sx={{ flex: 1, minWidth: 0 }}>
+                  <InputLabel id="approved-position-label">
+                    Approved Position
+                  </InputLabel>
+                  <Select
+                    labelId="approved-position-label"
+                    id="approved-position"
+                    name="approved_position_id"
+                    label="Approved Position"
+                    value={formData.approved_position_id}
+                    onChange={handleChange}
+                    disabled={draftActionsDisabled}
+                    sx={{
+                      borderRadius: 2,
+                      fontSize: 15,
+                      bgcolor: "background.paper"
+                    }}
+                  >
+                    <MenuItem value="">
+                      <em>Select Approved Position</em>
                     </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+                    {approvedPositions.map((position) => (
+                      <MenuItem
+                        key={position.position_id}
+                        value={position.position_id}
+                      >
+                        {position.position_title}
+                        {position.department
+                          ? ` — ${position.department}`
+                          : ""}
+                        {position.grade ? ` (${position.grade})` : ""}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              ) : (
+                <TextField
+                  label="Approved Position"
+                  value={
+                    fieldResolutionLoading && !resolvedPositionLabel
+                      ? "Resolving…"
+                      : resolvedPositionLabel ||
+                        (formData.approved_position_id
+                          ? formData.approved_position_id
+                          : "Not available")
+                  }
+                  size="small"
+                  fullWidth
+                  InputProps={{ readOnly: true }}
+                  sx={{
+                    flex: 1,
+                    minWidth: 0,
+                    "& .MuiInputBase-input": { fontSize: 15 }
+                  }}
+                />
+              )}
             </div>
 
             <div style={styles.row}>
-              <FormControl size="small" sx={{ flex: 1, minWidth: 0 }}>
-                <InputLabel id="approval-route-label">Approval Route</InputLabel>
-                <Select
-                  labelId="approval-route-label"
-                  id="approval-route"
-                  name="route_id"
-                  label="Approval Route"
-                  value={formData.route_id}
-                  onChange={handleChange}
-                  disabled={draftActionsDisabled}
-                  sx={{
-                    borderRadius: 2,
-                    fontSize: 15,
-                    bgcolor: "background.paper"
-                  }}
-                >
-                  <MenuItem value="">
-                    <em>Select Approval Route</em>
-                  </MenuItem>
-                  {approvalRoutes.map((route) => (
-                    <MenuItem key={route.route_id} value={route.route_id}>
-                      {route.route_name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              <TextField
+                label="Approval Route"
+                value={
+                  fieldResolutionLoading
+                    ? "Resolving…"
+                    : fieldResolution?.approval_route_name ||
+                      (fieldResolution?.approval_route_id
+                        ? `Route #${fieldResolution.approval_route_id}`
+                        : formData.approved_position_id
+                          ? "Resolved when you submit"
+                          : "Select or resolve an approved position first")
+                }
+                size="small"
+                fullWidth
+                InputProps={{ readOnly: true }}
+                helperText="Determined automatically from approval policy at submit"
+                sx={{
+                  flex: 1,
+                  minWidth: 0,
+                  "& .MuiInputBase-input": { fontSize: 15 }
+                }}
+              />
             </div>
           </EnterpriseCard>
 
