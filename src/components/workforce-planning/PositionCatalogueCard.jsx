@@ -15,6 +15,11 @@ import { formatCurrency } from "@/utils/formatCurrency";
 import WorkforceStatusChip from "./WorkforceStatusChip";
 
 function PositionCatalogueCard({ position, onCreateRequisition }) {
+  const isResume =
+    position.resume_mode === "requisition" ||
+    position.resume_mode === "draft" ||
+    Boolean(position.open_requisition_code || position.open_draft_id);
+
   const canCreateReq =
     position.remaining_budget > 0 &&
     position.status !== "Fully Utilized";
@@ -121,10 +126,10 @@ function PositionCatalogueCard({ position, onCreateRequisition }) {
               size="small"
               startIcon={<MdAddCircleOutline size={16} />}
               disabled={!canCreateReq}
-              onClick={() => onCreateRequisition(position.id)}
+              onClick={() => onCreateRequisition(position)}
               sx={{ mt: 1.25, fontWeight: 600, py: 0.625 }}
             >
-              Create requisition
+              {isResume ? "Resume requisition" : "Create requisition"}
             </Button>
           </span>
         </Tooltip>

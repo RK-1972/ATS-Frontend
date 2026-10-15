@@ -2,6 +2,7 @@ import { useOutletContext } from "react-router-dom";
 
 import {
   Alert,
+  Box,
   Button,
   Dialog,
   DialogActions,
@@ -20,7 +21,7 @@ import {
   ToggleButtonGroup
 } from "@mui/material";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { MdAdd } from "react-icons/md";
 
@@ -31,7 +32,14 @@ import ConfigPageHeader from "../../components/platform-config/ConfigPageHeader"
 import ConfigSurface from "../../components/platform-config/ConfigSurface";
 import BudgetRequestCard from "../../components/workforce-planning/BudgetRequestCard";
 import BudgetRequestFormDialog from "../../components/workforce-planning/BudgetRequestFormDialog";
+import WorkforcePlanningSectionSearch from "../../components/workforce-planning/WorkforcePlanningSectionSearch";
 import WorkforceStatusChip from "../../components/workforce-planning/WorkforceStatusChip";
+import {
+  BUDGET_REQUEST_SEARCH_FIELDS,
+  filterItemsBySearch,
+  normalizeWorkforceSearchQuery,
+  WORKFORCE_PLANNING_RESULTS_SCROLL_SX
+} from "@/utils/workforcePlanningListFilter";
 
 function BudgetRequestsPage() {
   const {
@@ -42,6 +50,7 @@ function BudgetRequestsPage() {
     resubmitClarification
   } = useOutletContext();
   const [view, setView] = useState("cards");
+  const [searchQuery, setSearchQuery] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [editingRequest, setEditingRequest] = useState(null);
   const [accessDeniedOpen, setAccessDeniedOpen] = useState(false);
@@ -72,6 +81,20 @@ function BudgetRequestsPage() {
     setEditingRequest(null);
     setFormOpen(true);
   };
+
+  const budgetRequests = data?.budget_requests;
+
+  const normalizedSearchQuery = normalizeWorkforceSearchQuery(searchQuery);
+
+  const filteredBudgetRequests = useMemo(
+    () =>
+      filterItemsBySearch(
+        budgetRequests ?? [],
+        BUDGET_REQUEST_SEARCH_FIELDS,
+        searchQuery
+      ),
+    [budgetRequests, searchQuery]
+  );
 
   const isOpenable = (request) =>
     request?.status === "Draft" || request?.status === "Clarification Requested";
@@ -165,13 +188,28 @@ function BudgetRequestsPage() {
         }
       />
 
-      <Stack direction="row" justifyContent="flex-end" mb={1}>
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        spacing={1.5}
+        alignItems={{ xs: "stretch", sm: "center" }}
+        mb={1.5}
+      >
+        <WorkforcePlanningSectionSearch
+          label="Search budget requests"
+          placeholder="Request ID, position, department, grade, requester, status…"
+          value={searchQuery}
+          onChange={(event) => setSearchQuery(event.target.value)}
+          onClear={() => setSearchQuery("")}
+        />
+
         <ToggleButtonGroup
           size="small"
           value={view}
           exclusive
           onChange={(_, val) => val && setView(val)}
           sx={{
+            flexShrink: 0,
+            alignSelf: { xs: "flex-end", sm: "center" },
             "& .MuiToggleButton-root": {
               py: 0.375,
               px: 1.25,
@@ -184,108 +222,129 @@ function BudgetRequestsPage() {
         </ToggleButtonGroup>
       </Stack>
 
-      {view === "cards" ? (
-        <Grid container spacing={1.5}>
-          {data.budget_requests.map((request) => {
-            const clickable = isOpenable(request);
+      <Box sx={WORKFORCE_PLANNING_RESULTS_SCROLL_SX}>
+        {filteredBudgetRequests.length === 0 ? (
+          <ConfigSurface sx={{ p: 2.5, textAlign: "center" }}>
+            <Typography variant="body2" color="text.secondary">
+              {(budgetRequests?.length ?? 0) === 0
+                ? "No budget requests yet. Use New request to create one."
+                : normalizedSearchQuery
+                  ? "No budget requests match your search. Try different keywords or clear the search."
+                  : "No budget requests to display."}
+            </Typography>
+            {normalizedSearchQuery && (budgetRequests?.length ?? 0) > 0 ? (
+              <Button
+                size="small"
+                onClick={() => setSearchQuery("")}
+                sx={{ mt: 1.5, textTransform: "none", fontWeight: 600 }}
+              >
+                Clear search
+              </Button>
+            ) : null}
+          </ConfigSurface>
+        ) : view === "cards" ? (
+          <Grid container spacing={1.5}>
+            {filteredBudgetRequests.map((request) => {
+              const clickable = isOpenable(request);
 
-            return (
-              <Grid key={request.id} size={{ xs: 12, md: 6, lg: 4 }}>
-                <BudgetRequestCard
-                  request={request}
-                  selected={editingRequest?.id === request.id && formOpen}
-                  onClick={
-                    clickable ? () => openDraftRequest(request) : undefined
-                  }
-                />
-              </Grid>
-            );
-          })}
-        </Grid>
-      ) : (
-        <ConfigSurface sx={{ p: 0, overflow: "hidden" }}>
-          <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow sx={{ bgcolor: "action.hover" }}>
-                  <TableCell sx={{ fontWeight: 700, py: 0.75, fontSize: 11 }}>
-                    Request
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 700, py: 0.75, fontSize: 11 }}>
-                    Department
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 700, py: 0.75, fontSize: 11 }}>
-                    Position
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 700, py: 0.75, fontSize: 11 }}>
-                    Grade
-                  </TableCell>
-                  <TableCell
-                    sx={{ fontWeight: 700, py: 0.75, fontSize: 11 }}
-                    align="center"
-                  >
-                    HC
-                  </TableCell>
-                  <TableCell
-                    sx={{ fontWeight: 700, py: 0.75, fontSize: 11 }}
-                    align="right"
-                  >
-                    Budget
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 700, py: 0.75, fontSize: 11 }}>
-                    Status
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-
-              <TableBody>
-                {data.budget_requests.map((req) => {
-                  const clickable = isOpenable(req);
-
-                  return (
-                    <TableRow
-                      key={req.id}
-                      hover={clickable}
-                      onClick={
-                        clickable ? () => openDraftRequest(req) : undefined
-                      }
-                      sx={{ cursor: clickable ? "pointer" : "default" }}
+              return (
+                <Grid key={request.id} size={{ xs: 12, md: 6, lg: 4 }}>
+                  <BudgetRequestCard
+                    request={request}
+                    selected={editingRequest?.id === request.id && formOpen}
+                    onClick={
+                      clickable ? () => openDraftRequest(request) : undefined
+                    }
+                  />
+                </Grid>
+              );
+            })}
+          </Grid>
+        ) : (
+          <ConfigSurface sx={{ p: 0, overflow: "hidden" }}>
+            <TableContainer>
+              <Table size="small" stickyHeader>
+                <TableHead>
+                  <TableRow sx={{ bgcolor: "action.hover" }}>
+                    <TableCell sx={{ fontWeight: 700, py: 0.75, fontSize: 11 }}>
+                      Request
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 700, py: 0.75, fontSize: 11 }}>
+                      Department
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 700, py: 0.75, fontSize: 11 }}>
+                      Position
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 700, py: 0.75, fontSize: 11 }}>
+                      Grade
+                    </TableCell>
+                    <TableCell
+                      sx={{ fontWeight: 700, py: 0.75, fontSize: 11 }}
+                      align="center"
                     >
-                      <TableCell sx={{ py: 0.75, fontSize: 12 }}>
-                        {req.id}
-                      </TableCell>
-                      <TableCell sx={{ py: 0.75, fontSize: 13 }}>
-                        {req.department}
-                      </TableCell>
-                      <TableCell sx={{ py: 0.75, fontSize: 13 }}>
-                        {req.position}
-                      </TableCell>
-                      <TableCell sx={{ py: 0.75, fontSize: 13 }}>
-                        {req.grade}
-                      </TableCell>
-                      <TableCell
-                        align="center"
-                        sx={{ py: 0.75, fontSize: 13 }}
+                      HC
+                    </TableCell>
+                    <TableCell
+                      sx={{ fontWeight: 700, py: 0.75, fontSize: 11 }}
+                      align="right"
+                    >
+                      Budget
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 700, py: 0.75, fontSize: 11 }}>
+                      Status
+                    </TableCell>
+                  </TableRow>
+                </TableHead>
+
+                <TableBody>
+                  {filteredBudgetRequests.map((req) => {
+                    const clickable = isOpenable(req);
+
+                    return (
+                      <TableRow
+                        key={req.id}
+                        hover={clickable}
+                        onClick={
+                          clickable ? () => openDraftRequest(req) : undefined
+                        }
+                        sx={{ cursor: clickable ? "pointer" : "default" }}
                       >
-                        {req.headcount}
-                      </TableCell>
-                      <TableCell
-                        align="right"
-                        sx={{ py: 0.75, fontSize: 13 }}
-                      >
-                        {formatCurrency(req.proposed_budget)}
-                      </TableCell>
-                      <TableCell sx={{ py: 0.75 }}>
-                        <WorkforceStatusChip status={req.status} />
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </ConfigSurface>
-      )}
+                        <TableCell sx={{ py: 0.75, fontSize: 12 }}>
+                          {req.id}
+                        </TableCell>
+                        <TableCell sx={{ py: 0.75, fontSize: 13 }}>
+                          {req.department}
+                        </TableCell>
+                        <TableCell sx={{ py: 0.75, fontSize: 13 }}>
+                          {req.position}
+                        </TableCell>
+                        <TableCell sx={{ py: 0.75, fontSize: 13 }}>
+                          {req.grade}
+                        </TableCell>
+                        <TableCell
+                          align="center"
+                          sx={{ py: 0.75, fontSize: 13 }}
+                        >
+                          {req.headcount}
+                        </TableCell>
+                        <TableCell
+                          align="right"
+                          sx={{ py: 0.75, fontSize: 13 }}
+                        >
+                          {formatCurrency(req.proposed_budget)}
+                        </TableCell>
+                        <TableCell sx={{ py: 0.75 }}>
+                          <WorkforceStatusChip status={req.status} />
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </ConfigSurface>
+        )}
+      </Box>
 
       <BudgetRequestFormDialog
         key={editingRequest?.id || "new-budget-request"}

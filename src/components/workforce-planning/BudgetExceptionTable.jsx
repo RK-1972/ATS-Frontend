@@ -42,7 +42,7 @@ function BudgetExceptionTable({ exceptions }) {
 
 
 
-        <Table size="small">
+        <Table size="small" stickyHeader>
 
 
 

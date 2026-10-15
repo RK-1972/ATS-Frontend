@@ -503,14 +503,18 @@ async function createRequisition(workforce, hiringProcess, positionId) {
     hiringProcess: {
       ...hiringProcess,
       linkedPositionId: hiringProcessUpdate.linkedPositionId || positionId,
-      linkedRequisitionId: hiringProcessUpdate.linkedRequisitionId || result.requisitionId,
+      linkedRequisitionId:
+        hiringProcessUpdate.linkedRequisitionId || result.requisitionId || null,
       meta: {
         ...hiringProcess.meta,
         ...(hiringProcessUpdate.meta || {})
       }
     },
     position: result.position,
-    requisitionId: result.requisitionId,
+    requisitionId: result.requisitionId || null,
+    draftId: result.draftId || null,
+    draftCode: result.draftCode || null,
+    resumeMode: result.resumeMode || null,
     toastMessage: result.toastMessage
   };
 }

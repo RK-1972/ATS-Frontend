@@ -1,11 +1,19 @@
+import { useMemo, useState } from "react";
 import { useOutletContext, useNavigate } from "react-router-dom";
 
-import { Grid, Alert, Typography } from "@mui/material";
+import { Box, Button, Grid, Alert, Typography } from "@mui/material";
 
 import ConfigPageHeader from "../../components/platform-config/ConfigPageHeader";
+import ConfigSurface from "../../components/platform-config/ConfigSurface";
 import PositionCatalogueCard from "../../components/workforce-planning/PositionCatalogueCard";
+import WorkforcePlanningSectionSearch from "../../components/workforce-planning/WorkforcePlanningSectionSearch";
 import { EmptyState } from "../../components/enterprise";
 import ApprovalOutlinedIcon from "@mui/icons-material/ApprovalOutlined";
+import {
+  APPROVED_POSITION_SEARCH_FIELDS,
+  filterItemsBySearch,
+  WORKFORCE_PLANNING_RESULTS_SCROLL_SX
+} from "@/utils/workforcePlanningListFilter";
 
 function extractExistingRequisitionCode(error) {
   const message =
@@ -17,28 +25,47 @@ function extractExistingRequisitionCode(error) {
 function ApprovedPositionCataloguePage() {
   const navigate = useNavigate();
   const { data, createRequisition, setToastMessage } = useOutletContext();
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const availablePositions = data.approved_positions || [];
+  const approvedPositions = data?.approved_positions;
 
-  const handleCreateRequisition = async (positionId) => {
-    let requisitionCode = null;
+  const filteredPositions = useMemo(
+    () =>
+      filterItemsBySearch(
+        approvedPositions ?? [],
+        APPROVED_POSITION_SEARCH_FIELDS,
+        searchQuery
+      ),
+    [approvedPositions, searchQuery]
+  );
 
-    try {
-      const result = await createRequisition(positionId);
-      requisitionCode = result?.requisitionId || null;
-    } catch (error) {
-      requisitionCode = extractExistingRequisitionCode(error);
+  const handleCreateRequisition = async (position) => {
+    const positionId = position?.id || position;
+    let requisitionCode = position?.open_requisition_code || null;
+    let draftId = position?.open_draft_id || null;
 
-      if (!requisitionCode && typeof setToastMessage === "function") {
-        setToastMessage(
-          error?.response?.data?.message ||
-            error?.message ||
-            "Unable to create requisition from this approved position."
-        );
+    if (!requisitionCode && !draftId) {
+      try {
+        const result = await createRequisition(positionId);
+        requisitionCode = result?.requisitionId || null;
+        draftId = result?.draftId || null;
+      } catch (error) {
+        requisitionCode = extractExistingRequisitionCode(error);
+
+        if (!requisitionCode && typeof setToastMessage === "function") {
+          setToastMessage(
+            error?.response?.data?.message ||
+              error?.message ||
+              "Unable to start requisition from this approved position."
+          );
+        }
       }
     }
 
     const params = new URLSearchParams();
+    if (draftId) {
+      params.set("draftId", String(draftId));
+    }
     if (requisitionCode) {
       params.set("requisitionCode", requisitionCode);
     }
@@ -49,6 +76,7 @@ function ApprovedPositionCataloguePage() {
 
     navigate(query ? `/requisitions?${query}` : "/requisitions", {
       state: {
+        ...(draftId ? { draftId } : {}),
         ...(requisitionCode ? { requisitionCode } : {}),
         approvedPositionId: positionId
       }
@@ -78,29 +106,56 @@ function ApprovedPositionCataloguePage() {
         <Typography variant="body2" sx={{ fontSize: 13 }}>
           <strong>Gate to recruitment:</strong> The Create Requisition button
           is enabled only when an approved budget exists with remaining
-          headcount and budget. After a requisition is raised, track it under
-          Requisitions in the main navigation rail.
+          headcount and budget. Use Create requisition to open a Talent Demand
+          draft. The approved position stays here until you successfully submit.
+          If work is already in progress, use Resume requisition.
         </Typography>
       </Alert>
 
-      {availablePositions.length ? (
-        <Grid container spacing={1.5}>
-          {availablePositions.map((position) => (
-            <Grid key={position.id} size={{ xs: 12, sm: 6, lg: 4 }}>
-              <PositionCatalogueCard
-                position={position}
-                onCreateRequisition={handleCreateRequisition}
-              />
-            </Grid>
-          ))}
-        </Grid>
-      ) : (
-        <EmptyState
-          icon={ApprovalOutlinedIcon}
-          title="No available approved positions"
-          description="All approved positions have already raised a requisition or have no remaining budget."
-        />
-      )}
+      <WorkforcePlanningSectionSearch
+        label="Search approved positions"
+        placeholder="Position ID, title, department, grade, status, source request…"
+        value={searchQuery}
+        onChange={(event) => setSearchQuery(event.target.value)}
+        onClear={() => setSearchQuery("")}
+      />
+
+      <Box sx={{ ...WORKFORCE_PLANNING_RESULTS_SCROLL_SX, mt: 1.5 }}>
+        {filteredPositions.length === 0 ? (
+          (approvedPositions?.length ?? 0) === 0 ? (
+            <EmptyState
+              icon={ApprovalOutlinedIcon}
+              title="No available approved positions"
+              description="All approved positions have already raised a requisition or have no remaining budget."
+            />
+          ) : (
+            <ConfigSurface sx={{ p: 2.5, textAlign: "center" }}>
+              <Typography variant="body2" color="text.secondary">
+                No approved positions match your search. Try different keywords
+                or clear the search.
+              </Typography>
+              <Button
+                size="small"
+                onClick={() => setSearchQuery("")}
+                sx={{ mt: 1.5, textTransform: "none", fontWeight: 600 }}
+              >
+                Clear search
+              </Button>
+            </ConfigSurface>
+          )
+        ) : (
+          <Grid container spacing={1.5}>
+            {filteredPositions.map((position) => (
+              <Grid key={position.id} size={{ xs: 12, sm: 6, lg: 4 }}>
+                <PositionCatalogueCard
+                  position={position}
+                  onCreateRequisition={handleCreateRequisition}
+                />
+              </Grid>
+            ))}
+          </Grid>
+        )}
+      </Box>
     </>
   );
 }

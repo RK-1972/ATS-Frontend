@@ -1268,17 +1268,19 @@ const useEnterpriseStore = create((set, get) => ({
 
       get().refreshWorkforce?.().catch(() => null);
 
-      publishAudit(set, get, ENTERPRISE_EVENTS.REQUISITION_CREATED, {
-        module: "Recruitment Management",
-        entity: "Requisition",
-        entityId: result.requisitionId,
-        action: `Requisition created from approved position ${positionId}`,
-        metadata: { stageKey: "requisition_raised" }
-      });
+      if (result.requisitionId) {
+        publishAudit(set, get, ENTERPRISE_EVENTS.REQUISITION_CREATED, {
+          module: "Recruitment Management",
+          entity: "Requisition",
+          entityId: result.requisitionId,
+          action: `Requisition created from approved position ${positionId}`,
+          metadata: { stageKey: "requisition_raised" }
+        });
 
-      Promise.resolve(recruitmentRepository.getAll()).then((recruitment) => {
-        set({ recruitment });
-      });
+        Promise.resolve(recruitmentRepository.getAll()).then((recruitment) => {
+          set({ recruitment });
+        });
+      }
 
       return result;
 
