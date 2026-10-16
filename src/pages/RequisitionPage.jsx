@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Alert,
@@ -256,6 +256,37 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
     isEditMode ||
     Boolean(navApprovedPositionId) ||
     fieldResolution?.position_locked;
+  const catalogueApprovedPositionId =
+    searchParams.get("approvedPositionId") || navApprovedPositionId || null;
+  const catalogueEntryFlow = Boolean(
+    suppliedDraftId || catalogueApprovedPositionId
+  );
+  const hasApprovedPositionOnForm = Boolean(
+    String(formData.approved_position_id || "").trim()
+  );
+  const jobTitleReadOnly =
+    !isEditMode &&
+    hasApprovedPositionOnForm &&
+    (Boolean(catalogueApprovedPositionId) ||
+      fieldResolution?.position_locked === true ||
+      Boolean(suppliedDraftId));
+  const resolvedJobTitleDisplay = (() => {
+    const positionId = formData.approved_position_id;
+    if (
+      positionId &&
+      fieldResolution?.approved_position_id != null &&
+      String(fieldResolution.approved_position_id) === String(positionId) &&
+      fieldResolution.approved_position_title
+    ) {
+      return fieldResolution.approved_position_title;
+    }
+    return formData.job_title || "";
+  })();
+  const formPanelRef = useRef(null);
+  const scrolledForEntryRef = useRef(null);
+  const entryScrollKey = catalogueEntryFlow
+    ? `${suppliedDraftId || ""}|${catalogueApprovedPositionId || ""}`
+    : null;
   const positionSelectionRequired =
     fieldResolution?.position_selection_required === true ||
     (approvedPositions.length > 1 && !positionLocked);
@@ -554,6 +585,83 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
       approved_position_id: String(navApprovedPositionId)
     }));
   }, [suppliedDraftId, suppliedRequisitionCode, navApprovedPositionId]);
+
+  useEffect(() => {
+    if (isEditMode || !hasApprovedPositionOnForm) {
+      return;
+    }
+
+    const shouldSyncJobTitle =
+      Boolean(catalogueApprovedPositionId) ||
+      fieldResolution?.position_locked === true ||
+      Boolean(suppliedDraftId);
+
+    if (!shouldSyncJobTitle) {
+      return;
+    }
+
+    const positionId = formData.approved_position_id;
+    const resolvedTitle =
+      fieldResolution?.approved_position_id != null &&
+      String(fieldResolution.approved_position_id) === String(positionId) &&
+      fieldResolution.approved_position_title
+        ? fieldResolution.approved_position_title
+        : null;
+
+    if (!resolvedTitle || formData.job_title === resolvedTitle) {
+      return;
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      job_title: resolvedTitle
+    }));
+  }, [
+    isEditMode,
+    hasApprovedPositionOnForm,
+    catalogueApprovedPositionId,
+    suppliedDraftId,
+    formData.approved_position_id,
+    formData.job_title,
+    fieldResolution?.approved_position_id,
+    fieldResolution?.approved_position_title,
+    fieldResolution?.position_locked
+  ]);
+
+  useEffect(() => {
+    if (!catalogueEntryFlow || !entryScrollKey || isLoadingDraft) {
+      return;
+    }
+    if (
+      catalogueApprovedPositionId &&
+      !String(formData.approved_position_id || "").trim()
+    ) {
+      return;
+    }
+    if (hasApprovedPositionOnForm && fieldResolutionLoading) {
+      return;
+    }
+    if (scrolledForEntryRef.current === entryScrollKey) {
+      return;
+    }
+    const panel = formPanelRef.current;
+    if (!panel) {
+      return;
+    }
+
+    scrolledForEntryRef.current = entryScrollKey;
+    requestAnimationFrame(() => {
+      panel.scrollIntoView({ block: "start", behavior: "auto" });
+    });
+  }, [
+    catalogueEntryFlow,
+    entryScrollKey,
+    isLoadingDraft,
+    catalogueApprovedPositionId,
+    formData.approved_position_id,
+    hasApprovedPositionOnForm,
+    fieldResolutionLoading
+  ]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -887,7 +995,8 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
           flexDirection: { xs: "column", md: "row" },
           gap: 1,
           alignItems: "stretch",
-          mt: 1
+          mt: 1,
+          minWidth: 0
         }}
       >
         {/* LEFT PANEL — Talent Demand Directory */}
@@ -896,7 +1005,8 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
             width: { xs: "100%", md: "34%" },
             minWidth: 0,
             display: "flex",
-            flexDirection: "column"
+            flexDirection: "column",
+            order: catalogueEntryFlow ? { xs: 2, sm: 2, md: 1 } : undefined
           }}
         >
           <RecruiterAssignmentPanel
@@ -919,12 +1029,15 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
 
         {/* RIGHT PANEL — Talent Demand Sheet */}
         <Box
+          ref={formPanelRef}
           sx={{
             width: { xs: "100%", md: "66%" },
             minWidth: 0,
             display: "flex",
             flexDirection: "column",
-            gap: 1
+            gap: 1,
+            order: catalogueEntryFlow ? { xs: 1, sm: 1, md: 2 } : undefined,
+            scrollMarginTop: { xs: "88px", sm: "88px", md: 0 }
           }}
         >
           <Box
@@ -1107,8 +1220,19 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
                 name="job_title"
                 placeholder="Job Title *"
                 style={styles.input}
-                value={formData.job_title}
+                value={
+                  jobTitleReadOnly
+                    ? resolvedJobTitleDisplay
+                    : formData.job_title
+                }
                 onChange={handleChange}
+                readOnly={jobTitleReadOnly}
+                disabled={jobTitleReadOnly}
+                title={
+                  jobTitleReadOnly
+                    ? "Designation is inherited from the approved WFP position."
+                    : undefined
+                }
               />
 
               <input
@@ -1511,7 +1635,7 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
                   }
                   sx={{ textTransform: "none", fontWeight: 600 }}
                 >
-                  {isSubmittingDraft ? "Creating…" : "Create Requisition"}
+                  {isSubmittingDraft ? "Submitting…" : "Submit for Approval"}
                 </Button>
               ) : null}
             </Stack>

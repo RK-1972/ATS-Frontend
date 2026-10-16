@@ -737,8 +737,9 @@ function ApprovalRouteManagementPage() {
       <Box
         sx={{
           display: "flex",
+          flexDirection: { xs: "column", md: "row" },
           flex: 1,
-          minHeight: 520,
+          minHeight: { xs: 0, md: 520 },
           border: 1,
           borderColor: "divider",
           borderRadius: 2,
@@ -746,7 +747,7 @@ function ApprovalRouteManagementPage() {
           bgcolor: "background.paper"
         }}
       >
-        {/* Left — Approval Route Directory (~28%) */}
+        {/* Left — Approval Route Directory (~28% on md+) */}
         <Box
           sx={{
             width: { xs: "100%", md: "28%" },
@@ -754,10 +755,12 @@ function ApprovalRouteManagementPage() {
             minWidth: { md: 220 },
             flexShrink: 0,
             borderRight: { md: 1 },
+            borderBottom: { xs: 1, md: 0 },
             borderColor: "divider",
-            display: { xs: "none", md: "flex" },
+            display: "flex",
             flexDirection: "column",
-            minHeight: 0
+            minHeight: 0,
+            maxHeight: { xs: "min(42vh, 360px)", md: "none" }
           }}
         >
           <Box sx={{ p: 1.5, borderBottom: 1, borderColor: "divider" }}>
@@ -799,7 +802,11 @@ function ApprovalRouteManagementPage() {
             />
           </Box>
 
-          <List disablePadding dense sx={{ flex: 1, overflow: "auto" }}>
+          <List
+            disablePadding
+            dense
+            sx={{ flex: 1, minHeight: 0, overflow: "auto" }}
+          >
             {loading && approvalRoutes.length === 0 ? (
               <Box sx={{ display: "flex", justifyContent: "center", py: 3 }}>
                 <CircularProgress size={22} />
