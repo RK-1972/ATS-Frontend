@@ -37,6 +37,7 @@ import { useCopilotContext } from "../components/copilot/CopilotContext";
 import { dispatchApprovalNotificationsUpdated } from "@/utils/enterpriseNotificationEvents";
 import useEnterpriseStore from "@/store/enterpriseStore";
 import RequisitionSkillMultiSelect from "../components/requisitions/RequisitionSkillMultiSelect";
+import { collectExperienceRangeErrors } from "../utils/experienceRangeValidation";
 
 function resolveEnterpriseNavRail(user) {
   let workspace = {};
@@ -265,11 +266,11 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
     String(formData.approved_position_id || "").trim()
   );
   const jobTitleReadOnly =
-    !isEditMode &&
     hasApprovedPositionOnForm &&
     (Boolean(catalogueApprovedPositionId) ||
       fieldResolution?.position_locked === true ||
-      Boolean(suppliedDraftId));
+      Boolean(suppliedDraftId) ||
+      isEditMode);
   const resolvedJobTitleDisplay = (() => {
     const positionId = formData.approved_position_id;
     if (
@@ -587,16 +588,7 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
   }, [suppliedDraftId, suppliedRequisitionCode, navApprovedPositionId]);
 
   useEffect(() => {
-    if (isEditMode || !hasApprovedPositionOnForm) {
-      return;
-    }
-
-    const shouldSyncJobTitle =
-      Boolean(catalogueApprovedPositionId) ||
-      fieldResolution?.position_locked === true ||
-      Boolean(suppliedDraftId);
-
-    if (!shouldSyncJobTitle) {
+    if (!hasApprovedPositionOnForm || !jobTitleReadOnly) {
       return;
     }
 
@@ -617,16 +609,42 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
       job_title: resolvedTitle
     }));
   }, [
-    isEditMode,
     hasApprovedPositionOnForm,
-    catalogueApprovedPositionId,
-    suppliedDraftId,
+    jobTitleReadOnly,
     formData.approved_position_id,
     formData.job_title,
     fieldResolution?.approved_position_id,
-    fieldResolution?.approved_position_title,
-    fieldResolution?.position_locked
+    fieldResolution?.approved_position_title
   ]);
+
+  useEffect(() => {
+    if (!fieldResolution?.approval_route_id) {
+      return;
+    }
+
+    const resolvedRouteId = String(fieldResolution.approval_route_id);
+    if (String(formData.route_id || "") === resolvedRouteId) {
+      return;
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      route_id: resolvedRouteId
+    }));
+  }, [fieldResolution?.approval_route_id, formData.route_id]);
+
+  const assertExperienceFieldsValid = () => {
+    const errors = collectExperienceRangeErrors(
+      formData.experience_min,
+      formData.experience_max
+    );
+    if (errors.length === 0) {
+      return true;
+    }
+    setSubmitErrorMessage(errors.join(" "));
+    setSubmitErrorOpen(true);
+    return false;
+  };
 
   useEffect(() => {
     if (!catalogueEntryFlow || !entryScrollKey || isLoadingDraft) {
@@ -665,6 +683,22 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+
+    if (name === "job_title" && jobTitleReadOnly) {
+      return;
+    }
+
+    if (name === "approved_position_id" && positionLocked) {
+      return;
+    }
+
+    if (
+      (name === "experience_min" || name === "experience_max") &&
+      value !== "" &&
+      Number(value) < 0
+    ) {
+      return;
+    }
 
     if (name === "client_id") {
       const selectedClient =
@@ -753,6 +787,18 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
       return;
     }
 
+    const experienceErrors = collectExperienceRangeErrors(
+      formData.experience_min,
+      formData.experience_max
+    );
+    if (experienceErrors.length > 0) {
+      setToast({
+        message: experienceErrors.join(" "),
+        severity: "error"
+      });
+      return;
+    }
+
     setIsSavingDraft(true);
 
     try {
@@ -805,6 +851,10 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
       return;
     }
 
+    if (!assertExperienceFieldsValid()) {
+      return;
+    }
+
     setIsSubmittingDraft(true);
 
     try {
@@ -833,6 +883,18 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
   const handleSaveDraft = async () => {
     if (isEditMode) {
       await handleSaveExistingRequisition();
+      return;
+    }
+
+    const experienceErrors = collectExperienceRangeErrors(
+      formData.experience_min,
+      formData.experience_max
+    );
+    if (experienceErrors.length > 0) {
+      setToast({
+        message: experienceErrors.join(" "),
+        severity: "error"
+      });
       return;
     }
 
@@ -890,6 +952,10 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
         "Complete all mandatory Talent Demand fields before submitting."
       );
       setSubmitErrorOpen(true);
+      return;
+    }
+
+    if (!assertExperienceFieldsValid()) {
       return;
     }
 
@@ -1259,6 +1325,7 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
                 style={styles.input}
                 value={formData.experience_min}
                 onChange={handleChange}
+                min={0}
               />
 
               <input
@@ -1268,6 +1335,7 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
                 style={styles.input}
                 value={formData.experience_max}
                 onChange={handleChange}
+                min={0}
               />
             </div>
 
