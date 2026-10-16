@@ -36,6 +36,13 @@ const recruitmentClient = {
     return httpGet(url, () => emptyDashboard());
   },
 
+  getOfferRaiseEligibleMappings() {
+    return httpGet(
+      `${ENDPOINTS.recruitment}/offer-raise-eligible-mappings`,
+      () => ({ success: true, count: 0, data: [] })
+    );
+  },
+
   getAll() {
     return this.getMyDashboard();
   },

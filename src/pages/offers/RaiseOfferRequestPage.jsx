@@ -67,15 +67,10 @@ function mappingKey(row) {
   return String(row.mapping_id ?? row.mappingId ?? row.map_id ?? "");
 }
 
-function buildCandidateOptions(dashboard) {
-  const buckets = [
-    ...(dashboard.offerCandidates || []),
-    ...(dashboard.activePipeline || []),
-    ...(dashboard.pipeline || [])
-  ];
-
+function buildCandidateOptions(rows) {
+  const list = Array.isArray(rows) ? rows : [];
   const byMapping = new Map();
-  buckets.forEach((row) => {
+  list.forEach((row) => {
     const key = mappingKey(row);
     if (!key || byMapping.has(key)) {
       return;
@@ -271,9 +266,10 @@ function RaiseOfferRequestPage() {
     async function loadCandidates() {
       setLoadingOptions(true);
       try {
-        const dashboard = await recruitmentClient.getMyDashboard();
+        const response = await recruitmentClient.getOfferRaiseEligibleMappings();
+        const rows = Array.isArray(response?.data) ? response.data : [];
         if (!cancelled) {
-          setCandidates(buildCandidateOptions(dashboard || {}));
+          setCandidates(buildCandidateOptions(rows));
         }
       } catch (_error) {
         if (!cancelled) {
@@ -454,7 +450,7 @@ function RaiseOfferRequestPage() {
                         error={Boolean(errors.candidate)}
                         helperText={
                           errors.candidate ||
-                          "Select a mapped candidate from your assigned requisitions."
+                          "Candidates with Final HR Interview outcome Selected on your assigned requisitions."
                         }
                       />
                     )}
