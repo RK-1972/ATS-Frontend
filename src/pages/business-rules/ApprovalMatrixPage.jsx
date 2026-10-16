@@ -743,7 +743,7 @@ function ApprovalRouteManagementPage() {
           border: 1,
           borderColor: "divider",
           borderRadius: 2,
-          overflow: "hidden",
+          overflow: { xs: "visible", md: "hidden" },
           bgcolor: "background.paper"
         }}
       >
@@ -760,7 +760,15 @@ function ApprovalRouteManagementPage() {
             display: "flex",
             flexDirection: "column",
             minHeight: 0,
-            maxHeight: { xs: "min(42vh, 360px)", md: "none" }
+            height: { xs: "min(48vh, 400px)", md: "auto" },
+            maxHeight: { xs: "min(48vh, 400px)", md: "none" },
+            overflow: { xs: "hidden", md: "visible" },
+            position: { xs: "sticky", md: "static" },
+            top: { xs: "82px", md: "auto" },
+            pb: { xs: 1, md: 0 },
+            zIndex: { xs: 4, md: "auto" },
+            bgcolor: "background.paper",
+            boxShadow: { xs: 2, md: "none" }
           }}
         >
           <Box sx={{ p: 1.5, borderBottom: 1, borderColor: "divider" }}>
@@ -805,7 +813,12 @@ function ApprovalRouteManagementPage() {
           <List
             disablePadding
             dense
-            sx={{ flex: 1, minHeight: 0, overflow: "auto" }}
+            sx={{
+              flex: 1,
+              minHeight: 0,
+              overflow: "auto",
+              pb: { xs: 10, md: 0 }
+            }}
           >
             {loading && approvalRoutes.length === 0 ? (
               <Box sx={{ display: "flex", justifyContent: "center", py: 3 }}>
@@ -884,8 +897,9 @@ function ApprovalRouteManagementPage() {
           sx={{
             flex: 1,
             minWidth: 0,
+            minHeight: { xs: 0, md: "auto" },
             p: 1.5,
-            overflow: "auto"
+            overflow: { xs: "visible", md: "auto" }
           }}
         >
           {loading && !route && !isCreating ? (
