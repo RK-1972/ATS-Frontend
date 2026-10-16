@@ -1639,7 +1639,7 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
                       ? "Updating…"
                       : "Saving…"
                   : isEditMode
-                    ? "Save"
+                    ? "Save Progress"
                     : draftId
                       ? "Update Draft"
                       : "Save Draft"}

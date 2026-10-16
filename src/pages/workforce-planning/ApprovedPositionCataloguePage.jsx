@@ -65,8 +65,7 @@ function ApprovedPositionCataloguePage() {
     const params = new URLSearchParams();
     if (draftId) {
       params.set("draftId", String(draftId));
-    }
-    if (requisitionCode) {
+    } else if (requisitionCode) {
       params.set("requisitionCode", requisitionCode);
     }
     if (positionId) {
@@ -77,7 +76,7 @@ function ApprovedPositionCataloguePage() {
     navigate(query ? `/requisitions?${query}` : "/requisitions", {
       state: {
         ...(draftId ? { draftId } : {}),
-        ...(requisitionCode ? { requisitionCode } : {}),
+        ...(!draftId && requisitionCode ? { requisitionCode } : {}),
         approvedPositionId: positionId
       }
     });

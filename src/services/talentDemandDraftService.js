@@ -45,7 +45,20 @@ async function getDraft(draftId) {
  */
 async function listMyDrafts() {
   const response = await API.get("/api/v1/talent-demand/drafts");
-  return response.data;
+  const envelope = response.data || {};
+  const payload = envelope.data;
+
+  if (Array.isArray(payload)) {
+    return {
+      ...envelope,
+      data: {
+        drafts: payload.map((row) => ({ ...row, work_item_type: "draft" })),
+        requisitions_in_progress: []
+      }
+    };
+  }
+
+  return envelope;
 }
 
 /**

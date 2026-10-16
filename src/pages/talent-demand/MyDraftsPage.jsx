@@ -73,7 +73,7 @@ function MyDraftsPage() {
     }
   }, []);
 
-  const [drafts, setDrafts] = useState([]);
+  const [workItems, setWorkItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -86,9 +86,14 @@ function MyDraftsPage() {
 
     try {
       const response = await TalentDemandDraftService.listMyDrafts();
-      setDrafts(Array.isArray(response?.data) ? response.data : []);
+      const payload = response?.data || {};
+      const draftRows = Array.isArray(payload.drafts) ? payload.drafts : [];
+      const requisitionRows = Array.isArray(payload.requisitions_in_progress)
+        ? payload.requisitions_in_progress
+        : [];
+      setWorkItems([...draftRows, ...requisitionRows]);
     } catch (error) {
-      setDrafts([]);
+      setWorkItems([]);
       setToast({
         message:
           error.response?.data?.message || "Failed to load drafts.",
@@ -105,18 +110,18 @@ function MyDraftsPage() {
 
   const statusOptions = useMemo(() => {
     const unique = new Set(
-      drafts
-        .map((draft) => String(draft.status || "").toUpperCase())
+      workItems
+        .map((row) => String(row.status || "").toUpperCase())
         .filter(Boolean)
     );
     return ["ALL", ...Array.from(unique).sort()];
-  }, [drafts]);
+  }, [workItems]);
 
   const filteredDrafts = useMemo(() => {
     const query = search.trim().toLowerCase();
 
-    return drafts.filter((draft) => {
-      const status = String(draft.status || "").toUpperCase();
+    return workItems.filter((row) => {
+      const status = String(row.status || "").toUpperCase();
       if (statusFilter !== "ALL" && status !== statusFilter) {
         return false;
       }
@@ -124,12 +129,14 @@ function MyDraftsPage() {
       if (!query) return true;
 
       const haystack = [
-        draft.draft_code,
-        draft.job_title,
-        draft.client_name,
-        draft.hiring_manager,
-        draft.status,
-        draft.updated_by
+        row.draft_code,
+        row.requisition_code,
+        row.job_title,
+        row.client_name,
+        row.hiring_manager,
+        row.status,
+        row.updated_by,
+        row.work_item_type
       ]
         .filter(Boolean)
         .join(" ")
@@ -137,10 +144,19 @@ function MyDraftsPage() {
 
       return haystack.includes(query);
     });
-  }, [drafts, search, statusFilter]);
+  }, [workItems, search, statusFilter]);
 
-  const handleContinueEditing = (draftId) => {
-    navigate(`/requisitions?draftId=${encodeURIComponent(draftId)}`);
+  const handleContinueEditing = (row) => {
+    if (row?.work_item_type === "requisition" && row.requisition_code) {
+      navigate(
+        `/requisitions?requisitionCode=${encodeURIComponent(row.requisition_code)}`
+      );
+      return;
+    }
+
+    if (row?.draft_id) {
+      navigate(`/requisitions?draftId=${encodeURIComponent(row.draft_id)}`);
+    }
   };
 
   const handleConfirmDelete = async () => {
@@ -170,9 +186,18 @@ function MyDraftsPage() {
   const columns = [
     {
       field: "draft_code",
-      headerName: "Draft Code",
+      headerName: "Reference",
       flex: 1.1,
-      minWidth: 150
+      minWidth: 150,
+      valueGetter: (_value, row) =>
+        row.draft_code || row.requisition_code || "—"
+    },
+    {
+      field: "work_item_type",
+      headerName: "Type",
+      width: 120,
+      valueGetter: (_value, row) =>
+        row.work_item_type === "requisition" ? "Requisition" : "Draft"
     },
     {
       field: "job_title",
@@ -232,25 +257,28 @@ function MyDraftsPage() {
             startIcon={<EditOutlinedIcon sx={{ fontSize: 16 }} />}
             onClick={(event) => {
               event.stopPropagation();
-              handleContinueEditing(params.row.draft_id);
+              handleContinueEditing(params.row);
             }}
             sx={{ textTransform: "none", fontWeight: 600, py: 0.25 }}
           >
             Continue Editing
           </Button>
-          <Button
-            size="small"
-            color="error"
-            variant="text"
-            startIcon={<DeleteOutlinedIcon sx={{ fontSize: 16 }} />}
-            onClick={(event) => {
-              event.stopPropagation();
-              setDeleteTarget(params.row);
-            }}
-            sx={{ textTransform: "none", fontWeight: 600, minWidth: 0, px: 1 }}
-          >
-            Delete
-          </Button>
+          {params.row.work_item_type === "draft" &&
+          String(params.row.status || "").toUpperCase() === "DRAFT" ? (
+            <Button
+              size="small"
+              color="error"
+              variant="text"
+              startIcon={<DeleteOutlinedIcon sx={{ fontSize: 16 }} />}
+              onClick={(event) => {
+                event.stopPropagation();
+                setDeleteTarget(params.row);
+              }}
+              sx={{ textTransform: "none", fontWeight: 600, minWidth: 0, px: 1 }}
+            >
+              Delete
+            </Button>
+          ) : null}
         </Stack>
       )
     }
@@ -261,7 +289,7 @@ function MyDraftsPage() {
       <Box sx={{ bgcolor: "background.default" }}>
         <EnterpriseWorkspaceHeader
           title="My Drafts"
-          subtitle="Resume and manage your Talent Demand draft documents"
+          subtitle="Resume unsubmitted Talent Demand drafts and in-progress requisitions"
           actions={
             <>
               <Button
@@ -287,8 +315,8 @@ function MyDraftsPage() {
         />
 
         <EnterpriseCard
-          title="Draft documents"
-          subtitle="Private work-in-progress Talent Demand requests"
+          title="Work in progress"
+          subtitle="Draft documents and legacy requisitions not yet submitted for approval"
         >
           <Stack
             direction={{ xs: "column", sm: "row" }}
@@ -322,26 +350,30 @@ function MyDraftsPage() {
           </Stack>
 
           {isLoading ? (
-            <LoadingState message="Loading your drafts…" />
-          ) : drafts.length === 0 ? (
+            <LoadingState message="Loading your work in progress…" />
+          ) : workItems.length === 0 ? (
             <EmptyState
               icon={DescriptionOutlinedIcon}
-              title="No drafts yet"
-              description="Save a Talent Demand as a draft to see it here."
+              title="No work in progress yet"
+              description="Save a Talent Demand draft or continue an unsubmitted requisition to see it here."
               actionLabel="Create Talent Demand"
               onAction={() => navigate("/requisitions")}
             />
           ) : filteredDrafts.length === 0 ? (
             <EmptyState
               icon={DescriptionOutlinedIcon}
-              title="No matching drafts"
-              description="Try a different search term or status filter."
+              title="No matching work in progress"
+              description="Try a different search term or status filter for your drafts and requisitions."
             />
           ) : (
             <EnterpriseDataGrid
               rows={filteredDrafts}
               columns={columns}
-              getRowId={(row) => row.draft_id}
+              getRowId={(row) =>
+                row.work_item_type === "requisition"
+                  ? `req-${row.requisition_code}`
+                  : `draft-${row.draft_id}`
+              }
               height={480}
               disableColumnMenu
             />
