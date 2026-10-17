@@ -84,14 +84,28 @@ function mapOfferApprovalNotification(row) {
   const offerNumber = row?.document_number || row?.offer_id || "—";
   const candidateName = String(row?.candidateName || row?.candidate_name || "").trim();
   const candidateLabel = candidateName ? ` for ${candidateName}` : "";
+  const isClarificationRequest =
+    String(row?.task_type || "").trim().toLowerCase() === "clarification";
+
+  const title = isClarificationRequest
+    ? "Offer Clarification Required"
+    : "Offer Approval Required";
+
+  const message = isClarificationRequest
+    ? `Offer ${offerNumber}${candidateLabel} requires your clarification response.`
+    : `Offer ${offerNumber}${candidateLabel} requires your approval.`;
 
   return {
     taskId: row?.task_id,
     assignmentId: row?.assignment_id,
+    instanceId: row?.instance_id || null,
+    taskType: row?.task_type || null,
+    isClarificationRequest,
     offerNumber,
     document_number: offerNumber,
-    title: "Offer Approval Required",
-    message: `Offer ${offerNumber}${candidateLabel} requires your approval.`,
+    offerId: offerNumber,
+    title,
+    message,
     assigned_on: row?.assigned_on || null,
     submitted_date: row?.submitted_date || null,
     sortTimestamp: resolveApprovalSortTimestamp(row)

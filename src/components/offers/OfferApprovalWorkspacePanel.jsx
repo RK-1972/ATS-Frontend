@@ -146,7 +146,7 @@ function OfferApprovalWorkspacePanel({
   const approvalRows = Array.isArray(offer.approvalSteps) ? offer.approvalSteps : [];
 
   return (
-    <Stack spacing={1.5}>
+    <Stack spacing={1.5} sx={{ minWidth: 0 }}>
       <EnterpriseCard
         title={candidateName || "Offer Request"}
         subtitle={`${offer.offerId} · ${offer.requisitionCode || "—"}`}

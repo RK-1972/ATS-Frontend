@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Chip, Grid, Stack, Typography } from "@mui/material";
 
@@ -27,9 +27,20 @@ function OfferStatusWorkspacePage({
   onAmendApproved,
   onSubmitClarification,
   loggedInUser = null,
-  busy = false
+  busy = false,
+  initialOfferId = null
 }) {
   const [selectedOfferId, setSelectedOfferId] = useState(null);
+
+  useEffect(() => {
+    if (!initialOfferId) {
+      return;
+    }
+
+    if (offers.some((item) => item.offerId === initialOfferId)) {
+      setSelectedOfferId(initialOfferId);
+    }
+  }, [initialOfferId, offers]);
 
   const activeOfferId = useMemo(() => {
     if (selectedOfferId && offers.some((item) => item.offerId === selectedOfferId)) {

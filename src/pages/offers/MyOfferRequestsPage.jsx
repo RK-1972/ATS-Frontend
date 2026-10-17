@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useOutletContext } from "react-router-dom";
+import { useLocation, useOutletContext } from "react-router-dom";
 
 import { Alert, Snackbar } from "@mui/material";
 import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
@@ -8,7 +8,9 @@ import OfferStatusWorkspacePage from "@/components/offers/OfferStatusWorkspacePa
 import { buildMyOfferRequestsList } from "@/utils/offerApprovalUtils";
 
 function MyOfferRequestsPage() {
+  const location = useLocation();
   const loggedInUser = JSON.parse(localStorage.getItem("user") || "null");
+  const initialOfferId = location.state?.offerId || null;
   const {
     offers,
     releaseOffer,
@@ -76,6 +78,7 @@ function MyOfferRequestsPage() {
           "Offer amended and resubmitted for approval."
         )
       }
+      initialOfferId={initialOfferId}
       onSubmitClarification={(offerId, comments) =>
         run(
           () => submitOfferClarification(offerId, comments),

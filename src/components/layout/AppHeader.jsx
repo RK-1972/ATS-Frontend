@@ -322,10 +322,20 @@ function AppHeader({
       workspace = {};
     }
 
+    const offerId =
+      notification?.document_number || notification?.offerId || notification?.offerNumber || null;
+
+    if (notification?.isClarificationRequest && workspace.showOfferWorkspace) {
+      navigate("/offers/my-requests", {
+        state: { offerId, taskId }
+      });
+      return;
+    }
+
     if (workspace.showOfferWorkspace) {
       navigate("/offers/pending-approvals", {
         state: {
-          offerId: notification?.document_number || notification?.offerId || null,
+          offerId,
           taskId
         }
       });

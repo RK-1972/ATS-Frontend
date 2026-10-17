@@ -1,3 +1,8 @@
+import {
+  filterItemsBySearch,
+  normalizeWorkforceSearchQuery
+} from "@/utils/workforcePlanningListFilter";
+
 export function resolveMirrorVersionStatus(step = {}) {
   return String(step.version_status || step.versionStatus || "Published");
 }
@@ -57,6 +62,31 @@ export function canWithdrawOfferStatus(status) {
   const normalized = String(status || "").trim();
   return Boolean(normalized) && !WITHDRAWN_TERMINAL_STATUSES.has(normalized);
 }
+
+export const OFFER_PENDING_APPROVAL_SEARCH_FIELDS = [
+  "offerId",
+  "candidateName",
+  "candidate_name",
+  "requisitionCode",
+  "requisition_code",
+  "currentApprovalStep",
+  "currentApproverRole",
+  "positionTitle",
+  "position_title",
+  "businessUnit",
+  "business_unit",
+  "department"
+];
+
+export function filterPendingApprovalQueueBySearch(queue, searchQuery) {
+  return filterItemsBySearch(
+    queue,
+    OFFER_PENDING_APPROVAL_SEARCH_FIELDS,
+    searchQuery
+  );
+}
+
+export { normalizeWorkforceSearchQuery as normalizeOfferApprovalSearchQuery };
 
 export function buildPendingApprovalQueue(bundle) {
   const offers = bundle?.offers || [];

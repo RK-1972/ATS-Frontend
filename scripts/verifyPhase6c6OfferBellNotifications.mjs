@@ -63,13 +63,24 @@ function mapOfferApprovalNotification(row) {
   const offerNumber = row?.document_number || row?.offer_id || "—";
   const candidateName = String(row?.candidateName || row?.candidate_name || "").trim();
   const candidateLabel = candidateName ? ` for ${candidateName}` : "";
+  const isClarificationRequest =
+    String(row?.task_type || "").trim().toLowerCase() === "clarification";
+
+  const title = isClarificationRequest
+    ? "Offer Clarification Required"
+    : "Offer Approval Required";
+
+  const message = isClarificationRequest
+    ? `Offer ${offerNumber}${candidateLabel} requires your clarification response.`
+    : `Offer ${offerNumber}${candidateLabel} requires your approval.`;
 
   return {
     taskId: row?.task_id,
     assignmentId: row?.assignment_id,
+    isClarificationRequest,
     offerNumber,
-    title: "Offer Approval Required",
-    message: `Offer ${offerNumber}${candidateLabel} requires your approval.`,
+    title,
+    message,
     assigned_on: row?.assigned_on || null,
     submitted_date: row?.submitted_date || null,
     sortTimestamp: resolveApprovalSortTimestamp(row)
@@ -124,6 +135,26 @@ assert.match(mappedOffer.message, /OFF-2026-014/);
 assert.match(mappedOffer.message, /Jane Candidate/);
 
 pass("offer approval notification mapping");
+
+const clarificationRow = {
+  task_id: 902,
+  assignment_id: 802,
+  document_type: "OFFER",
+  document_number: "OFF-2026-099",
+  task_type: "clarification",
+  candidateName: "Alex Applicant",
+  assigned_on: "2026-09-11T08:00:00.000Z"
+};
+
+const mappedClarification = mapOfferApprovalNotification(clarificationRow);
+assert.equal(mappedClarification.isClarificationRequest, true);
+assert.equal(mappedClarification.title, "Offer Clarification Required");
+assert.match(mappedClarification.message, /clarification response/i);
+
+assert.match(appHeaderSource, /isClarificationRequest/);
+assert.match(appHeaderSource, /\/offers\/my-requests/);
+
+pass("offer clarification bell mapping and routing");
 
 const mixedRows = [
   { task_id: 1, document_type: "BUDGET", document_number: "BR-1", assigned_on: "2026-09-10T09:00:00.000Z" },

@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useOutletContext } from "react-router-dom";
 
 import {
   Alert,
+  Box,
+  Button,
   Chip,
   Grid,
   Snackbar,
@@ -15,12 +17,29 @@ import { httpPost } from "@/api/httpClient";
 import myApprovalsService from "@/services/myApprovalsService";
 import { dispatchApprovalNotificationsUpdated } from "@/utils/enterpriseNotificationEvents";
 import {
+  filterPendingApprovalQueueBySearch,
+  normalizeOfferApprovalSearchQuery
+} from "@/utils/offerApprovalUtils";
+import { WORKFORCE_PLANNING_QUEUE_SCROLL_SX } from "@/utils/workforcePlanningListFilter";
+import {
   EmptyState,
   WorkspaceHeader
 } from "@/components/enterprise";
 import OfferApprovalQueueCard from "@/components/offers/OfferApprovalQueueCard";
 import OfferApprovalWorkspacePanel from "@/components/offers/OfferApprovalWorkspacePanel";
+import WorkforcePlanningSectionSearch from "@/components/workforce-planning/WorkforcePlanningSectionSearch";
+import ConfigSurface from "@/components/platform-config/ConfigSurface";
 import PendingActionsOutlinedIcon from "@mui/icons-material/PendingActionsOutlined";
+
+const OFFER_DETAIL_SCROLL_SX = {
+  maxHeight: {
+    xs: "min(70vh, 640px)",
+    lg: "min(calc(100vh - 240px), 720px)"
+  },
+  overflowY: "auto",
+  overflowX: "hidden",
+  pr: 0.5
+};
 
 /**
  * Offer Approval Workspace — mirrors BudgetApprovalWorkspacePage.
@@ -28,6 +47,7 @@ import PendingActionsOutlinedIcon from "@mui/icons-material/PendingActionsOutlin
  */
 function PendingOfferApprovalsPage() {
   const location = useLocation();
+  const [searchQuery, setSearchQuery] = useState("");
   const {
     queue,
     selectedOfferId,
@@ -38,6 +58,13 @@ function PendingOfferApprovalsPage() {
   } = useOutletContext();
 
   const [toast, setToast] = useState({ open: false, message: "", severity: "success" });
+
+  const filteredQueue = useMemo(
+    () => filterPendingApprovalQueueBySearch(queue, searchQuery),
+    [queue, searchQuery]
+  );
+
+  const normalizedSearchQuery = normalizeOfferApprovalSearchQuery(searchQuery);
 
   useEffect(() => {
     const offerId = location.state?.offerId;
@@ -152,25 +179,57 @@ function PendingOfferApprovalsPage() {
               Offer queue
             </Typography>
 
-            <Stack spacing={1}>
-              {queue.map((offer) => (
-                <OfferApprovalQueueCard
-                  key={offer.offerId}
-                  offer={offer}
-                  selected={offer.offerId === selectedOfferId}
-                  onClick={() => setSelectedOfferId(offer.offerId)}
-                />
-              ))}
-            </Stack>
+            <WorkforcePlanningSectionSearch
+              label="Search offer queue"
+              placeholder="Offer ID, candidate, requisition, approval step…"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              onClear={() => setSearchQuery("")}
+            />
+
+            <Box sx={{ ...WORKFORCE_PLANNING_QUEUE_SCROLL_SX, mt: 1.5 }}>
+              {filteredQueue.length === 0 ? (
+                <ConfigSurface sx={{ p: 2, textAlign: "center" }}>
+                  <Typography variant="body2" color="text.secondary">
+                    {normalizedSearchQuery
+                      ? "No offers match your search. Try different keywords or clear the search."
+                      : "No offers to display."}
+                  </Typography>
+                  {normalizedSearchQuery ? (
+                    <Button
+                      size="small"
+                      onClick={() => setSearchQuery("")}
+                      sx={{ mt: 1.5, textTransform: "none", fontWeight: 600 }}
+                    >
+                      Clear search
+                    </Button>
+                  ) : null}
+                </ConfigSurface>
+              ) : (
+                <Stack spacing={1}>
+                  {filteredQueue.map((offer) => (
+                    <OfferApprovalQueueCard
+                      key={offer.offerId}
+                      offer={offer}
+                      selected={offer.offerId === selectedOfferId}
+                      onClick={() => setSelectedOfferId(offer.offerId)}
+                    />
+                  ))}
+                </Stack>
+              )}
+            </Box>
           </Grid>
 
           <Grid size={{ xs: 12, lg: 8 }}>
-            <OfferApprovalWorkspacePanel
-              offer={selectedOffer}
-              onApprove={handleApprove}
-              onReject={handleReject}
-              onSendBack={handleSendBack}
-            />
+            <Box sx={OFFER_DETAIL_SCROLL_SX}>
+              <OfferApprovalWorkspacePanel
+                key={selectedOfferId || "no-selection"}
+                offer={selectedOffer}
+                onApprove={handleApprove}
+                onReject={handleReject}
+                onSendBack={handleSendBack}
+              />
+            </Box>
           </Grid>
         </Grid>
       )}
