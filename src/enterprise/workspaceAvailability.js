@@ -7,6 +7,7 @@ import AdminPanelSettingsOutlinedIcon from "@mui/icons-material/AdminPanelSettin
 import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
 import SupervisorAccountOutlinedIcon from "@mui/icons-material/SupervisorAccountOutlined";
 import ManageAccountsOutlinedIcon from "@mui/icons-material/ManageAccountsOutlined";
+import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
 
 const WORKSPACE_CATALOG = [
   {
@@ -16,6 +17,16 @@ const WORKSPACE_CATALOG = [
     description: "Enterprise administration, governance, configuration and access management.",
     path: "/",
     icon: AdminPanelSettingsOutlinedIcon,
+    module: "configuration"
+  },
+  {
+    id: "application-audit",
+    flag: "showApplicationAuditWorkspace",
+    title: "Application Audit & Session History",
+    description:
+      "Review employee login sessions, screen activity, and business audit events.",
+    path: "/application-audit",
+    icon: HistoryOutlinedIcon,
     module: "configuration"
   },
   {

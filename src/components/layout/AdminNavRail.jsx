@@ -18,6 +18,7 @@ import PolicyOutlinedIcon from "@mui/icons-material/PolicyOutlined";
 import ViewTimelineOutlinedIcon from "@mui/icons-material/ViewTimelineOutlined";
 import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
 import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
+import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
 import StorageOutlinedIcon from "@mui/icons-material/StorageOutlined";
 import DatasetOutlinedIcon from "@mui/icons-material/DatasetOutlined";
 import BarChartOutlinedIcon from "@mui/icons-material/BarChartOutlined";
@@ -57,6 +58,11 @@ const ADMIN_NAV_ITEMS = [
     label: "User Management",
     path: "/users",
     icon: PeopleAltOutlinedIcon
+  },
+  {
+    label: "Application Audit",
+    path: "/application-audit",
+    icon: HistoryOutlinedIcon
   },
   {
     label: "Responsibility Clearance",
@@ -235,6 +241,10 @@ function AdminNavRail() {
 
     if (item.path === "/users") {
       return Boolean(workspace.showUserAdministrationWorkspace);
+    }
+
+    if (item.path === "/application-audit") {
+      return Boolean(workspace.showApplicationAuditWorkspace);
     }
 
     return false;

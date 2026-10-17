@@ -29,6 +29,7 @@ import BrandLogo from "./BrandLogo";
 import EnterpriseNotificationFeedItem from "./EnterpriseNotificationFeedItem";
 import { OptalynxCopilot } from "../copilot";
 import OptalynxHelp from "../help/OptalynxHelp";
+import applicationAuditClient from "@/api/clients/applicationAuditClient";
 import { clearAuthStorage, getStoredToken } from "@/utils/sessionAuth";
 import {
   APPROVAL_NOTIFICATIONS_UPDATED_EVENT,
@@ -345,8 +346,17 @@ function AppHeader({
     navigate("/my-approvals", { state: { taskId } });
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setUserMenuAnchor(null);
+
+    if (getStoredToken()) {
+      try {
+        await applicationAuditClient.postLogout();
+      } catch (_logoutError) {
+        // Client logout proceeds even if session audit update fails.
+      }
+    }
+
     if (typeof onLogout === "function") {
       onLogout();
       return;

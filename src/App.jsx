@@ -28,6 +28,7 @@ import MyDraftsPage from "./pages/talent-demand/MyDraftsPage";
 import RecruiterAssignmentWorkspacePage from "./pages/requisitions/RecruiterAssignmentWorkspacePage";
 import MyApprovalsPage from "./pages/approvals/MyApprovalsPage";
 import UserManagementPage from "./pages/UserManagementPage";
+import ApplicationAuditWorkspaceRoute from "./pages/application-audit/ApplicationAuditWorkspaceRoute";
 import ResponsibilityClearancePage from "./pages/ResponsibilityClearancePage";
 import EmployeeWorkAssignmentPage from "./pages/EmployeeWorkAssignmentPage";
 import WorkAssignmentMasterPage from "./pages/WorkAssignmentMasterPage";
@@ -470,6 +471,15 @@ function App() {
         {/* =====================================
             User Management Route
         ===================================== */}
+
+        <Route
+          path="/application-audit"
+          element={
+            <ProtectedRoute>
+              <ApplicationAuditWorkspaceRoute />
+            </ProtectedRoute>
+          }
+        />
 
         <Route
 

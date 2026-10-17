@@ -3,6 +3,7 @@ import { useLayoutEffect, useRef } from "react";
 
 import { enforceSession } from "../utils/sessionAuth";
 import useEnterpriseStore from "../store/enterpriseStore";
+import ApplicationScreenTelemetry from "./telemetry/ApplicationScreenTelemetry";
 
 /**
  * Route gate: require a non-expired JWT before rendering protected UI.
@@ -30,7 +31,12 @@ function ProtectedRoute({ children }) {
     return <Navigate to="/login" replace />;
   }
 
-  return children;
+  return (
+    <>
+      <ApplicationScreenTelemetry />
+      {children}
+    </>
+  );
 }
 
 export default ProtectedRoute;
