@@ -388,6 +388,14 @@ const SESSION_DETAIL_GROUPS = [
 
   {
 
+    title: "Client",
+
+    fields: [{ key: "user_agent_summary", label: "Device / Browser" }]
+
+  },
+
+  {
+
     title: "Network",
 
     fields: [{ key: "source_ip", label: "Source IP" }]
@@ -903,6 +911,36 @@ function ApplicationAuditWorkspacePage() {
           variant="body2"
 
           sx={{ py: 0.75, wordBreak: "break-all", overflowWrap: "anywhere", lineHeight: 1.35 }}
+
+        >
+
+          {params.value ?? "—"}
+
+        </Typography>
+
+      )
+
+    },
+
+    {
+
+      field: "user_agent_summary",
+
+      headerName: "Device / Browser",
+
+      flex: 1.1,
+
+      minWidth: 150,
+
+      cellClassName: "application-audit-client-cell",
+
+      renderCell: (params) => (
+
+        <Typography
+
+          variant="body2"
+
+          sx={{ py: 0.75, wordBreak: "break-word", overflowWrap: "anywhere", lineHeight: 1.35 }}
 
         >
 
