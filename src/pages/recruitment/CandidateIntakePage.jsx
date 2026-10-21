@@ -1439,7 +1439,7 @@ function getReviewQueueSourceLabel(row) {
 
   return (
     row.source_name ||
-    (row.source_code === "PORTAL" ? "Career Portal" : row.source_code) ||
+    (row.source_code === "PORTAL" ? "Candidate portal" : row.source_code) ||
     "Candidate Intake"
   );
 }
@@ -1849,9 +1849,7 @@ function CandidateIntakePage() {
       label: "Resume Parsed",
       icon: AutoFixHighOutlinedIcon,
       completed:
-        isStatusAtLeast("RESUME_PARSED") ||
-        parsingStatus === "COMPLETED" ||
-        Boolean(draftCandidateId)
+        isStatusAtLeast("RESUME_PARSED") || parsingStatus === "COMPLETED"
     },
     {
       label: "Candidate Created",
@@ -1942,13 +1940,21 @@ function CandidateIntakePage() {
         }
 
         const session = buildReviewSessionFromRow(queueRow);
+        const reviewResumePath = String(
+          session.resumePath ||
+            candidate.resume_path ||
+            ""
+        ).trim();
+        const reviewParsingComplete =
+          String(queueRow.parsing_status || "").toUpperCase() ===
+            "COMPLETED" && Boolean(reviewResumePath);
 
         setIntakeSessionKey((currentKey) => currentKey + 1);
         setSelectedSource(session.sourceId);
         setResumeFile(null);
         setIntakeId(session.intakeId);
-        setIntakeStatus("COMPLETED");
-        setParsingStatus("COMPLETED");
+        setIntakeStatus(reviewParsingComplete ? "COMPLETED" : "RESUME_UPLOADED");
+        setParsingStatus(reviewParsingComplete ? "COMPLETED" : "PENDING");
         setExtractedText("");
         setParsedCandidate(null);
         setDraftCandidateId(candidateId);
