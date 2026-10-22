@@ -35,6 +35,7 @@ import {
 } from "../components/enterprise";
 import { ENTERPRISE_MOBILE_PRIMARY_BUTTON_SX } from "../components/enterprise/enterpriseWorkspaceTokens";
 import { useNavigationFilters } from "@/copilot/core/useNavigationFilters";
+import { resolveInterviewerInterviewDisplayStatus } from "./interviewerHomeInterviewStatus";
 
 function InterviewerHome() {
   const loggedInUser = JSON.parse(localStorage.getItem("user") || "null");
@@ -77,7 +78,12 @@ function InterviewerHome() {
   }, [interviews, focusScheduleId]);
 
   // Live dashboard counts from /my-interviews (same rules as before).
-  const scheduledCount = interviews.filter((x) => !x.feedback_submitted).length;
+  const scheduledCount = interviews.filter(
+    (x) =>
+      !x.feedback_submitted
+      && x.interview_status !== "Cancelled"
+      && x.interview_status !== "Completed"
+  ).length;
   const completedCount = interviews.filter((x) => x.feedback_submitted).length;
   const selectedCount = interviews.filter((x) => x.final_outcome === "Selected").length;
   const rejectedCount = interviews.filter((x) => x.final_outcome === "Rejected").length;
@@ -300,7 +306,7 @@ function InterviewerHome() {
       minWidth: 110,
       width: 120,
       sortable: false,
-      valueGetter: (_value, row) => (row.feedback_submitted ? "Completed" : "Scheduled"),
+      valueGetter: (_value, row) => resolveInterviewerInterviewDisplayStatus(row),
       renderCell: (params) => (
         <StatusChip status={params.value} variant="soft" size="small" />
       )

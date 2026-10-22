@@ -1,3 +1,20 @@
+export function formatFormulaBasis(component) {
+  switch (component?.formulaType) {
+    case "PERCENT_OF_CTC":
+      return "Percentage of approved annual CTC";
+    case "PERCENT_OF_BASIC":
+      return "Percentage of annual Basic (+ DA)";
+    case "FIXED":
+      return "Fixed annual amount";
+    case "BALANCING":
+      return "Balancing amount (CTC minus other included components)";
+    case "RULE_BASED":
+      return "Rule-based (documented statutory or policy rule)";
+    default:
+      return component?.formulaType || "—";
+  }
+}
+
 export function formatFormulaValue(component) {
   if (component.formulaType === "FIXED") {
     return component.fixedAmount != null

@@ -2,15 +2,21 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import {
+  Alert,
   Autocomplete,
   Box,
   Button,
   Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   FormControl,
   Grid,
   InputLabel,
   MenuItem,
   Select,
+  Snackbar,
   Stack,
   TextField,
   Typography
@@ -18,6 +24,8 @@ import {
 import EventAvailableOutlinedIcon from "@mui/icons-material/EventAvailableOutlined";
 
 import API from "../api/axios";
+import interviewClient from "../api/clients/interviewClient";
+import EnterpriseConfirmationDialog from "../components/enterprise/EnterpriseConfirmationDialog";
 import { filterInterviewSchedules } from "./interviewScheduleSearch";
 import masterDataClient from "../api/clients/masterDataClient";
 import { getPublishedRecords } from "../enterprise/masterDataHelpers";
@@ -48,6 +56,60 @@ const denseFieldSx = {
     fontSize: 13
   }
 };
+
+const CALENDAR_SYNC_DISCLOSURE =
+  "The interview record was updated in OPTALYNX. Any existing Microsoft Teams or calendar invitation was not changed automatically.";
+
+const CANCELLATION_REASONS = [
+  "Candidate unavailable",
+  "Interviewer unavailable",
+  "Role closed / on hold",
+  "Duplicate schedule",
+  "Other"
+];
+
+function resolveInterviewLookupId(row) {
+  if (row?.interview_id) {
+    return String(row.interview_id);
+  }
+
+  if (row?.schedule_id != null && row.schedule_id !== "") {
+    return String(row.schedule_id);
+  }
+
+  return null;
+}
+
+function parseScheduleDisplayDate(value) {
+  if (!value || typeof value !== "string") {
+    return "";
+  }
+
+  const dotted = value.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+
+  if (dotted) {
+    return `${dotted[3]}-${dotted[2]}-${dotted[1]}`;
+  }
+
+  return value.slice(0, 10);
+}
+
+function formatTimeForInput(value) {
+  if (value == null || value === "") {
+    return "";
+  }
+
+  const str = String(value);
+  return str.length >= 5 ? str.slice(0, 5) : str;
+}
+
+function isRowEligibleForScheduleActions(row) {
+  return (
+    row?.interview_status === "Scheduled"
+    && !row?.feedback_submitted
+    && Boolean(resolveInterviewLookupId(row))
+  );
+}
 
 /**
  * Optional schedule-form initialization from location.state.
@@ -137,6 +199,27 @@ function InterviewSchedulePage() {
 
   const loggedInUser = JSON.parse(localStorage.getItem("user") || "null");
   const userRole = loggedInUser?.role_name;
+  const canManageScheduledInterviews =
+    userRole === "Admin" || userRole === "Recruiter";
+
+  const [rescheduleDialogOpen, setRescheduleDialogOpen] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [activeScheduleRow, setActiveScheduleRow] = useState(null);
+  const [rescheduleForm, setRescheduleForm] = useState({
+    interview_date: "",
+    interview_time: "",
+    remarks: ""
+  });
+  const [cancelForm, setCancelForm] = useState({
+    cancellation_reason: "",
+    notes: ""
+  });
+  const [scheduleActionLoading, setScheduleActionLoading] = useState(false);
+  const [feedbackSnack, setFeedbackSnack] = useState({
+    open: false,
+    severity: "success",
+    message: ""
+  });
 
   const [candidates, setCandidates] = useState([]);
   const [requisitions, setRequisitions] = useState([]);
@@ -433,6 +516,102 @@ function InterviewSchedulePage() {
     }
   };
 
+  const openRescheduleDialog = (row) => {
+    setActiveScheduleRow(row);
+    setRescheduleForm({
+      interview_date: parseScheduleDisplayDate(row.interview_date),
+      interview_time: formatTimeForInput(row.interview_time),
+      remarks: row.remarks || ""
+    });
+    setRescheduleDialogOpen(true);
+  };
+
+  const openCancelDialog = (row) => {
+    setActiveScheduleRow(row);
+    setCancelForm({ cancellation_reason: "", notes: "" });
+    setCancelDialogOpen(true);
+  };
+
+  const handleRescheduleSubmit = async () => {
+    const lookupId = resolveInterviewLookupId(activeScheduleRow);
+
+    if (!lookupId || scheduleActionLoading) {
+      return;
+    }
+
+    setScheduleActionLoading(true);
+
+    try {
+      await interviewClient.rescheduleInterview(lookupId, {
+        interview_date: rescheduleForm.interview_date,
+        interview_time: rescheduleForm.interview_time,
+        remarks: rescheduleForm.remarks
+      });
+
+      setFeedbackSnack({
+        open: true,
+        severity: "success",
+        message: `Interview rescheduled successfully. ${CALENDAR_SYNC_DISCLOSURE}`
+      });
+      setRescheduleDialogOpen(false);
+      setActiveScheduleRow(null);
+      fetchSchedules();
+    } catch (error) {
+      setFeedbackSnack({
+        open: true,
+        severity: "error",
+        message:
+          error?.response?.data?.message || "Failed to reschedule interview."
+      });
+    } finally {
+      setScheduleActionLoading(false);
+    }
+  };
+
+  const handleCancelConfirm = async () => {
+    const lookupId = resolveInterviewLookupId(activeScheduleRow);
+
+    if (!lookupId || scheduleActionLoading) {
+      return;
+    }
+
+    if (!String(cancelForm.cancellation_reason || "").trim()) {
+      setFeedbackSnack({
+        open: true,
+        severity: "error",
+        message: "Cancellation reason is required."
+      });
+      return;
+    }
+
+    setScheduleActionLoading(true);
+
+    try {
+      await interviewClient.cancelInterview(lookupId, {
+        cancellation_reason: cancelForm.cancellation_reason,
+        notes: cancelForm.notes
+      });
+
+      setFeedbackSnack({
+        open: true,
+        severity: "success",
+        message: `Interview cancelled successfully. ${CALENDAR_SYNC_DISCLOSURE}`
+      });
+      setCancelDialogOpen(false);
+      setActiveScheduleRow(null);
+      fetchSchedules();
+    } catch (error) {
+      setFeedbackSnack({
+        open: true,
+        severity: "error",
+        message:
+          error?.response?.data?.message || "Failed to cancel interview."
+      });
+    } finally {
+      setScheduleActionLoading(false);
+    }
+  };
+
   const handleScheduleInterview = async () => {
     try {
       await API.post("/schedule-interview", {
@@ -562,7 +741,52 @@ function InterviewSchedulePage() {
             —
           </Typography>
         )
-    }
+    },
+    ...(canManageScheduledInterviews
+      ? [
+          {
+            field: "schedule_actions",
+            headerName: "Actions",
+            minWidth: 180,
+            width: 190,
+            sortable: false,
+            filterable: false,
+            renderCell: (params) => {
+              if (!isRowEligibleForScheduleActions(params.row)) {
+                return (
+                  <Typography variant="body2" color="text.disabled">
+                    —
+                  </Typography>
+                );
+              }
+
+              return (
+                <Stack direction="row" spacing={0.5}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    disabled={scheduleActionLoading}
+                    onClick={() => openRescheduleDialog(params.row)}
+                    sx={{ textTransform: "none", minWidth: 0, px: 1 }}
+                  >
+                    Reschedule
+                  </Button>
+                  <Button
+                    size="small"
+                    color="error"
+                    variant="outlined"
+                    disabled={scheduleActionLoading}
+                    onClick={() => openCancelDialog(params.row)}
+                    sx={{ textTransform: "none", minWidth: 0, px: 1 }}
+                  >
+                    Cancel
+                  </Button>
+                </Stack>
+              );
+            }
+          }
+        ]
+      : [])
   ];
 
   return (
@@ -824,6 +1048,159 @@ function InterviewSchedulePage() {
           </Container>
         </Box>
       </Box>
+
+      <Dialog
+        open={rescheduleDialogOpen}
+        onClose={scheduleActionLoading ? undefined : () => setRescheduleDialogOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle sx={{ fontWeight: 600 }}>Reschedule interview</DialogTitle>
+        <DialogContent>
+          <Stack spacing={1.5} sx={{ pt: 0.5 }}>
+            {activeScheduleRow ? (
+              <Typography variant="body2" color="text.secondary">
+                {activeScheduleRow.candidate_name} — {activeScheduleRow.round_type} (
+                {activeScheduleRow.interview_date} {activeScheduleRow.interview_time})
+              </Typography>
+            ) : null}
+            <TextField
+              fullWidth
+              size="small"
+              type="date"
+              label="New interview date"
+              value={rescheduleForm.interview_date}
+              onChange={(event) =>
+                setRescheduleForm((prev) => ({
+                  ...prev,
+                  interview_date: event.target.value
+                }))
+              }
+              slotProps={{ inputLabel: { shrink: true } }}
+            />
+            <TextField
+              fullWidth
+              size="small"
+              type="time"
+              label="New interview time"
+              value={rescheduleForm.interview_time}
+              onChange={(event) =>
+                setRescheduleForm((prev) => ({
+                  ...prev,
+                  interview_time: event.target.value
+                }))
+              }
+              slotProps={{ inputLabel: { shrink: true } }}
+            />
+            <TextField
+              fullWidth
+              size="small"
+              label="Remarks"
+              placeholder="Optional remarks"
+              value={rescheduleForm.remarks}
+              onChange={(event) =>
+                setRescheduleForm((prev) => ({ ...prev, remarks: event.target.value }))
+              }
+              multiline
+              minRows={2}
+            />
+            <Typography variant="caption" color="text.secondary">
+              Rescheduling updates this interview in OPTALYNX only. Microsoft Teams meeting
+              invites are not updated automatically.
+            </Typography>
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => setRescheduleDialogOpen(false)}
+            disabled={scheduleActionLoading}
+            sx={{ textTransform: "none" }}
+          >
+            Close
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleRescheduleSubmit}
+            disabled={scheduleActionLoading}
+            sx={{ textTransform: "none" }}
+          >
+            {scheduleActionLoading ? "Saving…" : "Reschedule"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <EnterpriseConfirmationDialog
+        open={cancelDialogOpen}
+        title="Cancel interview"
+        message={
+          activeScheduleRow
+            ? `Cancel the ${activeScheduleRow.round_type} interview for ${activeScheduleRow.candidate_name}? This cannot be undone.`
+            : "Cancel this interview?"
+        }
+        confirmLabel="Cancel interview"
+        confirmColor="error"
+        loading={scheduleActionLoading}
+        onClose={() => setCancelDialogOpen(false)}
+        onConfirm={handleCancelConfirm}
+      >
+        <Stack spacing={1.5} sx={{ mt: 1 }}>
+          <FormControl fullWidth size="small">
+            <InputLabel id="cancel-reason-label">Cancellation reason</InputLabel>
+            <Select
+              labelId="cancel-reason-label"
+              label="Cancellation reason"
+              value={cancelForm.cancellation_reason}
+              onChange={(event) =>
+                setCancelForm((prev) => ({
+                  ...prev,
+                  cancellation_reason: event.target.value
+                }))
+              }
+            >
+              <MenuItem value="">
+                <em>Select reason</em>
+              </MenuItem>
+              {CANCELLATION_REASONS.map((reason) => (
+                <MenuItem key={reason} value={reason}>
+                  {reason}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <TextField
+            fullWidth
+            size="small"
+            label="Notes"
+            placeholder="Optional notes"
+            value={cancelForm.notes}
+            onChange={(event) =>
+              setCancelForm((prev) => ({ ...prev, notes: event.target.value }))
+            }
+            multiline
+            minRows={2}
+          />
+          <Typography variant="caption" color="text.secondary">
+            Cancelling updates this interview in OPTALYNX only. Microsoft Teams meeting
+            invites are not cancelled or updated automatically.
+          </Typography>
+        </Stack>
+      </EnterpriseConfirmationDialog>
+
+      <Snackbar
+        open={feedbackSnack.open}
+        autoHideDuration={6000}
+        onClose={() => setFeedbackSnack((prev) => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert
+          severity={feedbackSnack.severity}
+          onClose={() => setFeedbackSnack((prev) => ({ ...prev, open: false }))}
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          {feedbackSnack.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

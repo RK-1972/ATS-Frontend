@@ -59,6 +59,14 @@ const interviewClient = {
     );
   },
 
+  cancelInterview(interviewId, payload) {
+    return httpPost(
+      `${ENDPOINTS.interviews}/${interviewId}/cancel`,
+      payload,
+      () => ({ success: true, toastMessage: "Interview cancelled." })
+    );
+  },
+
   completeInterview(interviewId, comment = "") {
     return httpPost(
       `${ENDPOINTS.interviews}/${interviewId}/complete`,

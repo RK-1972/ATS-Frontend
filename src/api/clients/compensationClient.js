@@ -1,5 +1,5 @@
 import { ENDPOINTS } from "../endpoints";
-import { httpGet, httpPost } from "../httpClient";
+import { httpGet, httpPost, httpPut } from "../httpClient";
 
 const compensationClient = {
   getStructures() {
@@ -28,6 +28,13 @@ const compensationClient = {
         components: []
       }
     }));
+  },
+
+  updateStructureComponent(structureId, structureComponentId, payload) {
+    return httpPut(
+      `${ENDPOINTS.compensationStructures}/${structureId}/components/${structureComponentId}`,
+      payload
+    );
   },
 
   getDefaultStructureComponents() {

@@ -17,8 +17,10 @@ import EnterpriseCard from "@/components/enterprise/framework/EnterpriseCard";
 import EnterpriseConfirmationDialog from "@/components/enterprise/EnterpriseConfirmationDialog";
 import { StatusChip } from "@/components/enterprise";
 import offerLetterRepository from "@/repositories/offerLetterRepository";
+import compensationRepository from "@/repositories/compensationRepository";
 import { resolveGeneratedOfferDocumentUrl } from "@/utils/resolveGeneratedOfferDocumentUrl";
 import { formatApprovedDate } from "@/utils/offerLetterUtils";
+import { hasAnnexureBreakup } from "@/utils/offerAnnexureUtils";
 
 import OfferCompensationSection from "./OfferCompensationSection";
 import OfferLetterPreviewDialog from "./OfferLetterPreviewDialog";
@@ -37,6 +39,13 @@ function SummaryField({ label, value }) {
   );
 }
 
+function isGeneratedLetterStatus(offerDetail) {
+  return (
+    String(offerDetail?.letterStatus || "") === "Letter Generated" &&
+    Boolean(offerDetail?.pdfGenerated || offerDetail?.pdfPath)
+  );
+}
+
 function OfferLetterWorkspacePanel({
   offerId,
   readOnly = false,
@@ -49,6 +58,54 @@ function OfferLetterWorkspacePanel({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [calculatingCompensation, setCalculatingCompensation] = useState(false);
+
+  const loadOfferDetail = async (targetOfferId) => {
+    const offerDetail = await offerLetterRepository.getDetail(targetOfferId);
+    setDetail(offerDetail);
+    return offerDetail;
+  };
+
+  const applyCompensationResult = (offerDetail, compensationResult) => {
+    if (!compensationResult) {
+      return offerDetail;
+    }
+
+    return {
+      ...offerDetail,
+      gross: compensationResult.gross,
+      totalCtc: compensationResult.totalCtc,
+      ctcBreakup: compensationResult.components || compensationResult.ctcBreakup,
+      calculatedOn: compensationResult.calculatedOn,
+      calculatedBy: compensationResult.calculatedBy,
+      structureName: compensationResult.structureName
+    };
+  };
+
+  const runCompensationCalculation = async (recalculate = false) => {
+    if (!offerId || !detail?.annualCtc) {
+      return;
+    }
+
+    setCalculatingCompensation(true);
+    setErrorMessage("");
+
+    try {
+      const compensationResult = await compensationRepository.calculateCompensation(
+        offerId,
+        detail.annualCtc,
+        { recalculate }
+      );
+      const refreshed = await loadOfferDetail(offerId);
+      setDetail(applyCompensationResult(refreshed, compensationResult));
+    } catch (error) {
+      setErrorMessage(
+        error?.response?.data?.message || "Unable to calculate compensation breakup."
+      );
+    } finally {
+      setCalculatingCompensation(false);
+    }
+  };
 
   useEffect(() => {
     if (!offerId) {
@@ -62,9 +119,28 @@ function OfferLetterWorkspacePanel({
 
     offerLetterRepository
       .getDetail(offerId)
-      .then((offerDetail) => {
-        if (!cancelled) {
-          setDetail(offerDetail);
+      .then(async (offerDetail) => {
+        if (cancelled) {
+          return;
+        }
+
+        setDetail(offerDetail);
+
+        if (
+          !readOnly &&
+          !isGeneratedLetterStatus(offerDetail) &&
+          offerDetail?.annualCtc &&
+          !hasAnnexureBreakup(offerDetail?.ctcBreakup)
+        ) {
+          const compensationResult = await compensationRepository.calculateCompensation(
+            offerId,
+            offerDetail.annualCtc
+          );
+
+          if (!cancelled && compensationResult) {
+            const refreshed = await offerLetterRepository.getDetail(offerId);
+            setDetail(applyCompensationResult(refreshed, compensationResult));
+          }
         }
       })
       .catch((error) => {
@@ -83,7 +159,7 @@ function OfferLetterWorkspacePanel({
     return () => {
       cancelled = true;
     };
-  }, [offerId]);
+  }, [offerId, readOnly]);
 
   const isGeneratedLetter =
     String(detail?.letterStatus || "") === "Letter Generated" &&
@@ -235,6 +311,20 @@ function OfferLetterWorkspacePanel({
             <OfferCommercialSummaryFields offer={detail} />
           </Grid>
         </EnterpriseCard>
+
+        {!readOnly && !isGeneratedLetter ? (
+          <Stack direction="row" justifyContent="flex-end">
+            <Button
+              variant="outlined"
+              size="small"
+              disabled={!detail?.annualCtc || calculatingCompensation}
+              onClick={() => runCompensationCalculation(true)}
+              sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
+            >
+              {calculatingCompensation ? "Recalculating…" : "Recalculate breakup"}
+            </Button>
+          </Stack>
+        ) : null}
 
         <OfferCompensationSection
           approvedAnnualCtc={detail.annualCtc || 0}

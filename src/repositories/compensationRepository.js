@@ -14,11 +14,21 @@ async function getDefaultStructureComponents() {
   return compensationClient.getDefaultStructureComponents();
 }
 
-async function calculateCompensation(offerId, annualCtc) {
+async function calculateCompensation(offerId, annualCtc, options = {}) {
   const response = await compensationClient.calculateCompensation({
     offerId,
-    annualCtc
+    annualCtc,
+    recalculate: Boolean(options.recalculate)
   });
+  return response?.data || null;
+}
+
+async function updateStructureComponent(structureId, structureComponentId, payload) {
+  const response = await compensationClient.updateStructureComponent(
+    structureId,
+    structureComponentId,
+    payload
+  );
   return response?.data || null;
 }
 
@@ -26,7 +36,8 @@ const compensationRepository = {
   getActiveStructures,
   getStructureComponents,
   getDefaultStructureComponents,
-  calculateCompensation
+  calculateCompensation,
+  updateStructureComponent
 };
 
 export default compensationRepository;
