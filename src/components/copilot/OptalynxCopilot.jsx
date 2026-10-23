@@ -1,4 +1,5 @@
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import API from "@/api/axios";
 import { useNavigate } from "react-router-dom";
 import { IconButton, Tooltip } from "@mui/material";
 import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
@@ -23,6 +24,8 @@ import {
   createCopilotCommandRegistry,
   findCopilotCommand
 } from "./commandRegistry";
+import { mapSuggestionIdsToActionCards } from "./copilotQuickActionCatalog";
+import { WORKSPACE_SESSION_REFRESHED_EVENT } from "@/utils/sessionWorkspaceRefresh";
 
 const UNKNOWN_COMMAND_MESSAGE =
   "Sorry, I don't understand that command yet.";
@@ -113,7 +116,11 @@ function OptalynxCopilot({ iconButtonSx }) {
   const [conversationPrompt, setConversationPrompt] = useState(null);
   const [conversationBusy, setConversationBusy] = useState(false);
   const [outcomeAction, setOutcomeAction] = useState(null);
+  const [quickActions, setQuickActions] = useState([]);
+  const [quickActionsLoading, setQuickActionsLoading] = useState(false);
+  const [quickActionsError, setQuickActionsError] = useState("");
   const activeWorkflowIntentRef = useRef(null);
+  const suggestionsRequestRef = useRef(0);
 
   const conversationEngine = useMemo(() => createConversationEngine(), []);
 
@@ -150,12 +157,72 @@ function OptalynxCopilot({ iconButtonSx }) {
     setConversationBusy(false);
   };
 
-  const handleOpen = () => setOpen(true);
+  const loadQuickActions = useCallback(async () => {
+    const requestId = suggestionsRequestRef.current + 1;
+    suggestionsRequestRef.current = requestId;
+    setQuickActionsLoading(true);
+    setQuickActionsError("");
+
+    try {
+      const response = await API.get("/api/v1/copilot/suggestions");
+      if (suggestionsRequestRef.current !== requestId) {
+        return;
+      }
+
+      const suggestions = response?.data?.data?.suggestions || [];
+      const ids = suggestions.map((item) => item.id);
+      setQuickActions(mapSuggestionIdsToActionCards(ids));
+    } catch (error) {
+      if (suggestionsRequestRef.current !== requestId) {
+        return;
+      }
+
+      setQuickActions([]);
+      setQuickActionsError(
+        error?.response?.data?.message ||
+          "Could not load personalized quick actions."
+      );
+    } finally {
+      if (suggestionsRequestRef.current === requestId) {
+        setQuickActionsLoading(false);
+      }
+    }
+  }, []);
+
+  const handleOpen = () => {
+    setOpen(true);
+    loadQuickActions();
+  };
+
+  useEffect(() => {
+    if (!open) {
+      return undefined;
+    }
+
+    const onWorkspaceRefreshed = () => {
+      loadQuickActions();
+    };
+
+    window.addEventListener(
+      WORKSPACE_SESSION_REFRESHED_EVENT,
+      onWorkspaceRefreshed
+    );
+
+    return () => {
+      window.removeEventListener(
+        WORKSPACE_SESSION_REFRESHED_EVENT,
+        onWorkspaceRefreshed
+      );
+    };
+  }, [open, loadQuickActions]);
 
   const handleClose = () => {
     setOpen(false);
     resetConversation();
     setOutcomeAction(null);
+    setQuickActions([]);
+    setQuickActionsError("");
+    suggestionsRequestRef.current += 1;
   };
 
   const handleInputChange = (event) => {
@@ -556,6 +623,9 @@ function OptalynxCopilot({ iconButtonSx }) {
         onPreviousConductInterview={handleConductInterviewPrevious}
         outcomeAction={outcomeAction}
         onOutcomeAction={handleOutcomeAction}
+        quickActions={quickActions}
+        quickActionsLoading={quickActionsLoading}
+        quickActionsError={quickActionsError}
       />
     </>
   );

@@ -13,17 +13,10 @@ import {
 import { alpha, useTheme } from "@mui/material/styles";
 import ArrowBackOutlinedIcon from "@mui/icons-material/ArrowBackOutlined";
 import ArrowForwardIosOutlinedIcon from "@mui/icons-material/ArrowForwardIosOutlined";
-import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
 import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
 import CloseOutlinedIcon from "@mui/icons-material/CloseOutlined";
-import EventAvailableOutlinedIcon from "@mui/icons-material/EventAvailableOutlined";
 import FlashOnOutlinedIcon from "@mui/icons-material/FlashOnOutlined";
-import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
-import PersonAddAlt1OutlinedIcon from "@mui/icons-material/PersonAddAlt1Outlined";
 import SendOutlinedIcon from "@mui/icons-material/SendOutlined";
-import TodayOutlinedIcon from "@mui/icons-material/TodayOutlined";
-import LinkOutlinedIcon from "@mui/icons-material/LinkOutlined";
-import RateReviewOutlinedIcon from "@mui/icons-material/RateReviewOutlined";
 
 import ScheduleInterviewCandidatePicker from "@/copilot/conversations/ScheduleInterviewCandidatePicker";
 import ScheduleInterviewInterviewerPicker from "@/copilot/conversations/ScheduleInterviewInterviewerPicker";
@@ -33,72 +26,7 @@ import AssignRecruiterRecruiterPicker from "@/copilot/conversations/AssignRecrui
 import MapCandidateRequisitionPicker from "@/copilot/conversations/MapCandidateRequisitionPicker";
 import ConductInterviewPicker from "@/copilot/conversations/ConductInterviewPicker";
 import EnterpriseModuleIcon from "@/components/enterprise/EnterpriseModuleIcon";
-
-const ACTION_CARDS = [
-  {
-    id: "requisitions",
-    title: "My Requisitions",
-    description: "View and manage assigned requisitions",
-    inputText: "Show My Requisitions",
-    Icon: AssignmentOutlinedIcon,
-    accent: "#1f3b63",
-    module: "requisitions"
-  },
-  {
-    id: "candidates",
-    title: "Candidates",
-    description: "Search and manage candidates",
-    inputText: "Show Java Candidates",
-    Icon: PeopleAltOutlinedIcon,
-    accent: "#1967d2",
-    module: "candidates"
-  },
-  {
-    id: "interview",
-    title: "Schedule Interview",
-    description: "Create or manage interviews",
-    inputText: "Schedule Interview",
-    Icon: EventAvailableOutlinedIcon,
-    accent: "#f39c12",
-    module: "interviews"
-  },
-  {
-    id: "todays-interviews",
-    title: "Today's Interviews",
-    description: "View interviews scheduled for today",
-    inputText: "Show Today's Interviews",
-    Icon: TodayOutlinedIcon,
-    accent: "#b06000",
-    module: "interviews"
-  },
-  {
-    id: "assign-recruiter",
-    title: "Assign Recruiter",
-    description: "Assign a recruiter to a requisition",
-    inputText: "Assign Recruiter",
-    Icon: PersonAddAlt1OutlinedIcon,
-    accent: "#137333",
-    module: "recruitment"
-  },
-  {
-    id: "map-candidate",
-    title: "Map Candidate",
-    description: "Map a candidate to a requisition",
-    inputText: "Map Candidate",
-    Icon: LinkOutlinedIcon,
-    accent: "#0b57d0",
-    module: "candidates"
-  },
-  {
-    id: "conduct-interview",
-    title: "Conduct Interview",
-    description: "Open an assigned interview in your workspace",
-    inputText: "Conduct Interview",
-    Icon: RateReviewOutlinedIcon,
-    accent: "#7b1fa2",
-    module: "approvals"
-  }
-];
+import OptalynxLoader from "@/components/OptalynxLoader";
 
 function getTimeGreeting() {
   const hour = new Date().getHours();
@@ -449,7 +377,10 @@ function OptalynxCopilotDrawer({
   onOpenConductInterview,
   onPreviousConductInterview,
   outcomeAction = null,
-  onOutcomeAction
+  onOutcomeAction,
+  quickActions = [],
+  quickActionsLoading = false,
+  quickActionsError = ""
 }) {
   const theme = useTheme();
   const greeting = getTimeGreeting();
@@ -888,8 +819,27 @@ function OptalynxCopilotDrawer({
               </Typography>
             </Stack>
 
+            {quickActionsLoading ? (
+              <Box sx={{ py: 2, display: "flex", justifyContent: "center" }}>
+                <OptalynxLoader size={36} />
+              </Box>
+            ) : null}
+
+            {quickActionsError ? (
+              <Typography variant="body2" color="error" sx={{ fontSize: 13 }}>
+                {quickActionsError}
+              </Typography>
+            ) : null}
+
+            {!quickActionsLoading && !quickActionsError && quickActions.length === 0 ? (
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: 13 }}>
+                No quick actions are available for your current workspace. Try typing a
+                command below.
+              </Typography>
+            ) : null}
+
             <Stack spacing={0.85}>
-              {ACTION_CARDS.map((action) => (
+              {quickActions.map((action) => (
                 <ActionCard
                   key={action.id}
                   title={action.title}
