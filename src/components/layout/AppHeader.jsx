@@ -39,6 +39,7 @@ import {
   buildNotificationFeed,
   countNotifications
 } from "@/utils/enterpriseNotificationSections";
+import { resolveHeaderBusinessRoleLabel } from "@/utils/headerBusinessRoleLabel";
 
 function readStoredUser() {
   try {
@@ -48,55 +49,9 @@ function readStoredUser() {
   }
 }
 
-function readStoredWorkAssignments() {
-  try {
-    const rows = JSON.parse(localStorage.getItem("work_assignments") || "[]");
-    return Array.isArray(rows) ? rows : [];
-  } catch (_error) {
-    return [];
-  }
-}
-
-/**
- * Prefer an active work-assignment label for the header badge.
- * Falls back to role_name / activeWorkspace.
- */
-function resolveWorkAssignmentLabel(userRole) {
-  const assignments = readStoredWorkAssignments().filter(
-    (row) => row && row.is_active !== false
-  );
-
-  if (assignments.length === 1) {
-    return (
-      assignments[0].assignment_name ||
-      assignments[0].assignment_code ||
-      userRole ||
-      "—"
-    );
-  }
-
-  if (assignments.length > 1) {
-    const primary =
-      assignments.find((row) => row.is_primary === true) || assignments[0];
-    return (
-      primary.assignment_name ||
-      primary.assignment_code ||
-      userRole ||
-      "—"
-    );
-  }
-
-  const activeWorkspace = localStorage.getItem("activeWorkspace");
-  if (activeWorkspace && String(activeWorkspace).trim()) {
-    return String(activeWorkspace).trim();
-  }
-
-  return userRole || "—";
-}
-
 /**
  * Single enterprise top bar. Branding comes only from BrandLogo.
- * Authenticated controls (avatar, name, work-assignment badge, notifications, logout)
+ * Authenticated controls (avatar, name, business-role badge, notifications, logout)
  * are owned exclusively by this component.
  */
 const mobileIconButtonSx = {
@@ -129,7 +84,7 @@ function AppHeader({
     resolvedUser?.role_name ||
     resolvedUser?.secondary_role ||
     "";
-  const workAssignmentLabel = resolveWorkAssignmentLabel(resolvedRole);
+  const headerRoleLabel = resolveHeaderBusinessRoleLabel(resolvedUser);
 
   const isAuthenticated = Boolean(getStoredToken() && resolvedUser);
   const shouldShowUserActions =
@@ -546,9 +501,9 @@ function AppHeader({
         </Typography>
 
         <Chip
-          label={workAssignmentLabel}
+          label={headerRoleLabel}
           size="small"
-          title={workAssignmentLabel}
+          title={headerRoleLabel}
           sx={{
             mt: 0.5,
             maxWidth: 180,
@@ -635,9 +590,9 @@ function AppHeader({
             {resolvedUser?.full_name || "User"}
           </Typography>
           <Chip
-            label={workAssignmentLabel}
+            label={headerRoleLabel}
             size="small"
-            title={workAssignmentLabel}
+            title={headerRoleLabel}
             sx={{ mt: 1, maxWidth: "100%" }}
           />
         </Box>
