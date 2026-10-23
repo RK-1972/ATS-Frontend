@@ -18,6 +18,26 @@ const interviewClient = {
     return httpGet(`${ENDPOINTS.interviews}/${id}`, () => ({ success: true, data: null }));
   },
 
+  getSchedulePrecheck(mapId, roundType) {
+    const params = new URLSearchParams({
+      map_id: String(mapId),
+      round_type: String(roundType)
+    });
+
+    return httpGet(
+      `${ENDPOINTS.interviews}/schedule-precheck?${params.toString()}`,
+      () => ({
+        success: true,
+        data: {
+          guardCode: "ALLOW",
+          requiresRepeatConfirmation: false,
+          requiresRepeatReason: false,
+          requiresRepeatOverride: false
+        }
+      })
+    );
+  },
+
   getInterviewProgress(mapId) {
     return httpGet(
       `${ENDPOINTS.interviews}/progress/${encodeURIComponent(mapId)}`,
@@ -29,10 +49,50 @@ const interviewClient = {
           candidateName: null,
           requisitionCode: null,
           currentStage: null,
-          rounds: []
+          rounds: [],
+          stageGroups: [],
+          feedbackSummaries: []
         }
       })
     );
+  },
+
+  getFeedbackSummaries(mapId) {
+    return httpGet(
+      `${ENDPOINTS.interviews}/feedback-summaries/${encodeURIComponent(mapId)}`,
+      () => ({
+        success: true,
+        count: 0,
+        data: []
+      })
+    );
+  },
+
+  getPermittedFeedbackHistory(mapId, anchorScheduleId = null) {
+    const params = new URLSearchParams();
+
+    if (anchorScheduleId) {
+      params.set("anchor_schedule_id", String(anchorScheduleId));
+    }
+
+    const query = params.toString();
+
+    return httpGet(
+      `${ENDPOINTS.interviews}/permitted-feedback/${encodeURIComponent(mapId)}${query ? `?${query}` : ""}`,
+      () => ({
+        success: true,
+        count: 0,
+        data: []
+      })
+    );
+  },
+
+  getRecruiterScheduledFeedbackHistory() {
+    return httpGet(`${ENDPOINTS.interviews}/recruiter-scheduled-feedback`, () => ({
+      success: true,
+      count: 0,
+      data: []
+    }));
   },
 
   scheduleInterview(payload) {

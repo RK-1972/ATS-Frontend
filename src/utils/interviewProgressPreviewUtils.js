@@ -136,7 +136,107 @@ function resolveInitialRoundPhase(round) {
   };
 }
 
+function buildStageGroupPreviewStages(context = {}) {
+  const stageGroups = Array.isArray(context?.stageGroups)
+    ? context.stageGroups
+    : [];
+
+  if (!stageGroups.length) {
+    return null;
+  }
+
+  const stages = [];
+
+  stageGroups.forEach((group) => {
+    const decision = group?.currentDecision;
+    const decisionOutcome = decision?.outcome || null;
+
+    if (decisionOutcome) {
+      const decisionScheduleId = decision.scheduleId || null;
+
+      stages.push({
+        key: `decision-${group.stageKey}`,
+        title: `${group.stageLabel} — current decision`,
+        phase: decisionOutcome === "Rejected" ? "special" : "completed",
+        statusLabel: decisionOutcome,
+        detailLine: decision.sessionLabel || null,
+        finalOutcome: decisionOutcome,
+        feedbackSubmitted: true,
+        isStageDecision: true,
+        scheduleId: decisionScheduleId,
+        feedbackViewPath: decisionScheduleId
+          ? `/view-feedback/${decisionScheduleId}`
+          : null
+      });
+    }
+
+    (group.sessions || []).forEach((session, index) => {
+      const pseudoRound = {
+        interviewId: session.interviewId,
+        scheduleId: session.scheduleId,
+        roundType: session.roundType,
+        interviewDate: session.interviewDate,
+        interviewTime: session.interviewTime,
+        interviewStatus: session.interviewStatus,
+        feedbackSubmitted: session.feedbackSubmitted,
+        finalOutcome: session.sessionOutcome,
+        interviewerName: session.interviewerName,
+        assignmentStatus: session.assignmentStatus
+      };
+
+      const { phase, statusLabel } = resolveInitialRoundPhase(pseudoRound);
+      const scheduledAt = formatInterviewPreviewDateTime(
+        session.interviewDate,
+        session.interviewTime
+      );
+
+      const detailParts = [
+        session.interviewerName || null,
+        scheduledAt,
+        session.assignmentStatus || null
+      ].filter(Boolean);
+
+      if (session.repeatReason) {
+        detailParts.push(`Repeat: ${session.repeatReason}`);
+      }
+
+      const sessionScheduleId = session.scheduleId || null;
+
+      stages.push({
+        key: `session-${session.interviewId || index}`,
+        title: session.sessionLabel || group.stageLabel,
+        phase,
+        statusLabel: session.feedbackSubmitted
+          ? statusLabel
+          : session.sessionOutcome
+            ? statusLabel
+            : statusLabel,
+        detailLine: detailParts.join(" · ") || null,
+        finalOutcome: session.sessionOutcome,
+        feedbackSubmitted: Boolean(session.feedbackSubmitted),
+        scheduleId: sessionScheduleId,
+        feedbackViewPath:
+          session.viewFeedbackPath
+          || (sessionScheduleId ? `/view-feedback/${sessionScheduleId}` : null),
+        isHistoricalSession: Boolean(
+          decision?.interviewId
+          && session.interviewId
+          && session.interviewId !== decision.interviewId
+        )
+      });
+    });
+  });
+
+  return stages;
+}
+
 export function buildInterviewProgressPreviewStages(context = {}) {
+  const groupedStages = buildStageGroupPreviewStages(context);
+
+  if (groupedStages?.length) {
+    return groupedStages;
+  }
+
   const rounds = sortInterviewRounds(
     Array.isArray(context?.rounds) ? context.rounds : []
   );
@@ -169,6 +269,8 @@ export function buildInterviewProgressPreviewStages(context = {}) {
       round.assignmentStatus || null
     ].filter(Boolean).join(" · ");
 
+    const scheduleId = round.scheduleId || null;
+
     return {
       key: `interview-${round.interviewId || round.scheduleId || index}`,
       title: resolveDistinctRoundTitle(round, index, titleCounts),
@@ -176,7 +278,9 @@ export function buildInterviewProgressPreviewStages(context = {}) {
       statusLabel,
       detailLine: detailLine || null,
       finalOutcome: round.finalOutcome || null,
-      feedbackSubmitted: Boolean(round.feedbackSubmitted)
+      feedbackSubmitted: Boolean(round.feedbackSubmitted),
+      scheduleId,
+      feedbackViewPath: scheduleId ? `/view-feedback/${scheduleId}` : null
     };
   });
 

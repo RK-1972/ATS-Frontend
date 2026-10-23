@@ -1,6 +1,9 @@
+import { Link as RouterLink } from "react-router-dom";
+
 import {
   Box,
   CircularProgress,
+  Link,
   Stack,
   Typography
 } from "@mui/material";
@@ -96,6 +99,23 @@ function ProgressStageItem({ stage, isLast }) {
           >
             {stage.detailLine}
           </Typography>
+        ) : null}
+
+        {stage.feedbackSubmitted && stage.feedbackViewPath ? (
+          <Link
+            component={RouterLink}
+            to={stage.feedbackViewPath}
+            variant="caption"
+            underline="hover"
+            sx={{
+              display: "inline-block",
+              mt: 0.35,
+              fontWeight: 600
+            }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            View feedback
+          </Link>
         ) : null}
       </Box>
     </Box>

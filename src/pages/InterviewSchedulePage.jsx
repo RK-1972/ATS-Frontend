@@ -25,6 +25,12 @@ import EventAvailableOutlinedIcon from "@mui/icons-material/EventAvailableOutlin
 
 import API from "../api/axios";
 import interviewClient from "../api/clients/interviewClient";
+import { clearInterviewProgressPreviewCache } from "@/hooks/useInterviewProgressPreview";
+import {
+  REPEAT_GUARD_CODES,
+  buildRepeatSchedulePayload,
+  requiresRepeatDialog
+} from "../utils/interviewRepeatStageUtils";
 import EnterpriseConfirmationDialog from "../components/enterprise/EnterpriseConfirmationDialog";
 import { filterInterviewSchedules } from "./interviewScheduleSearch";
 import masterDataClient from "../api/clients/masterDataClient";
@@ -38,6 +44,7 @@ import {
   SearchBar,
   StatusChip
 } from "../components/enterprise";
+import PermittedFeedbackHistoryPanel from "../components/interviews/PermittedFeedbackHistoryPanel";
 import { useCopilotContext } from "../components/copilot/CopilotContext";
 import { useNavigationFilters } from "@/copilot/core/useNavigationFilters";
 
@@ -215,6 +222,14 @@ function InterviewSchedulePage() {
     notes: ""
   });
   const [scheduleActionLoading, setScheduleActionLoading] = useState(false);
+  const [scheduleSubmitLoading, setScheduleSubmitLoading] = useState(false);
+  const [scheduledFeedbackHistory, setScheduledFeedbackHistory] = useState([]);
+  const [repeatDialogOpen, setRepeatDialogOpen] = useState(false);
+  const [repeatPrecheck, setRepeatPrecheck] = useState(null);
+  const [repeatForm, setRepeatForm] = useState({
+    repeatReason: "",
+    repeatOverrideAcknowledged: false
+  });
   const [feedbackSnack, setFeedbackSnack] = useState({
     open: false,
     severity: "success",
@@ -336,6 +351,24 @@ function InterviewSchedulePage() {
     fetchRoundOptions();
     fetchSchedules();
   }, []);
+
+  useEffect(() => {
+    if (!canManageScheduledInterviews) {
+      setScheduledFeedbackHistory([]);
+      return;
+    }
+
+    (async () => {
+      try {
+        const response = await interviewClient.getRecruiterScheduledFeedbackHistory();
+        const rows = response?.data;
+        setScheduledFeedbackHistory(Array.isArray(rows) ? rows : []);
+      } catch (error) {
+        console.log(error);
+        setScheduledFeedbackHistory([]);
+      }
+    })();
+  }, [canManageScheduledInterviews]);
 
   // Capture Recruiter Requisition Details navigation state on first load only.
   useEffect(() => {
@@ -612,19 +645,44 @@ function InterviewSchedulePage() {
     }
   };
 
-  const handleScheduleInterview = async () => {
-    try {
-      await API.post("/schedule-interview", {
-        req_id: Number(formData.req_id),
-        map_id: Number(formData.map_id),
-        interviewer_id: Number(formData.interviewer_id),
-        round_type: formData.round_type,
-        interview_date: formData.interview_date,
-        interview_time: formData.interview_time,
-        remarks: formData.remarks
-      });
+  const buildSchedulePayload = (repeatOptions = null) => {
+    const base = {
+      req_id: Number(formData.req_id),
+      map_id: Number(formData.map_id),
+      interviewer_id: Number(formData.interviewer_id),
+      round_type: formData.round_type,
+      interview_date: formData.interview_date,
+      interview_time: formData.interview_time,
+      remarks: formData.remarks
+    };
 
-      alert("Interview Scheduled Successfully");
+    if (!repeatOptions) {
+      return base;
+    }
+
+    return buildRepeatSchedulePayload(base, {
+      repeatConfirmation: true,
+      repeatReason: repeatOptions.repeatReason,
+      repeatOverrideAcknowledged: repeatOptions.repeatOverrideAcknowledged
+    });
+  };
+
+  const submitScheduleInterview = async (repeatOptions = null) => {
+    setScheduleSubmitLoading(true);
+
+    try {
+      await API.post("/schedule-interview", buildSchedulePayload(repeatOptions));
+
+      clearInterviewProgressPreviewCache(formData.map_id);
+      setRepeatDialogOpen(false);
+      setRepeatPrecheck(null);
+      setRepeatForm({ repeatReason: "", repeatOverrideAcknowledged: false });
+
+      setFeedbackSnack({
+        open: true,
+        severity: "success",
+        message: "Interview scheduled successfully."
+      });
 
       fetchSchedules();
 
@@ -638,9 +696,105 @@ function InterviewSchedulePage() {
         remarks: ""
       });
     } catch (error) {
-      console.log(error);
-      alert(error?.response?.data?.message || "Failed to Schedule Interview");
+      const payload = error?.response?.data || {};
+
+      setFeedbackSnack({
+        open: true,
+        severity: "error",
+        message: payload.message || "Failed to schedule interview."
+      });
+
+      if (requiresRepeatDialog(payload.guard || payload)) {
+        setRepeatPrecheck(payload.guard || payload);
+        setRepeatDialogOpen(true);
+      }
+    } finally {
+      setScheduleSubmitLoading(false);
     }
+  };
+
+  const handleScheduleInterview = async () => {
+    if (
+      !formData.req_id
+      || !formData.map_id
+      || !formData.interviewer_id
+      || !formData.round_type
+      || !formData.interview_date
+      || !formData.interview_time
+    ) {
+      setFeedbackSnack({
+        open: true,
+        severity: "warning",
+        message: "Complete all required schedule fields before continuing."
+      });
+      return;
+    }
+
+    try {
+      const precheckResponse = await interviewClient.getSchedulePrecheck(
+        formData.map_id,
+        formData.round_type
+      );
+      const precheck = precheckResponse?.data || precheckResponse;
+
+      if (
+        precheck.guardCode === REPEAT_GUARD_CODES.ACTIVE_SCHEDULED
+        || precheck.guardCode === REPEAT_GUARD_CODES.PENDING_FEEDBACK
+      ) {
+        setFeedbackSnack({
+          open: true,
+          severity: "warning",
+          message: precheck.message || "Cannot schedule another session at this stage."
+        });
+        return;
+      }
+
+      if (requiresRepeatDialog(precheck)) {
+        setRepeatPrecheck(precheck);
+        setRepeatForm({ repeatReason: "", repeatOverrideAcknowledged: false });
+        setRepeatDialogOpen(true);
+        return;
+      }
+
+      await submitScheduleInterview();
+    } catch (error) {
+      setFeedbackSnack({
+        open: true,
+        severity: "error",
+        message:
+          error?.response?.data?.message
+          || "Unable to validate repeat interview rules."
+      });
+    }
+  };
+
+  const handleRepeatScheduleConfirm = async () => {
+    if (!repeatForm.repeatReason.trim()) {
+      setFeedbackSnack({
+        open: true,
+        severity: "warning",
+        message: "A reason is required to schedule another interview at this stage."
+      });
+      return;
+    }
+
+    if (
+      repeatPrecheck?.guardCode === REPEAT_GUARD_CODES.OVERRIDE_REJECTED
+      && !repeatForm.repeatOverrideAcknowledged
+    ) {
+      setFeedbackSnack({
+        open: true,
+        severity: "warning",
+        message:
+          "Acknowledge the rejected-stage override requirement before continuing."
+      });
+      return;
+    }
+
+    await submitScheduleInterview({
+      repeatReason: repeatForm.repeatReason,
+      repeatOverrideAcknowledged: repeatForm.repeatOverrideAcknowledged
+    });
   };
 
   const candidateOptions = candidates.map((c) => ({
@@ -984,6 +1138,7 @@ function InterviewSchedulePage() {
                         variant="contained"
                         startIcon={<EventAvailableOutlinedIcon />}
                         onClick={handleScheduleInterview}
+                        disabled={scheduleSubmitLoading}
                         sx={{
                           textTransform: "none",
                           fontWeight: 600,
@@ -997,6 +1152,17 @@ function InterviewSchedulePage() {
                   </Grid>
                 </Grid>
               </EnterpriseSurface>
+
+              {canManageScheduledInterviews ? (
+                <Box sx={{ mb: 2.5 }}>
+                  <PermittedFeedbackHistoryPanel
+                    title="Submitted feedback — sessions you scheduled"
+                    description="Each row is a separate interview session with submitted feedback. HR feedback is not included."
+                    items={scheduledFeedbackHistory}
+                    emptyMessage="No submitted feedback yet for interviews you scheduled."
+                  />
+                </Box>
+              ) : null}
 
               <Box>
                 <Stack
@@ -1048,6 +1214,105 @@ function InterviewSchedulePage() {
           </Container>
         </Box>
       </Box>
+
+      <Dialog
+        open={repeatDialogOpen}
+        onClose={scheduleSubmitLoading ? undefined : () => setRepeatDialogOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle sx={{ fontWeight: 600 }}>
+          Schedule another interview at this stage
+        </DialogTitle>
+        <DialogContent>
+          <Stack spacing={1.5} sx={{ pt: 0.5 }}>
+            {repeatPrecheck?.guardCode === REPEAT_GUARD_CODES.OVERRIDE_REJECTED ? (
+              <Alert severity="error">
+                The current decision for this stage is Rejected. Only an authorized
+                operator (Admin, TA Lead, or requisition assigner) may schedule another
+                session after override acknowledgement.
+              </Alert>
+            ) : (
+              <Alert severity="warning">
+                A previous session at this stage was completed. Confirm the repeat and
+                provide a reason before scheduling.
+              </Alert>
+            )}
+
+            <Typography variant="body2" color="text.secondary">
+              Stage: {repeatPrecheck?.stageBucket || formData.round_type}
+              {repeatPrecheck?.previousSessionCount != null
+                ? ` · ${repeatPrecheck.previousSessionCount} prior session(s)`
+                : ""}
+            </Typography>
+
+            {repeatPrecheck?.currentDecision?.outcome ? (
+              <Typography variant="body2">
+                Previous decision:{" "}
+                <strong>{repeatPrecheck.currentDecision.outcome}</strong>
+              </Typography>
+            ) : null}
+
+            <TextField
+              fullWidth
+              size="small"
+              label="Reason for repeat interview"
+              value={repeatForm.repeatReason}
+              onChange={(event) =>
+                setRepeatForm((prev) => ({
+                  ...prev,
+                  repeatReason: event.target.value
+                }))
+              }
+              multiline
+              minRows={2}
+              required
+            />
+
+            {repeatPrecheck?.guardCode === REPEAT_GUARD_CODES.OVERRIDE_REJECTED ? (
+              <Alert severity="warning" variant="outlined">
+                Override acknowledgement is required. The backend will verify your
+                authorization before creating the interview.
+              </Alert>
+            ) : null}
+
+            {repeatPrecheck?.guardCode === REPEAT_GUARD_CODES.OVERRIDE_REJECTED ? (
+              <Button
+                variant="outlined"
+                color="warning"
+                onClick={() =>
+                  setRepeatForm((prev) => ({
+                    ...prev,
+                    repeatOverrideAcknowledged: !prev.repeatOverrideAcknowledged
+                  }))
+                }
+                sx={{ alignSelf: "flex-start", textTransform: "none" }}
+              >
+                {repeatForm.repeatOverrideAcknowledged
+                  ? "Override acknowledged"
+                  : "Acknowledge rejected-stage override"}
+              </Button>
+            ) : null}
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => setRepeatDialogOpen(false)}
+            disabled={scheduleSubmitLoading}
+            sx={{ textTransform: "none" }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleRepeatScheduleConfirm}
+            disabled={scheduleSubmitLoading}
+            sx={{ textTransform: "none" }}
+          >
+            Continue
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog
         open={rescheduleDialogOpen}

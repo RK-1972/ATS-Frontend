@@ -3,9 +3,12 @@ import { useNavigate, useParams } from "react-router-dom";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { useTheme } from "@mui/material/styles";
 import API from "../api/axios";
+import interviewClient from "../api/clients/interviewClient";
 import WorkspaceLayout from "../components/enterprise/WorkspaceLayout";
 import { ErrorState } from "../components/enterprise";
 import RecruiterNavRail from "../components/layout/RecruiterNavRail";
+import PermittedFeedbackHistoryPanel from "../components/interviews/PermittedFeedbackHistoryPanel";
+import { Box } from "@mui/material";
 
 function normalizeSkillName(value) {
   return String(value || "").trim().toLowerCase();
@@ -78,6 +81,7 @@ function InterviewFeedbackPage() {
 
   const [accessDenied, setAccessDenied] = useState(false);
   const [loadError, setLoadError] = useState("");
+  const [historicalFeedback, setHistoricalFeedback] = useState([]);
 
   // =====================================
   // Load Candidate Details
@@ -129,6 +133,29 @@ function InterviewFeedbackPage() {
     loadFeedbackDetails();
 
   }, []);
+
+  useEffect(() => {
+    const mapId = candidate?.map_id;
+
+    if (!mapId || accessDenied) {
+      setHistoricalFeedback([]);
+      return;
+    }
+
+    (async () => {
+      try {
+        const response = await interviewClient.getPermittedFeedbackHistory(
+          mapId,
+          scheduleId
+        );
+        const rows = response?.data || [];
+        setHistoricalFeedback(Array.isArray(rows) ? rows : []);
+      } catch (error) {
+        console.log(error);
+        setHistoricalFeedback([]);
+      }
+    })();
+  }, [candidate?.map_id, scheduleId, accessDenied]);
 
   // =====================================
   // Skill Functions
@@ -463,6 +490,15 @@ function InterviewFeedbackPage() {
           </div>
 
         </div>
+
+        <Box sx={{ mb: 2 }}>
+          <PermittedFeedbackHistoryPanel
+            title="Previous submitted feedback"
+            description="Read-only history for this candidate. HR interview feedback is never shown here."
+            items={historicalFeedback}
+            emptyMessage="No prior submitted feedback is available for your access scope."
+          />
+        </Box>
 
         {/* Assessment */}
 
