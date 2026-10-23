@@ -847,7 +847,7 @@ function OptalynxCopilotDrawer({
                   Icon={action.Icon}
                   accent={action.accent}
                   module={action.module}
-                  onSelect={() => onSuggestionSelect?.(action.inputText)}
+                  onSelect={() => onSuggestionSelect?.(action)}
                 />
               ))}
             </Stack>

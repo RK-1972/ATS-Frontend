@@ -24,7 +24,11 @@ import {
   createCopilotCommandRegistry,
   findCopilotCommand
 } from "./commandRegistry";
-import { mapSuggestionIdsToActionCards } from "./copilotQuickActionCatalog";
+import {
+  mapSuggestionIdsToActionCards,
+  resolveDirectNavigationActionIdFromMessage
+} from "./copilotQuickActionCatalog";
+import { navigateCopilotQuickAction } from "./copilotQuickActionNavigation";
 import { WORKSPACE_SESSION_REFRESHED_EVENT } from "@/utils/sessionWorkspaceRefresh";
 
 const UNKNOWN_COMMAND_MESSAGE =
@@ -229,8 +233,15 @@ function OptalynxCopilot({ iconButtonSx }) {
     setInputValue(event.target.value);
   };
 
-  const handleSuggestionSelect = (label) => {
-    setInputValue(label);
+  const handleSuggestionSelect = (action) => {
+    if (action?.navigatesDirectly && navigateCopilotQuickAction(navigate, action.id)) {
+      return;
+    }
+
+    const text =
+      typeof action === "string" ? action : action?.inputText || "";
+
+    setInputValue(text);
   };
 
   const handleScheduleInterviewComplete = async (context) => {
@@ -532,6 +543,13 @@ function OptalynxCopilot({ iconButtonSx }) {
   };
 
   const handleSend = async (enteredText) => {
+    const navigationActionId = resolveDirectNavigationActionIdFromMessage(enteredText);
+
+    if (navigationActionId && navigateCopilotQuickAction(navigate, navigationActionId)) {
+      setInputValue("");
+      return;
+    }
+
     if (isMapCandidatePhrase(enteredText)) {
       setInputValue("");
       await startMapCandidateConversation();

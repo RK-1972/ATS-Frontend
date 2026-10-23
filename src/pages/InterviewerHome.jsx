@@ -36,11 +36,13 @@ import {
 import { ENTERPRISE_MOBILE_PRIMARY_BUTTON_SX } from "../components/enterprise/enterpriseWorkspaceTokens";
 import { useNavigationFilters } from "@/copilot/core/useNavigationFilters";
 import { resolveInterviewerInterviewDisplayStatus } from "./interviewerHomeInterviewStatus";
+import { applyInterviewerViewFilter } from "@/components/copilot/interviewerCopilotFilters";
 
 function InterviewerHome() {
   const loggedInUser = JSON.parse(localStorage.getItem("user") || "null");
   const [interviews, setInterviews] = useState([]);
   const [focusScheduleId, setFocusScheduleId] = useState(null);
+  const [interviewerView, setInterviewerView] = useState(null);
   const [resumePreview, setResumePreview] = useState({ open: false, url: "", title: "" });
   const [resumeUnavailable, setResumeUnavailable] = useState({ open: false, title: "" });
   const navigate = useNavigate();
@@ -61,6 +63,10 @@ function InterviewerHome() {
   // Minimum navigation filter — same useNavigationFilters pattern as InterviewSchedulePage.
   // Any producer may navigate with { state: { filters: { schedule_id } } }.
   useNavigationFilters((filters) => {
+    if (filters.interviewer_view) {
+      setInterviewerView(String(filters.interviewer_view));
+    }
+
     if (filters.schedule_id == null || filters.schedule_id === "") {
       setFocusScheduleId(null);
       return;
@@ -69,13 +75,20 @@ function InterviewerHome() {
   });
 
   const displayedInterviews = useMemo(() => {
-    if (focusScheduleId == null || focusScheduleId === "") {
-      return interviews;
+    let rows = interviews;
+
+    if (interviewerView) {
+      rows = applyInterviewerViewFilter(rows, interviewerView);
     }
-    return interviews.filter(
+
+    if (focusScheduleId == null || focusScheduleId === "") {
+      return rows;
+    }
+
+    return rows.filter(
       (row) => String(row.schedule_id) === String(focusScheduleId)
     );
-  }, [interviews, focusScheduleId]);
+  }, [interviews, focusScheduleId, interviewerView]);
 
   // Live dashboard counts from /my-interviews (same rules as before).
   const scheduledCount = interviews.filter(
