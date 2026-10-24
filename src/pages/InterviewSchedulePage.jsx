@@ -697,11 +697,17 @@ function InterviewSchedulePage() {
       });
     } catch (error) {
       const payload = error?.response?.data || {};
+      const status = error?.response?.status;
+      const message = payload.message || "Failed to schedule interview.";
+      const isOfferHoldConflict =
+        status === 409 && /offer hold/i.test(String(message));
 
       setFeedbackSnack({
         open: true,
-        severity: "error",
-        message: payload.message || "Failed to schedule interview."
+        severity: isOfferHoldConflict ? "warning" : "error",
+        message: isOfferHoldConflict
+          ? `${message} Refresh the candidate workspace or contact the assigned recruiter to release the hold.`
+          : message
       });
 
       if (requiresRepeatDialog(payload.guard || payload)) {

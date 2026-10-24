@@ -484,6 +484,25 @@ const recruitmentClient = {
         data: { mapping_id: mappingId }
       })
     );
+  },
+
+  getCandidateOfferHoldStatus(candidateId) {
+    return httpGet(
+      `${ENDPOINTS.recruitment}/candidates/${encodeURIComponent(candidateId)}/offer-hold`,
+      () => ({ success: true, data: { on_hold: false } })
+    );
+  },
+
+  releaseCandidateOfferHold(candidateId, reason) {
+    return httpPost(
+      `${ENDPOINTS.recruitment}/candidates/${encodeURIComponent(candidateId)}/offer-hold/release`,
+      { reason },
+      () => ({
+        success: true,
+        message: "Candidate released from Offer Hold.",
+        data: {}
+      })
+    );
   }
 
 };

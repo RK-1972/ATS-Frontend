@@ -39,6 +39,7 @@ import CandidateOwnershipCard from "@/components/candidate-workspace/CandidateOw
 import CandidateOwnershipDialog from "@/components/candidate-workspace/CandidateOwnershipDialog";
 import EnterpriseConfirmationDialog from "@/components/enterprise/EnterpriseConfirmationDialog";
 import CandidateDraftRegisterPanel from "@/components/candidate-workspace/CandidateDraftRegisterPanel";
+import CandidateOfferHoldBanner from "@/components/candidate-workspace/CandidateOfferHoldBanner";
 import candidateRepository from "@/repositories/candidateRepository";
 import useEnterpriseStore from "@/store/enterpriseStore";
 import { buildEntityAuditEvents } from "@/enterprise/recruiterSelectors.wave2";
@@ -551,6 +552,14 @@ if (
             onOverflowAction={handleToolbarOverflow}
           />
         }
+      />
+
+      <CandidateOfferHoldBanner
+        candidateId={candidate?.candidate_id}
+        onReleased={() => {
+          loadProfile?.();
+          loadCandidates?.();
+        }}
       />
 
       <Box sx={{ minWidth: 0, maxWidth: "100%", width: "100%", boxSizing: "border-box" }}>
