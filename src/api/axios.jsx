@@ -14,6 +14,28 @@ const API = axios.create({
 // Attach JWT Token Automatically
 // =====================================================
 
+API.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error.response?.status;
+    const code = error.response?.data?.code;
+
+    if (status === 401 && code === "SESSION_INVALID") {
+      clearAuthStorage();
+      if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+        window.location.assign(
+          `/login?session=ended&message=${encodeURIComponent(
+            error.response?.data?.message
+              || "Your session is no longer active. Sign in again."
+          )}`
+        );
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
 API.interceptors.request.use(
 
   (config) => {

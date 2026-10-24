@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
+  Alert,
   Box,
   Button,
   Card,
@@ -21,9 +22,64 @@ import LoginOutlinedIcon from "@mui/icons-material/LoginOutlined";
 import PersonAddOutlinedIcon from "@mui/icons-material/PersonAddOutlined";
 
 import { getAvailableWorkspaces } from "@/enterprise/workspaceAvailability";
+import sessionTakeoverClient from "@/api/clients/sessionTakeoverClient";
 import API from "../api/axios";
 import AppHeader from "../components/layout/AppHeader";
 import OptalynxLoader from "../components/OptalynxLoader";
+
+function persistLoginPayload(payload) {
+  localStorage.setItem("token", payload.token);
+  localStorage.setItem("user", JSON.stringify(payload.user));
+  localStorage.setItem(
+    "work_assignments",
+    JSON.stringify(payload.work_assignments || [])
+  );
+  localStorage.setItem(
+    "work_assignment_status",
+    payload.work_assignment_status || ""
+  );
+  localStorage.setItem(
+    "workspace",
+    JSON.stringify(payload.workspace || {})
+  );
+}
+
+function routeAfterLogin(navigate, user, workspaceFlags) {
+  const availableWorkspaces = getAvailableWorkspaces({
+    user,
+    workspaceFlags
+  });
+
+  if (
+    user.role_name === "Recruiter"
+    && user.secondary_role === "Interviewer"
+  ) {
+    navigate("/workspace");
+  } else if (availableWorkspaces.length > 1) {
+    navigate("/workspace");
+  } else if (availableWorkspaces.length === 1) {
+    const destination = availableWorkspaces[0].path;
+
+    if (destination === "/interviewer") {
+      localStorage.setItem("activeWorkspace", "Interviewer");
+    }
+
+    navigate(destination);
+  } else if (user.role_name === "Interviewer") {
+    localStorage.setItem("activeWorkspace", "Interviewer");
+    navigate("/interviewer");
+  } else if (user.role_name === "Recruiter") {
+    navigate("/recruiter");
+  } else if (
+    user.role_name === "TA Lead"
+    || user.role_name === "TA Leader"
+    || workspaceFlags.showTaLeadWorkspace
+  ) {
+    navigate("/ta-lead");
+  } else {
+    navigate("/");
+  }
+}
 
 const loginCardEnter = keyframes`
   from {
@@ -378,9 +434,118 @@ function LoginPage() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [infoMessage, setInfoMessage] = useState("");
+  const [takeoverPollToken, setTakeoverPollToken] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isCandidateSignInLoading, setIsCandidateSignInLoading] = useState(false);
   const [isCandidateRegisterLoading, setIsCandidateRegisterLoading] = useState(false);
+  const takeoverPollRef = useRef(null);
+  const takeoverDeadlineRef = useRef(null);
+  const takeoverCredentialsRef = useRef({ email_id: "", password: "" });
+
+  const stopTakeoverPolling = (terminalMessage, asError = true) => {
+    if (takeoverPollRef.current) {
+      window.clearInterval(takeoverPollRef.current);
+      takeoverPollRef.current = null;
+    }
+    setTakeoverPollToken(null);
+    setIsLoading(false);
+    setInfoMessage("");
+    if (terminalMessage) {
+      if (asError) {
+        setErrorMessage(terminalMessage);
+      } else {
+        setInfoMessage(terminalMessage);
+      }
+    }
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sessionEnded = params.get("session") === "ended";
+    const queryMessage = params.get("message");
+    const stateMessage = location.state?.sessionMessage;
+
+    if (sessionEnded || stateMessage) {
+      setInfoMessage(
+        stateMessage
+        || queryMessage
+        || "Your session is no longer active. Sign in again."
+      );
+    }
+  }, [location.state?.sessionMessage]);
+
+  useEffect(() => {
+    return () => {
+      if (takeoverPollRef.current) {
+        window.clearInterval(takeoverPollRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!takeoverPollToken) {
+      return undefined;
+    }
+
+    const pollOnce = async () => {
+      if (
+        takeoverDeadlineRef.current
+        && Date.now() > takeoverDeadlineRef.current
+      ) {
+        stopTakeoverPolling(
+          "The approval request timed out. Try signing in again later."
+        );
+        return;
+      }
+
+      try {
+        const pollResponse = await sessionTakeoverClient.pollStatus(takeoverPollToken);
+        const status = pollResponse?.data?.status;
+
+        if (status === "APPROVED" && pollResponse?.data?.can_complete) {
+          const completed = await sessionTakeoverClient.completeLogin({
+            pollToken: takeoverPollToken,
+            email_id: takeoverCredentialsRef.current.email_id,
+            password: takeoverCredentialsRef.current.password
+          });
+          stopTakeoverPolling(null);
+          persistLoginPayload(completed);
+          routeAfterLogin(
+            navigate,
+            completed.user,
+            completed.workspace || {}
+          );
+          return;
+        }
+
+        if (status === "DENIED") {
+          stopTakeoverPolling(
+            pollResponse?.data?.message
+            || "Sign-in was denied. Your existing session remains active."
+          );
+        } else if (status === "EXPIRED" || status === "CANCELLED") {
+          stopTakeoverPolling(
+            pollResponse?.data?.message
+            || "The approval request expired. Try again later."
+          );
+        }
+      } catch (pollError) {
+        stopTakeoverPolling(
+          pollError.response?.data?.message || "Unable to complete sign-in approval."
+        );
+      }
+    };
+
+    pollOnce();
+    takeoverPollRef.current = window.setInterval(pollOnce, 2500);
+
+    return () => {
+      if (takeoverPollRef.current) {
+        window.clearInterval(takeoverPollRef.current);
+      }
+    };
+  }, [takeoverPollToken, navigate]);
 
   useEffect(() => {
     setFormData({
@@ -435,6 +600,8 @@ function LoginPage() {
 
   const handleLogin = async () => {
     setIsLoading(true);
+    setErrorMessage("");
+    setInfoMessage("");
 
     await waitForLoginLoaderVisibility();
 
@@ -444,63 +611,63 @@ function LoginPage() {
         password: formData.password
       });
 
-      localStorage.setItem("token", response.data.token);
-      localStorage.setItem("user", JSON.stringify(response.data.user));
-      localStorage.setItem(
-        "work_assignments",
-        JSON.stringify(response.data.work_assignments || [])
-      );
-      localStorage.setItem(
-        "work_assignment_status",
-        response.data.work_assignment_status || ""
-      );
-      localStorage.setItem(
-        "workspace",
-        JSON.stringify(response.data.workspace || {})
-      );
-
-      const user = response.data.user;
-      const workspaceFlags = response.data.workspace || {};
-
-      const availableWorkspaces = getAvailableWorkspaces({
-        user,
-        workspaceFlags
-      });
-
-      setIsLoading(false);
-
       if (
-        user.role_name === "Recruiter" &&
-        user.secondary_role === "Interviewer"
+        response.status === 202
+        || response.data?.code === "SESSION_TAKEOVER_PENDING"
       ) {
-        navigate("/workspace");
-      } else if (availableWorkspaces.length > 1) {
-        navigate("/workspace");
-      } else if (availableWorkspaces.length === 1) {
-        const destination = availableWorkspaces[0].path;
-
-        if (destination === "/interviewer") {
-          localStorage.setItem("activeWorkspace", "Interviewer");
+        const pollToken = response.data?.data?.poll_token;
+        if (!pollToken) {
+          throw new Error("Missing takeover poll token");
         }
-
-        navigate(destination);
-      } else if (user.role_name === "Interviewer") {
-        localStorage.setItem("activeWorkspace", "Interviewer");
-        navigate("/interviewer");
-      } else if (user.role_name === "Recruiter") {
-        navigate("/recruiter");
-      } else if (
-        user.role_name === "TA Lead"
-        || user.role_name === "TA Leader"
-        || workspaceFlags.showTaLeadWorkspace
-      ) {
-        navigate("/ta-lead");
-      } else {
-        navigate("/");
+        takeoverCredentialsRef.current = {
+          email_id: formData.email_id,
+          password: formData.password
+        };
+        const expiresAt = response.data?.data?.expires_at;
+        takeoverDeadlineRef.current = expiresAt
+          ? new Date(expiresAt).getTime() + 5000
+          : Date.now() + 125000;
+        setTakeoverPollToken(pollToken);
+        setInfoMessage(
+          response.data?.message
+          || "Waiting for approval on your active session…"
+        );
+        return;
       }
+
+      if (response.data?.code === "SESSION_TAKEOVER_COMPLETE_REQUIRED") {
+        setIsLoading(false);
+        setErrorMessage(
+          response.data?.message
+          || "Complete the approved sign-in on the requesting device, or wait and try again."
+        );
+        return;
+      }
+
+      if (!response.data?.token) {
+        setIsLoading(false);
+        setErrorMessage("Login did not return a session. Try again.");
+        return;
+      }
+
+      persistLoginPayload(response.data);
+      setIsLoading(false);
+      routeAfterLogin(
+        navigate,
+        response.data.user,
+        response.data.workspace || {}
+      );
     } catch (error) {
       setIsLoading(false);
       console.log(error);
+
+      if (error.response?.data?.code === "SESSION_TAKEOVER_COMPLETE_REQUIRED") {
+        setErrorMessage(
+          error.response?.data?.message
+          || "Complete the approved sign-in on the requesting device, or wait and try again."
+        );
+        return;
+      }
 
       setErrorMessage(
         error.response?.data?.message || "Login Failed"
@@ -718,6 +885,11 @@ function LoginPage() {
                     }}
                   />
 
+                  {infoMessage ? (
+                    <Alert severity="info" sx={{ mb: 1 }}>
+                      {infoMessage}
+                    </Alert>
+                  ) : null}
                   {errorMessage ? (
                     <Typography
                       variant="caption"

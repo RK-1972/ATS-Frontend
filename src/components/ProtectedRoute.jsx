@@ -4,6 +4,7 @@ import { useLayoutEffect, useRef } from "react";
 import { enforceSession } from "../utils/sessionAuth";
 import useEnterpriseStore from "../store/enterpriseStore";
 import ApplicationScreenTelemetry from "./telemetry/ApplicationScreenTelemetry";
+import SessionTakeoverHost from "./session-takeover/SessionTakeoverHost";
 
 /**
  * Route gate: require a non-expired JWT before rendering protected UI.
@@ -34,6 +35,7 @@ function ProtectedRoute({ children }) {
   return (
     <>
       <ApplicationScreenTelemetry />
+      <SessionTakeoverHost />
       {children}
     </>
   );
