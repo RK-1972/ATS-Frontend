@@ -43,10 +43,23 @@ export default function useSessionTakeoverInbox({ enabled = true, onSessionRevok
     refreshInbox();
     pollRef.current = window.setInterval(refreshInbox, INBOX_POLL_MS);
 
+    const refreshWhenActive = () => {
+      if (document.visibilityState === "visible") {
+        refreshInbox();
+      }
+    };
+
+    document.addEventListener("visibilitychange", refreshWhenActive);
+    window.addEventListener("online", refreshInbox);
+    window.addEventListener("pageshow", refreshWhenActive);
+
     return () => {
       if (pollRef.current) {
         window.clearInterval(pollRef.current);
       }
+      document.removeEventListener("visibilitychange", refreshWhenActive);
+      window.removeEventListener("online", refreshInbox);
+      window.removeEventListener("pageshow", refreshWhenActive);
     };
   }, [enabled, refreshInbox]);
 

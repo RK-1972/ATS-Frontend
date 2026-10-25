@@ -23,11 +23,13 @@ import PersonAddOutlinedIcon from "@mui/icons-material/PersonAddOutlined";
 
 import { getAvailableWorkspaces } from "@/enterprise/workspaceAvailability";
 import sessionTakeoverClient from "@/api/clients/sessionTakeoverClient";
+import { clearEmployeeIdleSync } from "@/utils/employeeIdleSync";
 import API from "../api/axios";
 import AppHeader from "../components/layout/AppHeader";
 import OptalynxLoader from "../components/OptalynxLoader";
 
 function persistLoginPayload(payload) {
+  clearEmployeeIdleSync();
   localStorage.setItem("token", payload.token);
   localStorage.setItem("user", JSON.stringify(payload.user));
   localStorage.setItem(
@@ -540,10 +542,23 @@ function LoginPage() {
     pollOnce();
     takeoverPollRef.current = window.setInterval(pollOnce, 2500);
 
+    const pollWhenActive = () => {
+      if (document.visibilityState === "visible") {
+        pollOnce();
+      }
+    };
+
+    document.addEventListener("visibilitychange", pollWhenActive);
+    window.addEventListener("online", pollOnce);
+    window.addEventListener("pageshow", pollWhenActive);
+
     return () => {
       if (takeoverPollRef.current) {
         window.clearInterval(takeoverPollRef.current);
       }
+      document.removeEventListener("visibilitychange", pollWhenActive);
+      window.removeEventListener("online", pollOnce);
+      window.removeEventListener("pageshow", pollWhenActive);
     };
   }, [takeoverPollToken, navigate]);
 

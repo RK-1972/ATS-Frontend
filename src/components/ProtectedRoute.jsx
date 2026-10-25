@@ -5,6 +5,7 @@ import { enforceSession } from "../utils/sessionAuth";
 import useEnterpriseStore from "../store/enterpriseStore";
 import ApplicationScreenTelemetry from "./telemetry/ApplicationScreenTelemetry";
 import SessionTakeoverHost from "./session-takeover/SessionTakeoverHost";
+import EmployeeIdleLogoutHost from "./idle-logout/EmployeeIdleLogoutHost";
 
 /**
  * Route gate: require a non-expired JWT before rendering protected UI.
@@ -35,6 +36,7 @@ function ProtectedRoute({ children }) {
   return (
     <>
       <ApplicationScreenTelemetry />
+      <EmployeeIdleLogoutHost />
       <SessionTakeoverHost />
       {children}
     </>

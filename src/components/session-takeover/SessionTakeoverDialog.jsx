@@ -7,8 +7,10 @@ import {
   DialogContent,
   DialogTitle,
   Stack,
-  Typography
+  Typography,
+  useMediaQuery
 } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import DevicesOtherOutlinedIcon from "@mui/icons-material/DevicesOtherOutlined";
 
 import sessionTakeoverClient from "@/api/clients/sessionTakeoverClient";
@@ -28,6 +30,8 @@ function formatExpiry(expiresAt) {
 }
 
 export default function SessionTakeoverDialog({ pending, onResolved, onSessionRevoked }) {
+  const theme = useTheme();
+  const isCompactViewport = useMediaQuery(theme.breakpoints.down("sm"));
   const [submitting, setSubmitting] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -73,16 +77,33 @@ export default function SessionTakeoverDialog({ pending, onResolved, onSessionRe
       open
       maxWidth="sm"
       fullWidth
+      fullScreen={isCompactViewport}
       aria-labelledby="session-takeover-title"
+      aria-describedby="session-takeover-description"
       onClose={() => {}}
       disableEscapeKeyDown
+      PaperProps={{
+        sx: {
+          borderRadius: isCompactViewport ? 0 : 3,
+          pb: "env(safe-area-inset-bottom, 0px)"
+        }
+      }}
     >
-      <DialogTitle id="session-takeover-title" sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+      <DialogTitle
+        id="session-takeover-title"
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+          pr: 2,
+          pt: { xs: 2.5, sm: 2 }
+        }}
+      >
         <DevicesOtherOutlinedIcon color="warning" />
         Sign-in approval required
       </DialogTitle>
-      <DialogContent>
-        <Stack spacing={2}>
+      <DialogContent sx={{ pt: 0.5 }}>
+        <Stack spacing={2} id="session-takeover-description">
           <Typography variant="body1">
             Someone is trying to sign in with your account. If this was you on another
             device, you can allow access. Otherwise, deny the request to keep this session active.
@@ -91,7 +112,9 @@ export default function SessionTakeoverDialog({ pending, onResolved, onSessionRe
             <Typography variant="body2" sx={{ fontWeight: 600 }}>
               Request details (informational only)
             </Typography>
-            <Typography variant="body2">{deviceHint}</Typography>
+            <Typography variant="body2" sx={{ wordBreak: "break-word" }}>
+              {deviceHint}
+            </Typography>
             {ipHint ? (
               <Typography variant="caption" color="text.secondary">
                 {ipHint}
@@ -108,14 +131,28 @@ export default function SessionTakeoverDialog({ pending, onResolved, onSessionRe
           ) : null}
         </Stack>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
+      <DialogActions
+        sx={{
+          px: 3,
+          pb: { xs: 3, sm: 2 },
+          pt: 1,
+          flexDirection: { xs: "column-reverse", sm: "row" },
+          gap: 1,
+          "& .MuiButton-root": {
+            width: { xs: "100%", sm: "auto" },
+            minHeight: 44,
+            textTransform: "none",
+            fontWeight: 600
+          }
+        }}
+      >
         <Button
           variant="outlined"
           color="inherit"
           disabled={Boolean(submitting)}
           onClick={() => handleDecision("deny")}
         >
-          Deny
+          {submitting === "deny" ? "Denying…" : "Deny"}
         </Button>
         <Button
           variant="contained"
@@ -123,7 +160,7 @@ export default function SessionTakeoverDialog({ pending, onResolved, onSessionRe
           disabled={Boolean(submitting)}
           onClick={() => handleDecision("accept")}
         >
-          Allow sign-in
+          {submitting === "accept" ? "Allowing…" : "Allow sign-in"}
         </Button>
       </DialogActions>
     </Dialog>
