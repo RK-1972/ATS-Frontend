@@ -37,7 +37,8 @@ import {
 } from "@/utils/enterpriseNotificationEvents";
 import {
   buildNotificationFeed,
-  countNotifications
+  countNotifications,
+  isAllowedNotificationRoute
 } from "@/utils/enterpriseNotificationSections";
 import { resolveHeaderBusinessRoleLabel } from "@/utils/headerBusinessRoleLabel";
 
@@ -98,6 +99,10 @@ function AppHeader({
   const [budgetNotifications, setBudgetNotifications] = useState([]);
   const [requisitionNotifications, setRequisitionNotifications] = useState([]);
   const [offerNotifications, setOfferNotifications] = useState([]);
+  const [interviewNotifications, setInterviewNotifications] = useState([]);
+  const [assignedRequisitionNotifications, setAssignedRequisitionNotifications] =
+    useState([]);
+  const [feedbackNotifications, setFeedbackNotifications] = useState([]);
   const [menuAnchor, setMenuAnchor] = useState(null);
   const [userMenuAnchor, setUserMenuAnchor] = useState(null);
 
@@ -108,14 +113,18 @@ function AppHeader({
         resourceRequisition: requisitionNotifications,
         offer: offerNotifications,
         candidateOwnership: ownershipNotifications,
-        interviewScheduled: [],
-        assignedRequisition: []
+        interviewScheduled: interviewNotifications,
+        assignedRequisition: assignedRequisitionNotifications,
+        feedback: feedbackNotifications
       }),
     [
       budgetNotifications,
       requisitionNotifications,
       offerNotifications,
-      ownershipNotifications
+      ownershipNotifications,
+      interviewNotifications,
+      assignedRequisitionNotifications,
+      feedbackNotifications
     ]
   );
 
@@ -126,35 +135,47 @@ function AppHeader({
       candidateRepository.getMyOwnershipRequests(),
       MyApprovalsService.listMyBudgetApprovalNotifications(),
       MyApprovalsService.listMyRequisitionApprovalNotifications(),
-      MyApprovalsService.listMyOfferApprovalNotifications()
+      MyApprovalsService.listMyOfferApprovalNotifications(),
+      MyApprovalsService.listMyBellNotifications()
     ])
-      .then(([ownershipRequests, budgetRows, requisitionRows, offerRows]) => {
-        setOwnershipNotifications(
-          (Array.isArray(ownershipRequests) ? ownershipRequests : []).map(
+      .then(([ownershipRequests, budgetRows, requisitionRows, offerRows, bellRows]) => {
+        const bellGroups = MyApprovalsService.groupBellNotifications(bellRows);
+        setOwnershipNotifications([
+          ...(Array.isArray(ownershipRequests) ? ownershipRequests : []).map(
             MyApprovalsService.mapOwnershipNotification
-          )
-        );
-        setBudgetNotifications(
-          (Array.isArray(budgetRows) ? budgetRows : []).map(
+          ),
+          ...bellGroups.candidateOwnership
+        ]);
+        setBudgetNotifications([
+          ...(Array.isArray(budgetRows) ? budgetRows : []).map(
             MyApprovalsService.mapBudgetApprovalNotification
-          )
-        );
-        setRequisitionNotifications(
-          (Array.isArray(requisitionRows) ? requisitionRows : []).map(
+          ),
+          ...bellGroups.budget
+        ]);
+        setRequisitionNotifications([
+          ...(Array.isArray(requisitionRows) ? requisitionRows : []).map(
             MyApprovalsService.mapRequisitionApprovalNotification
-          )
-        );
-        setOfferNotifications(
-          (Array.isArray(offerRows) ? offerRows : []).map(
+          ),
+          ...bellGroups.resourceRequisition
+        ]);
+        setOfferNotifications([
+          ...(Array.isArray(offerRows) ? offerRows : []).map(
             MyApprovalsService.mapOfferApprovalNotification
-          )
-        );
+          ),
+          ...bellGroups.offer
+        ]);
+        setInterviewNotifications(bellGroups.interviewScheduled);
+        setAssignedRequisitionNotifications(bellGroups.assignedRequisition);
+        setFeedbackNotifications(bellGroups.feedback);
       })
       .catch(() => {
         setOwnershipNotifications([]);
         setBudgetNotifications([]);
         setRequisitionNotifications([]);
         setOfferNotifications([]);
+        setInterviewNotifications([]);
+        setAssignedRequisitionNotifications([]);
+        setFeedbackNotifications([]);
       });
   };
 
@@ -218,7 +239,35 @@ function AppHeader({
     navigate("/my-approvals", { state: { taskId } });
   };
 
+  const readOfferWorkspace = () => {
+    try {
+      return JSON.parse(localStorage.getItem("workspace") || "{}") || {};
+    } catch {
+      return {};
+    }
+  };
+
   const handleNotificationClick = (categoryKey, notification) => {
+    if (notification?.route && isAllowedNotificationRoute(notification.route)) {
+      handleMenuClose();
+      const workspace = readOfferWorkspace();
+      const offerRouteNeedsWorkspace =
+        notification.route === "/offers/my-requests"
+        || notification.route === "/offers/pending-approvals";
+
+      if (offerRouteNeedsWorkspace && !workspace.showOfferWorkspace) {
+        navigate("/my-approvals", {
+          state: notification.routeState || { taskId: notification.taskId }
+        });
+        return;
+      }
+
+      navigate(notification.route, {
+        state: notification.routeState || undefined
+      });
+      return;
+    }
+
     if (categoryKey === "budget") {
       handleBudgetApprovalClick(notification.taskId);
       return;
@@ -240,6 +289,10 @@ function AppHeader({
   };
 
   const resolveNotificationKey = (categoryKey, notification, index) => {
+    if (notification?.deliveryId) {
+      return `delivery-${notification.deliveryId}`;
+    }
+
     if (categoryKey === "budget") {
       return `budget-${notification.taskId}`;
     }
@@ -254,6 +307,10 @@ function AppHeader({
 
     if (categoryKey === "candidateOwnership") {
       return `ownership-${notification.requestId || index}`;
+    }
+
+    if (categoryKey === "feedback") {
+      return `feedback-${notification.taskId || index}`;
     }
 
     if (categoryKey === "interviewScheduled") {
@@ -271,12 +328,7 @@ function AppHeader({
   const handleOfferApprovalClick = (taskId, notification = null) => {
     handleMenuClose();
 
-    let workspace = {};
-    try {
-      workspace = JSON.parse(localStorage.getItem("workspace") || "{}") || {};
-    } catch (_error) {
-      workspace = {};
-    }
+    const workspace = readOfferWorkspace();
 
     const offerId =
       notification?.document_number || notification?.offerId || notification?.offerNumber || null;

@@ -36,6 +36,10 @@ const CATEGORY_VISUALS = {
   assignedRequisition: {
     Icon: PersonAddOutlinedIcon,
     accentKey: "secondary"
+  },
+  feedback: {
+    Icon: EventOutlinedIcon,
+    accentKey: "info"
   }
 };
 

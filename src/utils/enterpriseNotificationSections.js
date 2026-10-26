@@ -22,8 +22,78 @@ export const NOTIFICATION_CATEGORY_ORDER = [
   {
     key: "assignedRequisition",
     label: "Assigned Requisition"
+  },
+  {
+    key: "feedback",
+    label: "Feedback"
   }
 ];
+
+const ALLOWED_NOTIFICATION_ROUTES = new Set([
+  "/my-approvals",
+  "/offers/my-requests",
+  "/offers/pending-approvals",
+  "/workforce-planning/requests",
+  "/workforce-planning/approvals",
+  "/requisition-queues/approved",
+  "/requisition-queues/rejected",
+  "/requisition-queues/clarification",
+  "/recruiter/ownership-requests",
+  "/recruiter/my-requisitions",
+  "/interviewer",
+  "/interview-schedule"
+]);
+
+export function isClarificationTask(row) {
+  return String(row?.task_type || "").trim().toLowerCase() === "clarification";
+}
+
+export function budgetApprovalNotificationCopy(row) {
+  const budgetNumber = row?.document_number || "—";
+  const isClarificationRequest = isClarificationTask(row);
+
+  return {
+    isClarificationRequest,
+    title: isClarificationRequest
+      ? "Budget Clarification Required"
+      : "Budget Approval Required",
+    message: isClarificationRequest
+      ? `Budget Request ${budgetNumber} requires your clarification response.`
+      : `Budget Request ${budgetNumber} requires your approval.`
+  };
+}
+
+export function requisitionApprovalNotificationCopy(row) {
+  const requisitionNumber = row?.document_number || row?.requisition_code || "—";
+  const isClarificationRequest = isClarificationTask(row);
+
+  return {
+    isClarificationRequest,
+    title: isClarificationRequest
+      ? "Requisition Clarification Required"
+      : "Requisition Approval Required",
+    message: isClarificationRequest
+      ? `Requisition ${requisitionNumber} requires your clarification response.`
+      : `Requisition ${requisitionNumber} requires your approval.`
+  };
+}
+
+export function isAllowedNotificationRoute(route) {
+  const value = String(route || "").trim();
+
+  if (!value || value.includes("://") || value.startsWith("//")) {
+    return false;
+  }
+
+  if (ALLOWED_NOTIFICATION_ROUTES.has(value)) {
+    return true;
+  }
+
+  return (
+    /^\/recruiter\/my-requisitions\/[^/]+$/.test(value)
+    || /^\/view-feedback\/[^/]+$/.test(value)
+  );
+}
 
 const CATEGORY_LABEL_BY_KEY = NOTIFICATION_CATEGORY_ORDER.reduce(
   (accumulator, category) => {

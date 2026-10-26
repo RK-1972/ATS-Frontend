@@ -5,7 +5,10 @@ import { fileURLToPath } from "node:url";
 
 import {
   buildNotificationFeed,
-  countNotifications
+  countNotifications,
+  budgetApprovalNotificationCopy,
+  requisitionApprovalNotificationCopy,
+  isAllowedNotificationRoute
 } from "../src/utils/enterpriseNotificationSections.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -207,5 +210,41 @@ assert.equal(emptyOfferFeed.some((item) => item.categoryKey === "offer"), false)
 assert.equal(countNotifications(emptyOfferFeed), 0);
 
 pass("no pending offer approvals produces no offer bell item");
+
+const budgetClarification = budgetApprovalNotificationCopy({
+  document_number: "BR-9",
+  task_type: "clarification"
+});
+assert.equal(budgetClarification.title, "Budget Clarification Required");
+assert.match(budgetClarification.message, /clarification response/i);
+assert.equal(
+  budgetApprovalNotificationCopy({ document_number: "BR-9", task_type: "approval" }).title,
+  "Budget Approval Required"
+);
+
+const requisitionClarification = requisitionApprovalNotificationCopy({
+  document_number: "REQ-9",
+  task_type: "clarification"
+});
+assert.equal(requisitionClarification.title, "Requisition Clarification Required");
+assert.equal(
+  requisitionApprovalNotificationCopy({ document_number: "REQ-9" }).title,
+  "Requisition Approval Required"
+);
+
+assert.equal(isAllowedNotificationRoute("/offers/my-requests"), true);
+assert.equal(isAllowedNotificationRoute("/recruiter/my-requisitions/REQ-1"), true);
+assert.equal(isAllowedNotificationRoute("/view-feedback/15"), true);
+assert.equal(isAllowedNotificationRoute("https://evil.example"), false);
+assert.equal(isAllowedNotificationRoute("//evil.example"), false);
+
+const approvalsSource = read("src/services/myApprovalsService.js");
+assert.match(approvalsSource, /listMyBellNotifications/);
+assert.match(approvalsSource, /\/api\/v1\/workflows\/my-bell-notifications/);
+assert.match(appHeaderSource, /listMyBellNotifications/);
+assert.match(appHeaderSource, /isAllowedNotificationRoute/);
+assert.doesNotMatch(appHeaderSource, /interviewScheduled:\s*\[\]/);
+
+pass("clarification headings, bell feed wiring, and route allowlist");
 
 console.log("\nPhase 6C-6 offer bell notification verification passed.");

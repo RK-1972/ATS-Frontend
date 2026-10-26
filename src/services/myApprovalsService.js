@@ -1,4 +1,8 @@
 import API from "../api/axios";
+import {
+  budgetApprovalNotificationCopy,
+  requisitionApprovalNotificationCopy
+} from "../utils/enterpriseNotificationSections";
 
 /**
  * List active workflow approvals assigned to the logged-in user.
@@ -50,6 +54,7 @@ function resolveApprovalSortTimestamp(row) {
 }
 
 function mapRequisitionApprovalNotification(row) {
+  const copy = requisitionApprovalNotificationCopy(row);
   const requisitionNumber =
     row?.document_number || row?.requisition_code || "—";
 
@@ -57,8 +62,9 @@ function mapRequisitionApprovalNotification(row) {
     taskId: row?.task_id,
     assignmentId: row?.assignment_id,
     requisitionNumber,
-    title: "Requisition Approval Required",
-    message: `Requisition ${requisitionNumber} requires your approval.`,
+    isClarificationRequest: copy.isClarificationRequest,
+    title: copy.title,
+    message: copy.message,
     assigned_on: row?.assigned_on || null,
     submitted_date: row?.submitted_date || null,
     sortTimestamp: resolveApprovalSortTimestamp(row)
@@ -66,14 +72,16 @@ function mapRequisitionApprovalNotification(row) {
 }
 
 function mapBudgetApprovalNotification(row) {
+  const copy = budgetApprovalNotificationCopy(row);
   const budgetNumber = row?.document_number || "—";
 
   return {
     taskId: row?.task_id,
     assignmentId: row?.assignment_id,
     budgetNumber,
-    title: "Budget Approval Required",
-    message: `Budget Request ${budgetNumber} requires your approval.`,
+    isClarificationRequest: copy.isClarificationRequest,
+    title: copy.title,
+    message: copy.message,
     assigned_on: row?.assigned_on || null,
     submitted_date: row?.submitted_date || null,
     sortTimestamp: resolveApprovalSortTimestamp(row)
@@ -183,11 +191,62 @@ async function submitClarification(instanceId, comments = "") {
   return response.data;
 }
 
+async function listMyBellNotifications() {
+  const response = await API.get("/api/v1/workflows/my-bell-notifications");
+  return Array.isArray(response?.data?.data) ? response.data.data : [];
+}
+
+function emptyBellGroups() {
+  return {
+    budget: [],
+    resourceRequisition: [],
+    offer: [],
+    candidateOwnership: [],
+    interviewScheduled: [],
+    assignedRequisition: [],
+    feedback: []
+  };
+}
+
+function mapBellNotification(row) {
+  return {
+    deliveryId: row?.delivery_id,
+    event: row?.event_key,
+    title: row?.title,
+    message: row?.message,
+    categoryKey: row?.category,
+    route: row?.route || null,
+    routeState: row?.route_state || null,
+    taskId: row?.task_id || row?.route_state?.taskId || null,
+    documentNumber: row?.document_number || null,
+    offerId: row?.route_state?.offerId || row?.document_number || null,
+    document_number: row?.document_number || row?.route_state?.offerId || null,
+    sortTimestamp: row?.attempted_on || null,
+    assigned_on: row?.attempted_on || null
+  };
+}
+
+function groupBellNotifications(rows) {
+  const grouped = emptyBellGroups();
+
+  (Array.isArray(rows) ? rows : []).forEach((row) => {
+    const item = mapBellNotification(row);
+    if (!item.title || !grouped[item.categoryKey]) {
+      return;
+    }
+    grouped[item.categoryKey].push(item);
+  });
+
+  return grouped;
+}
+
 const MyApprovalsService = {
   listMyActiveApprovals,
   listMyRequisitionApprovalNotifications,
   listMyBudgetApprovalNotifications,
   listMyOfferApprovalNotifications,
+  listMyBellNotifications,
+  groupBellNotifications,
   mapRequisitionApprovalNotification,
   mapBudgetApprovalNotification,
   mapOfferApprovalNotification,
