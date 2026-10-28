@@ -230,4 +230,4 @@ function RequisitionsSidebar() {
 
 export default RequisitionsSidebar;
 
-export { REQUISITION_QUEUE_SECTIONS, DRAFT_REQUISITIONS_PATH };
+export { REQUISITION_QUEUE_SECTIONS };
