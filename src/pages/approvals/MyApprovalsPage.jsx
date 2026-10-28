@@ -49,6 +49,7 @@ import {
 import { matchesApprovalSearch } from "@/utils/myApprovalsSearch";
 import { dispatchApprovalNotificationsUpdated } from "@/utils/enterpriseNotificationEvents";
 import RequisitionWorkflowStepCell from "../../components/approvals/RequisitionWorkflowStepCell";
+import RequisitionInspectorDrawer from "../../components/requisitions/RequisitionInspectorDrawer";
 
 function resolveEnterpriseNavRail(user) {
   let workspace = {};
@@ -203,6 +204,8 @@ function MyApprovalsPage() {
   const [actionComments, setActionComments] = useState("");
   const [isActing, setIsActing] = useState(false);
   const [approvalInspectorDetail, setApprovalInspectorDetail] = useState(null);
+  const [requisitionDocumentInspectorCode, setRequisitionDocumentInspectorCode] =
+    useState(null);
   const [clarificationResponse, setClarificationResponse] = useState("");
   const [clarificationResponseTouched, setClarificationResponseTouched] =
     useState(false);
@@ -425,13 +428,20 @@ function MyApprovalsPage() {
   };
 
   const handleOpenInTalentDemand = (row) => {
-    if (row?.requisition_code) {
-      navigate("/requisitions", {
-        state: { requisitionCode: row.requisition_code }
-      });
+    const requisitionCode =
+      resolveRequisitionDocumentCode(row)
+      || approvalInspectorDetail?.requisition_code
+      || null;
+
+    if (requisitionCode) {
+      setRequisitionDocumentInspectorCode(requisitionCode);
       return;
     }
-    navigate("/requisitions");
+
+    setToast({
+      message: "Requisition code is missing for this approval task.",
+      severity: "error"
+    });
   };
 
   const handleOpenDocumentByType = (row) => {
@@ -1093,6 +1103,12 @@ function MyApprovalsPage() {
           {toast.message}
         </Alert>
       </Snackbar>
+
+      <RequisitionInspectorDrawer
+        open={Boolean(requisitionDocumentInspectorCode)}
+        requisitionCode={requisitionDocumentInspectorCode}
+        onClose={() => setRequisitionDocumentInspectorCode(null)}
+      />
     </WorkspaceLayout>
   );
 }
