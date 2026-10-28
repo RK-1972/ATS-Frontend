@@ -16,9 +16,10 @@ import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import RefreshOutlinedIcon from "@mui/icons-material/RefreshOutlined";
 
-import WorkspaceLayout from "../../components/enterprise/WorkspaceLayout";
+import AppHeader from "../../components/layout/AppHeader";
 import AdminNavRail from "../../components/layout/AdminNavRail";
 import RecruiterNavRail from "../../components/layout/RecruiterNavRail";
+import RequisitionsSidebar from "../../components/requisitions/RequisitionsSidebar";
 import EnterpriseCard from "../../components/enterprise/framework/EnterpriseCard";
 import EnterpriseWorkspaceHeader from "../../components/enterprise/framework/EnterpriseWorkspaceHeader";
 import EnterpriseConfirmationDialog from "../../components/enterprise/EnterpriseConfirmationDialog";
@@ -32,7 +33,7 @@ import {
 import TalentDemandDraftService from "../../services/talentDemandDraftService";
 import AuthorizationService from "../../services/authorizationService";
 
-function resolveEnterpriseNavRail(user) {
+function resolvePrimaryNavRail(user) {
   let workspace = {};
   try {
     workspace = JSON.parse(localStorage.getItem("workspace") || "{}") || {};
@@ -73,6 +74,7 @@ function MyDraftsPage() {
       return null;
     }
   }, []);
+  const userRole = loggedInUser?.role_name || "Admin";
 
   const [workItems, setWorkItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -214,6 +216,15 @@ function MyDraftsPage() {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("work_assignments");
+    localStorage.removeItem("work_assignment_status");
+    localStorage.removeItem("workspace");
+    navigate("/login");
+  };
+
   const columns = [
     {
       field: "draft_code",
@@ -316,114 +327,139 @@ function MyDraftsPage() {
   ];
 
   return (
-    <WorkspaceLayout navRail={resolveEnterpriseNavRail(loggedInUser)}>
-      <Box sx={{ bgcolor: "background.default" }}>
-        <EnterpriseWorkspaceHeader
-          title="Draft Requisitions"
-          subtitle="Find, reopen, and submit saved Talent Demand drafts and in-progress requisitions"
-          actions={
-            canAccessDrafts === false ? null : (
-            <>
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<RefreshOutlinedIcon />}
-                onClick={loadDrafts}
-                disabled={isLoading || canAccessDrafts !== true}
-                sx={{ textTransform: "none", fontWeight: 600 }}
-              >
-                Refresh
-              </Button>
-              <Button
-                variant="contained"
-                size="small"
-                onClick={() => navigate("/requisitions")}
-                sx={{ textTransform: "none", fontWeight: 600 }}
-              >
-                New Talent Demand
-              </Button>
-            </>
-            )
-          }
-        />
+    <Box
+      sx={{
+        minHeight: "100vh",
+        bgcolor: "background.default",
+        display: "flex",
+        flexDirection: "column"
+      }}
+    >
+      <AppHeader
+        loggedInUser={loggedInUser}
+        userRole={userRole}
+        onLogout={handleLogout}
+      />
 
-        {canAccessDrafts === null ? (
-          <LoadingState message="Checking access…" />
-        ) : canAccessDrafts === false ? (
-          <EnterpriseCard title="Access denied">
-            <Alert severity="warning" sx={{ borderRadius: 2 }}>
-              Enterprise Access Denied. You are not authorized to create a
-              Requisition. Draft Requisitions requires an active{" "}
-              REQUISITION_REQUESTOR work assignment.
-            </Alert>
-          </EnterpriseCard>
-        ) : (
-        <EnterpriseCard
-          title="Draft requisitions"
-          subtitle="Saved drafts and legacy requisitions awaiting submission for approval"
+      <Box sx={{ display: "flex", flex: 1 }}>
+        {resolvePrimaryNavRail(loggedInUser)}
+        <Box
+          sx={{
+            display: "flex",
+            flex: 1,
+            flexDirection: { xs: "column", md: "row" },
+            minWidth: 0
+          }}
         >
-          <Stack
-            direction={{ xs: "column", sm: "row" }}
-            spacing={1.5}
-            alignItems={{ xs: "stretch", sm: "center" }}
-            sx={{ mb: 1.5 }}
+          <RequisitionsSidebar />
+          <Box
+            component="main"
+            sx={{
+              flex: 1,
+              minWidth: 0,
+              px: { xs: 2, sm: 2.5 },
+              py: { xs: 2, sm: 2.5 },
+              maxWidth: 1480
+            }}
           >
-            <SearchBar
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search draft requisitions"
-              width={320}
-            />
-
-            <FormControl size="small" sx={{ minWidth: 160 }}>
-              <InputLabel id="my-drafts-status-filter-label">Status</InputLabel>
-              <Select
-                labelId="my-drafts-status-filter-label"
-                label="Status"
-                value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value)}
-                sx={{ borderRadius: 2 }}
-              >
-                {statusOptions.map((option) => (
-                  <MenuItem key={option} value={option}>
-                    {option === "ALL" ? "All statuses" : option}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Stack>
-
-          {isLoading ? (
-            <LoadingState message="Loading your work in progress…" />
-          ) : workItems.length === 0 ? (
-            <EmptyState
-              icon={DescriptionOutlinedIcon}
-              title="No work in progress yet"
-              description="Save a Talent Demand draft or continue an unsubmitted requisition to see it here."
-              actionLabel="Draft Requisitions"
-              onAction={() => navigate("/requisitions/my-drafts")}
-            />
-          ) : filteredDrafts.length === 0 ? (
-            <EmptyState
-              icon={DescriptionOutlinedIcon}
-              title="No matching work in progress"
-              description="Try a different search term or status filter for your drafts and requisitions."
-            />
-          ) : (
-            <EnterpriseDataGrid
-              rows={filteredDrafts}
-              columns={columns}
-              getRowId={(row) =>
-                row.work_item_type === "requisition"
-                  ? `req-${row.requisition_code}`
-                  : `draft-${row.draft_id}`
+            <EnterpriseWorkspaceHeader
+              title="Draft Requisitions"
+              subtitle="Find, reopen, and submit saved Talent Demand drafts and in-progress requisitions"
+              actions={
+                canAccessDrafts === false ? null : (
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<RefreshOutlinedIcon />}
+                    onClick={loadDrafts}
+                    disabled={isLoading || canAccessDrafts !== true}
+                    sx={{ textTransform: "none", fontWeight: 600 }}
+                  >
+                    Refresh
+                  </Button>
+                )
               }
-              height={480}
-              disableColumnMenu
             />
-          )}
-        </EnterpriseCard>
-        )}
+
+            {canAccessDrafts === null ? (
+              <LoadingState message="Checking access…" />
+            ) : canAccessDrafts === false ? (
+              <EnterpriseCard title="Access denied">
+                <Alert severity="warning" sx={{ borderRadius: 2 }}>
+                  Enterprise Access Denied. You are not authorized to create a
+                  Requisition. Draft Requisitions requires an active{" "}
+                  REQUISITION_REQUESTOR work assignment.
+                </Alert>
+              </EnterpriseCard>
+            ) : (
+              <EnterpriseCard
+                title="Draft requisitions"
+                subtitle="Saved drafts and legacy requisitions awaiting submission for approval"
+              >
+                <Stack
+                  direction={{ xs: "column", sm: "row" }}
+                  spacing={1.5}
+                  alignItems={{ xs: "stretch", sm: "center" }}
+                  sx={{ mb: 1.5 }}
+                >
+                  <SearchBar
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Search draft requisitions"
+                    width={320}
+                  />
+
+                  <FormControl size="small" sx={{ minWidth: 160 }}>
+                    <InputLabel id="my-drafts-status-filter-label">
+                      Status
+                    </InputLabel>
+                    <Select
+                      labelId="my-drafts-status-filter-label"
+                      label="Status"
+                      value={statusFilter}
+                      onChange={(event) => setStatusFilter(event.target.value)}
+                      sx={{ borderRadius: 2 }}
+                    >
+                      {statusOptions.map((option) => (
+                        <MenuItem key={option} value={option}>
+                          {option === "ALL" ? "All statuses" : option}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Stack>
+
+                {isLoading ? (
+                  <LoadingState message="Loading your work in progress…" />
+                ) : workItems.length === 0 ? (
+                  <EmptyState
+                    icon={DescriptionOutlinedIcon}
+                    title="No work in progress yet"
+                    description="Save a Talent Demand draft from an approved position to see it here."
+                  />
+                ) : filteredDrafts.length === 0 ? (
+                  <EmptyState
+                    icon={DescriptionOutlinedIcon}
+                    title="No matching work in progress"
+                    description="Try a different search term or status filter for your drafts and requisitions."
+                  />
+                ) : (
+                  <EnterpriseDataGrid
+                    rows={filteredDrafts}
+                    columns={columns}
+                    getRowId={(row) =>
+                      row.work_item_type === "requisition"
+                        ? `req-${row.requisition_code}`
+                        : `draft-${row.draft_id}`
+                    }
+                    height={480}
+                    disableColumnMenu
+                  />
+                )}
+              </EnterpriseCard>
+            )}
+          </Box>
+        </Box>
       </Box>
 
       <EnterpriseConfirmationDialog
@@ -458,7 +494,7 @@ function MyDraftsPage() {
           {toast.message}
         </Alert>
       </Snackbar>
-    </WorkspaceLayout>
+    </Box>
   );
 }
 

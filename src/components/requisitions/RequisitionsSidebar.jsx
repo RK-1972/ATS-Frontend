@@ -16,8 +16,12 @@ import VerifiedOutlinedIcon from "@mui/icons-material/VerifiedOutlined";
 import HelpOutlineOutlinedIcon from "@mui/icons-material/HelpOutlineOutlined";
 import HighlightOffOutlinedIcon from "@mui/icons-material/HighlightOffOutlined";
 
+import EditNoteOutlinedIcon from "@mui/icons-material/EditNoteOutlined";
+
 import AuthorizationService from "../../services/authorizationService";
 import useWorkforcePlanning from "../../hooks/useWorkforcePlanning";
+
+export const DRAFT_REQUISITIONS_PATH = "/requisitions/my-drafts";
 
 const REQUISITION_QUEUE_SECTIONS = [
   {
@@ -49,6 +53,7 @@ function RequisitionsSidebar() {
   const { data } = useWorkforcePlanning();
 
   const [canViewRequisitions, setCanViewRequisitions] = useState(false);
+  const [canRaiseRequisition, setCanRaiseRequisition] = useState(false);
 
   let workspace = {};
   try {
@@ -63,6 +68,7 @@ function RequisitionsSidebar() {
     AuthorizationService.canRaiseRequisition()
       .then((allowed) => {
         if (!cancelled) {
+          setCanRaiseRequisition(Boolean(allowed));
           setCanViewRequisitions(
             Boolean(allowed) || Boolean(workspace.showRequestWorkspace)
           );
@@ -70,6 +76,7 @@ function RequisitionsSidebar() {
       })
       .catch(() => {
         if (!cancelled) {
+          setCanRaiseRequisition(false);
           setCanViewRequisitions(Boolean(workspace.showRequestWorkspace));
         }
       });
@@ -129,6 +136,40 @@ function RequisitionsSidebar() {
       <Divider />
 
       <List sx={{ px: 1, py: 0.5 }}>
+        {canRaiseRequisition ? (
+          <ListItemButton
+            key="requisitions-draft-list"
+            selected={location.pathname.startsWith(DRAFT_REQUISITIONS_PATH)}
+            onClick={() => navigate(DRAFT_REQUISITIONS_PATH)}
+            sx={{
+              borderRadius: 1.5,
+              mb: 0.25,
+              py: 0.75,
+              minHeight: 40,
+              "&.Mui-selected": {
+                bgcolor: "rgba(31, 59, 99, 0.08)",
+                color: "primary.main",
+                "& .MuiListItemIcon-root": {
+                  color: "primary.main"
+                }
+              }
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: 36 }}>
+              <EditNoteOutlinedIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText
+              primary="Draft Requisitions"
+              primaryTypographyProps={{
+                fontWeight: location.pathname.startsWith(DRAFT_REQUISITIONS_PATH)
+                  ? 700
+                  : 500,
+                fontSize: 13
+              }}
+            />
+          </ListItemButton>
+        ) : null}
+
         {REQUISITION_QUEUE_SECTIONS.map((section) => {
           const Icon = section.icon;
           const active = location.pathname.startsWith(section.path);
@@ -189,4 +230,4 @@ function RequisitionsSidebar() {
 
 export default RequisitionsSidebar;
 
-export { REQUISITION_QUEUE_SECTIONS };
+export { REQUISITION_QUEUE_SECTIONS, DRAFT_REQUISITIONS_PATH };

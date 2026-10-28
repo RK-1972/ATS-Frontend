@@ -43,3 +43,25 @@ export function collectExperienceRangeErrors(experienceMin, experienceMax) {
 
   return errors;
 }
+
+/**
+ * Allow empty or a non-negative decimal numeric string while typing.
+ * Rejects trailing minus signs and other malformed values (e.g. "6-").
+ * @returns {string|null} sanitized value, or null to reject the change
+ */
+export function sanitizeExperienceInput(rawValue) {
+  if (rawValue === "" || rawValue === null || rawValue === undefined) {
+    return "";
+  }
+
+  const text = String(rawValue);
+  if (!/^\d*(\.\d*)?$/.test(text)) {
+    return null;
+  }
+
+  if (text.includes("-")) {
+    return null;
+  }
+
+  return text;
+}

@@ -23,6 +23,7 @@ import AdminNavRail from "../components/layout/AdminNavRail";
 import RecruiterNavRail from "../components/layout/RecruiterNavRail";
 import EnterpriseCard from "../components/enterprise/framework/EnterpriseCard";
 import EnterpriseWorkspaceHeader from "../components/enterprise/framework/EnterpriseWorkspaceHeader";
+import EnterpriseConfirmationDialog from "../components/enterprise/EnterpriseConfirmationDialog";
 import RecruiterAssignmentPanel from "../components/requisitions/RecruiterAssignmentPanel";
 import RequisitionHeadcountChangePanel from "../components/requisitions/RequisitionHeadcountChangePanel";
 import RequisitionBudgetChangePanel from "../components/requisitions/RequisitionBudgetChangePanel";
@@ -37,7 +38,7 @@ import { useCopilotContext } from "../components/copilot/CopilotContext";
 import { dispatchApprovalNotificationsUpdated } from "@/utils/enterpriseNotificationEvents";
 import useEnterpriseStore from "@/store/enterpriseStore";
 import RequisitionSkillMultiSelect from "../components/requisitions/RequisitionSkillMultiSelect";
-import { collectExperienceRangeErrors } from "../utils/experienceRangeValidation";
+import { collectExperienceRangeErrors, sanitizeExperienceInput } from "../utils/experienceRangeValidation";
 import { collectOpeningsCountErrors } from "../utils/nonNegativeNumericValidation";
 
 function resolveEnterpriseNavRail(user) {
@@ -63,6 +64,7 @@ function toOptionalNumber(value) {
 
 function toFormValue(value) {
   if (value === null || value === undefined) return "";
+  if (typeof value === "number") return String(value);
   return value;
 }
 
@@ -122,12 +124,13 @@ function mapDraftToFormData(draft, loggedInUser) {
     employment_type: draft.employment_type || "",
     priority_level: draft.priority_level || "",
     req_status: REQUISITION_STATUS.OPEN,
-    recruiter_id: draft.recruiter_id || loggedInUser?.employee_code || "",
+    recruiter_id: draft.recruiter_id || "",
     hiring_manager_id: toFormValue(draft.hiring_manager_id),
     hiring_manager: draft.hiring_manager || "",
     target_date: formatDateForInput(draft.target_date),
     route_id: toFormValue(draft.approval_route_id),
     approved_position_id: toFormValue(draft.approved_position_id),
+    budget_approved: "",
     created_by: draft.created_by || loggedInUser?.full_name || ""
   };
 }
@@ -218,6 +221,7 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
   );
   const [toast, setToast] = useState({ message: "", severity: "success" });
   const [submitSuccessOpen, setSubmitSuccessOpen] = useState(false);
+  const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
   const [submitErrorOpen, setSubmitErrorOpen] = useState(false);
   const [submitErrorMessage, setSubmitErrorMessage] = useState("");
   const [approvedPositions, setApprovedPositions] = useState([]);
@@ -267,6 +271,8 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
   const hasApprovedPositionOnForm = Boolean(
     String(formData.approved_position_id || "").trim()
   );
+  const openingsCountReadOnly =
+    hasApprovedPositionOnForm && !isEditMode;
   const jobTitleReadOnly =
     hasApprovedPositionOnForm &&
     (Boolean(catalogueApprovedPositionId) ||
@@ -287,6 +293,7 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
   })();
   const formPanelRef = useRef(null);
   const scrolledForEntryRef = useRef(null);
+  const draftHydratedRef = useRef(false);
   const entryScrollKey = catalogueEntryFlow
     ? `${suppliedDraftId || ""}|${catalogueApprovedPositionId || ""}`
     : null;
@@ -493,6 +500,7 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
 
     const loadDraft = async () => {
       setIsLoadingDraft(true);
+      draftHydratedRef.current = false;
 
       try {
         const response = await TalentDemandDraftService.getDraft(suppliedDraftId);
@@ -507,15 +515,6 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
           return;
         }
 
-        setDraftId(draft.draft_id ?? suppliedDraftId);
-        setDraftCode(draft.draft_code ?? null);
-        setDraftStatus(draft.status ?? "DRAFT");
-        setRowVersion(draft.row_version ?? null);
-        setResultRequisitionCode(draft.result_requisition_code ?? null);
-        setFormData(
-          mapDraftToFormData(draft, { employee_code: loggedInEmployeeCode })
-        );
-
         if (draft.client_id) {
           await loadRequisitionFormProjects(draft.client_id);
         }
@@ -527,6 +526,23 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
         if (draft.project_id) {
           await loadRequisitionFormHiringManagers(draft.project_id);
         }
+
+        if (cancelled) {
+          return;
+        }
+
+        setDraftId(draft.draft_id ?? suppliedDraftId);
+        setDraftCode(draft.draft_code ?? null);
+        setDraftStatus(draft.status ?? "DRAFT");
+        setRowVersion(draft.row_version ?? null);
+        setResultRequisitionCode(draft.result_requisition_code ?? null);
+        setFormData(
+          mapDraftToFormData(draft, {
+            employee_code: loggedInEmployeeCode,
+            full_name: loggedInUser?.full_name
+          })
+        );
+        draftHydratedRef.current = true;
       } catch (error) {
         if (!cancelled) {
           setToast({
@@ -552,7 +568,8 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
     suppliedRequisitionCode,
     loggedInEmployeeCode,
     loadRequisitionFormProjects,
-    loadRequisitionFormHiringManagers
+    loadRequisitionFormHiringManagers,
+    loggedInUser?.full_name
   ]);
 
   // Open newly created / linked requisition in the existing Talent Demand form.
@@ -675,6 +692,10 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
   ]);
 
   useEffect(() => {
+    if (isLoadingDraft) {
+      return;
+    }
+
     if (!fieldResolution?.approval_route_id) {
       return;
     }
@@ -684,11 +705,62 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
       return;
     }
 
+    if (suppliedDraftId && draftHydratedRef.current && formData.route_id) {
+      return;
+    }
+
     setFormData((prev) => ({
       ...prev,
       route_id: resolvedRouteId
     }));
-  }, [fieldResolution?.approval_route_id, formData.route_id]);
+  }, [
+    fieldResolution?.approval_route_id,
+    formData.route_id,
+    isLoadingDraft,
+    suppliedDraftId
+  ]);
+
+  useEffect(() => {
+    if (isLoadingDraft) {
+      return;
+    }
+
+    const positionId = formData.approved_position_id;
+    if (
+      !positionId ||
+      fieldResolution?.approved_position_id == null ||
+      String(fieldResolution.approved_position_id) !== String(positionId)
+    ) {
+      return;
+    }
+
+    setFormData((prev) => {
+      const next = { ...prev };
+
+      if (
+        fieldResolution.approved_headcount != null &&
+        Number(prev.openings_count) !== Number(fieldResolution.approved_headcount)
+      ) {
+        next.openings_count = fieldResolution.approved_headcount;
+      }
+
+      if (
+        fieldResolution.budget_approved != null &&
+        fieldResolution.budget_approved !== "" &&
+        prev.budget_approved !== fieldResolution.budget_approved
+      ) {
+        next.budget_approved = fieldResolution.budget_approved;
+      }
+
+      return next;
+    });
+  }, [
+    fieldResolution?.approved_position_id,
+    fieldResolution?.approved_headcount,
+    fieldResolution?.budget_approved,
+    formData.approved_position_id,
+    isLoadingDraft
+  ]);
 
   const assertExperienceFieldsValid = () => {
     const errors = collectExperienceRangeErrors(
@@ -749,11 +821,19 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
       return;
     }
 
-    if (
-      (name === "experience_min" || name === "experience_max") &&
-      value !== "" &&
-      Number(value) < 0
-    ) {
+    if (name === "openings_count" && openingsCountReadOnly) {
+      return;
+    }
+
+    if (name === "experience_min" || name === "experience_max") {
+      const sanitized = sanitizeExperienceInput(value);
+      if (sanitized === null) {
+        return;
+      }
+      setFormData((prev) => ({
+        ...prev,
+        [name]: sanitized
+      }));
       return;
     }
 
@@ -809,10 +889,10 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
       return;
     }
 
-    setFormData({
-      ...formData,
+    setFormData((prev) => ({
+      ...prev,
       [name]: value
-    });
+    }));
   };
 
   const persistDraftFromForm = async () => {
@@ -1059,7 +1139,7 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
     }
   };
 
-  const handleSubmitDraft = async () => {
+  const performSubmitDraft = async () => {
     if (isEditMode) {
       await handleSubmitExistingRequisition();
       return;
@@ -1107,8 +1187,6 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
     setIsSubmittingDraft(true);
 
     try {
-      // Flush latest form values (including approved_position_id)
-      // before Submit so the backend never sees a stale draft.
       const savedDraft = await persistDraftFromForm();
       const submitDraftId = savedDraft.draft_id ?? draftId;
       const submitRowVersion = savedDraft.row_version ?? rowVersion;
@@ -1151,6 +1229,24 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
     } finally {
       setIsSubmittingDraft(false);
     }
+  };
+
+  const handleSubmitDraft = async () => {
+    if (isEditMode) {
+      await handleSubmitExistingRequisition();
+      return;
+    }
+
+    if (isDraftSubmitted || isSubmittingDraft) {
+      return;
+    }
+
+    setSubmitConfirmOpen(true);
+  };
+
+  const handleConfirmSubmitDraft = async () => {
+    setSubmitConfirmOpen(false);
+    await performSubmitDraft();
   };
 
   /** Create Requisition uses the same enterprise draft conversion as Submit Draft. */
@@ -1449,42 +1545,44 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
               />
 
               <input
-                type="number"
+                type="text"
+                inputMode="numeric"
                 name="openings_count"
-                placeholder="Openings Count"
+                placeholder="No. of positions"
                 style={styles.input}
                 value={formData.openings_count}
                 onChange={handleChange}
-                min={1}
-                step={1}
-                disabled={isApprovedRequisition}
+                readOnly={openingsCountReadOnly || isApprovedRequisition}
+                disabled={openingsCountReadOnly || isApprovedRequisition}
                 title={
-                  isApprovedRequisition
-                    ? "Approved requisitions require a governed headcount change request."
-                    : undefined
+                  openingsCountReadOnly
+                    ? "Headcount is inherited from the approved workforce position."
+                    : isApprovedRequisition
+                      ? "Approved requisitions require a governed headcount change request."
+                      : undefined
                 }
               />
             </div>
 
             <div style={styles.row}>
               <input
-                type="number"
+                type="text"
+                inputMode="decimal"
                 name="experience_min"
                 placeholder="Min Experience"
                 style={styles.input}
                 value={formData.experience_min}
                 onChange={handleChange}
-                min={0}
               />
 
               <input
-                type="number"
+                type="text"
+                inputMode="decimal"
                 name="experience_max"
                 placeholder="Max Experience"
                 style={styles.input}
                 value={formData.experience_max}
                 onChange={handleChange}
-                min={0}
               />
             </div>
 
@@ -1890,6 +1988,20 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <EnterpriseConfirmationDialog
+        open={submitConfirmOpen}
+        title="Submit draft for approval?"
+        message="This will validate your Talent Demand draft and start the requisition approval workflow. You can cancel to keep editing."
+        confirmLabel="Submit for approval"
+        loading={isSubmittingDraft}
+        onConfirm={handleConfirmSubmitDraft}
+        onClose={() => {
+          if (!isSubmittingDraft) {
+            setSubmitConfirmOpen(false);
+          }
+        }}
+      />
 
       <Dialog
         open={submitSuccessOpen}

@@ -27,7 +27,6 @@ import AssignmentIndOutlinedIcon from "@mui/icons-material/AssignmentIndOutlined
 import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
 import PersonAddAlt1OutlinedIcon from "@mui/icons-material/PersonAddAlt1Outlined";
 import AssignmentTurnedInOutlinedIcon from "@mui/icons-material/AssignmentTurnedInOutlined";
-import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import LocalOfferOutlinedIcon from "@mui/icons-material/LocalOfferOutlined";
 
 import useEnterpriseStore from "@/store/enterpriseStore";
@@ -97,12 +96,6 @@ const ADMIN_NAV_ITEMS = [
     label: "Workforce Planning",
     path: "/workforce-planning",
     icon: GroupsOutlinedIcon
-  },
-  {
-    label: "Draft Requisitions",
-    path: "/requisitions/my-drafts",
-    icon: DescriptionOutlinedIcon,
-    requiresRequisitionRequestor: true
   },
   {
     label: "Requisitions",
@@ -324,6 +317,13 @@ function AdminNavRail() {
 
     if (path === "/") {
       return location.pathname === "/";
+    }
+
+    if (path === REQUISITION_QUEUES_PATH) {
+      return (
+        location.pathname.startsWith("/requisition-queues") ||
+        location.pathname.startsWith("/requisitions/my-drafts")
+      );
     }
 
     return location.pathname.startsWith(path);
