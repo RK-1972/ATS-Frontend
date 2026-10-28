@@ -25,13 +25,39 @@ import {
   resolveOfferStatus
 } from "@/utils/offerApprovalUtils";
 import {
-  canRespondToOfferClarification,
-  canWritePendingApprovalOffer
-} from "@/utils/offerWorkspaceAuth";
+  validateCommercialOfferFields,
+  validateOfferCtcAmount,
+  validateNonNegativeOfferAmount,
+  validateOptionalOfferCtcAmount
+} from "@/utils/offerCommercialUtils";
 
 import OfferApprovedSummaryPanel from "./OfferApprovedSummaryPanel";
 import ClarificationTimeline from "@/components/workforce-planning/ClarificationTimeline";
 import { dispatchApprovalNotificationsUpdated } from "@/utils/enterpriseNotificationEvents";
+
+function validateWorkspaceCommercialForm(form) {
+  const errors = {
+    offeredCtc: validateOfferCtcAmount(form.offeredCtc, "Offered CTC"),
+    variablePay: validateNonNegativeOfferAmount(form.variablePay, "Variable pay"),
+    joiningBonus: validateNonNegativeOfferAmount(form.joiningBonus, "Joining bonus")
+  };
+
+  const commercialValidation = validateCommercialOfferFields({
+    expected_joining_date: form.expectedJoiningDate,
+    variable_pay: form.variablePay,
+    variable_pay_frequency: form.variablePayFrequency,
+    joining_bonus: form.joiningBonus,
+    joining_bonus_frequency: form.joiningBonusFrequency
+  });
+
+  return {
+    offeredCtc: errors.offeredCtc,
+    variablePay: errors.variablePay || commercialValidation.errors.variable_pay,
+    variablePayFrequency: commercialValidation.errors.variable_pay_frequency,
+    joiningBonus: errors.joiningBonus || commercialValidation.errors.joining_bonus,
+    joiningBonusFrequency: commercialValidation.errors.joining_bonus_frequency
+  };
+}
 
 function OfferWorkspaceDetailPanel({
   offer,
@@ -53,6 +79,7 @@ function OfferWorkspaceDetailPanel({
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [withdrawReason, setWithdrawReason] = useState("");
   const [proposedCtc, setProposedCtc] = useState("");
+  const [counterCtc, setCounterCtc] = useState("");
   const [negotiationNotes, setNegotiationNotes] = useState("");
   const [revisedCtc, setRevisedCtc] = useState("");
   const [reviseReason, setReviseReason] = useState("");
@@ -75,6 +102,11 @@ function OfferWorkspaceDetailPanel({
     joiningBonus: "",
     joiningBonusFrequency: "One Time"
   });
+  const [amendFieldErrors, setAmendFieldErrors] = useState({});
+  const [correctFieldErrors, setCorrectFieldErrors] = useState({});
+  const [negotiateFieldError, setNegotiateFieldError] = useState("");
+  const [negotiateCounterError, setNegotiateCounterError] = useState("");
+  const [reviseFieldError, setReviseFieldError] = useState("");
 
   const user = useMemo(() => {
     if (loggedInUser) {
@@ -190,6 +222,13 @@ function OfferWorkspaceDetailPanel({
   };
 
   const handleAmend = async () => {
+    const fieldErrors = validateWorkspaceCommercialForm(amendForm);
+    setAmendFieldErrors(fieldErrors);
+
+    if (Object.values(fieldErrors).some(Boolean) || !amendmentReason.trim()) {
+      return;
+    }
+
     await onAmendApproved?.(offer.offerId, {
       offered_ctc: Number(amendForm.offeredCtc),
       expected_joining_date: amendForm.expectedJoiningDate,
@@ -200,19 +239,39 @@ function OfferWorkspaceDetailPanel({
       reason: amendmentReason
     });
     setAmendOpen(false);
+    setAmendFieldErrors({});
   };
 
   const handleNegotiate = async () => {
+    const ctcError = validateOfferCtcAmount(proposedCtc, "Proposed CTC");
+    const counterError = validateOptionalOfferCtcAmount(counterCtc, "Counter CTC");
+    setNegotiateFieldError(ctcError);
+    setNegotiateCounterError(counterError);
+    if (ctcError || counterError) {
+      return;
+    }
+
     await onNegotiate?.(offer.offerId, {
       proposed_ctc: Number(proposedCtc),
+      counter_ctc:
+        String(counterCtc ?? "").trim() === "" ? undefined : Number(counterCtc),
       notes: negotiationNotes
     });
     setNegotiateOpen(false);
     setProposedCtc("");
+    setCounterCtc("");
     setNegotiationNotes("");
+    setNegotiateFieldError("");
+    setNegotiateCounterError("");
   };
 
   const handleRevise = async () => {
+    const ctcError = validateOfferCtcAmount(revisedCtc, "Offered CTC");
+    setReviseFieldError(ctcError);
+    if (ctcError) {
+      return;
+    }
+
     await onRevise?.(offer.offerId, {
       offered_ctc: Number(revisedCtc),
       reason: reviseReason
@@ -220,6 +279,7 @@ function OfferWorkspaceDetailPanel({
     setReviseOpen(false);
     setRevisedCtc("");
     setReviseReason("");
+    setReviseFieldError("");
   };
 
   const handleSubmitClarification = async () => {
@@ -233,6 +293,13 @@ function OfferWorkspaceDetailPanel({
   };
 
   const handleCorrect = async () => {
+    const fieldErrors = validateWorkspaceCommercialForm(correctForm);
+    setCorrectFieldErrors(fieldErrors);
+
+    if (Object.values(fieldErrors).some(Boolean) || !correctionReason.trim()) {
+      return;
+    }
+
     await onCorrectPendingApproval?.(offer.offerId, {
       offered_ctc: Number(correctForm.offeredCtc),
       expected_joining_date: correctForm.expectedJoiningDate,
@@ -243,6 +310,7 @@ function OfferWorkspaceDetailPanel({
       reason: correctionReason
     });
     setCorrectOpen(false);
+    setCorrectFieldErrors({});
   };
 
   return (
@@ -464,8 +532,13 @@ function OfferWorkspaceDetailPanel({
               label="Offered CTC"
               type="number"
               value={amendForm.offeredCtc}
-              onChange={(event) => setAmendForm((prev) => ({ ...prev, offeredCtc: event.target.value }))}
+              onChange={(event) =>
+                setAmendForm((prev) => ({ ...prev, offeredCtc: event.target.value }))
+              }
               fullWidth
+              error={Boolean(amendFieldErrors.offeredCtc)}
+              helperText={amendFieldErrors.offeredCtc || " "}
+              slotProps={{ htmlInput: { min: 1, step: 1 } }}
             />
             <TextField
               label="Expected joining date"
@@ -485,6 +558,9 @@ function OfferWorkspaceDetailPanel({
                 setAmendForm((prev) => ({ ...prev, variablePay: event.target.value }))
               }
               fullWidth
+              error={Boolean(amendFieldErrors.variablePay)}
+              helperText={amendFieldErrors.variablePay || " "}
+              slotProps={{ htmlInput: { min: 0, step: 1 } }}
             />
             <TextField
               label="Variable pay frequency"
@@ -502,6 +578,9 @@ function OfferWorkspaceDetailPanel({
                 setAmendForm((prev) => ({ ...prev, joiningBonus: event.target.value }))
               }
               fullWidth
+              error={Boolean(amendFieldErrors.joiningBonus)}
+              helperText={amendFieldErrors.joiningBonus || " "}
+              slotProps={{ htmlInput: { min: 0, step: 1 } }}
             />
             <TextField
               label="Joining bonus frequency"
@@ -566,8 +645,13 @@ function OfferWorkspaceDetailPanel({
               label="Offered CTC"
               type="number"
               value={correctForm.offeredCtc}
-              onChange={(event) => setCorrectForm((prev) => ({ ...prev, offeredCtc: event.target.value }))}
+              onChange={(event) =>
+                setCorrectForm((prev) => ({ ...prev, offeredCtc: event.target.value }))
+              }
               fullWidth
+              error={Boolean(correctFieldErrors.offeredCtc)}
+              helperText={correctFieldErrors.offeredCtc || " "}
+              slotProps={{ htmlInput: { min: 1, step: 1 } }}
             />
             <TextField
               label="Expected joining date"
@@ -587,6 +671,9 @@ function OfferWorkspaceDetailPanel({
                 setCorrectForm((prev) => ({ ...prev, variablePay: event.target.value }))
               }
               fullWidth
+              error={Boolean(correctFieldErrors.variablePay)}
+              helperText={correctFieldErrors.variablePay || " "}
+              slotProps={{ htmlInput: { min: 0, step: 1 } }}
             />
             <TextField
               label="Variable pay frequency"
@@ -604,6 +691,9 @@ function OfferWorkspaceDetailPanel({
                 setCorrectForm((prev) => ({ ...prev, joiningBonus: event.target.value }))
               }
               fullWidth
+              error={Boolean(correctFieldErrors.joiningBonus)}
+              helperText={correctFieldErrors.joiningBonus || " "}
+              slotProps={{ htmlInput: { min: 0, step: 1 } }}
             />
             <TextField
               label="Joining bonus frequency"
@@ -664,6 +754,19 @@ function OfferWorkspaceDetailPanel({
               value={proposedCtc}
               onChange={(event) => setProposedCtc(event.target.value)}
               fullWidth
+              error={Boolean(negotiateFieldError)}
+              helperText={negotiateFieldError || " "}
+              slotProps={{ htmlInput: { min: 1, step: 1 } }}
+            />
+            <TextField
+              label="Counter CTC (optional)"
+              type="number"
+              value={counterCtc}
+              onChange={(event) => setCounterCtc(event.target.value)}
+              fullWidth
+              error={Boolean(negotiateCounterError)}
+              helperText={negotiateCounterError || "Candidate counter-offer amount, if known."}
+              slotProps={{ htmlInput: { min: 1, step: 1 } }}
             />
             <TextField
               label="Notes"
@@ -693,6 +796,9 @@ function OfferWorkspaceDetailPanel({
               value={revisedCtc}
               onChange={(event) => setRevisedCtc(event.target.value)}
               fullWidth
+              error={Boolean(reviseFieldError)}
+              helperText={reviseFieldError || " "}
+              slotProps={{ htmlInput: { min: 1, step: 1 } }}
             />
             <TextField
               label="Reason"

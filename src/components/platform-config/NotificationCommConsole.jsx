@@ -309,14 +309,18 @@ function NotificationCommConsole({
             type="number"
             size="small"
             value={settings.retry_attempts}
-            onChange={(e) =>
+            onChange={(e) => {
+              const raw = e.target.value;
+              const parsed = raw === "" ? "" : Number(raw);
               onUpdateSettings(
                 "retry_attempts",
-                Number(e.target.value)
-              )
-            }
+                parsed === "" || !Number.isFinite(parsed)
+                  ? raw
+                  : Math.max(0, Math.trunc(parsed))
+              );
+            }}
             slotProps={{
-              input: { sx: { width: 56, fontSize: 14 } }
+              input: { sx: { width: 56, fontSize: 14 }, inputProps: { min: 0, step: 1 } }
             }}
           />
         </ConfigDenseField>

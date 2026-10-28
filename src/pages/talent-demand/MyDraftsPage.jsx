@@ -30,6 +30,7 @@ import {
   StatusChip
 } from "../../components/enterprise";
 import TalentDemandDraftService from "../../services/talentDemandDraftService";
+import AuthorizationService from "../../services/authorizationService";
 
 function resolveEnterpriseNavRail(user) {
   let workspace = {};
@@ -75,6 +76,7 @@ function MyDraftsPage() {
 
   const [workItems, setWorkItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [canAccessDrafts, setCanAccessDrafts] = useState(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [toast, setToast] = useState({ message: "", severity: "success" });
@@ -105,8 +107,37 @@ function MyDraftsPage() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+
+    AuthorizationService.canRaiseRequisition()
+      .then((allowed) => {
+        if (!cancelled) {
+          setCanAccessDrafts(Boolean(allowed));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCanAccessDrafts(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (canAccessDrafts === false) {
+      setIsLoading(false);
+      return undefined;
+    }
+
+    if (canAccessDrafts !== true) {
+      return undefined;
+    }
+
     loadDrafts();
-  }, [loadDrafts]);
+  }, [canAccessDrafts, loadDrafts]);
 
   const statusOptions = useMemo(() => {
     const unique = new Set(
@@ -288,16 +319,17 @@ function MyDraftsPage() {
     <WorkspaceLayout navRail={resolveEnterpriseNavRail(loggedInUser)}>
       <Box sx={{ bgcolor: "background.default" }}>
         <EnterpriseWorkspaceHeader
-          title="My Drafts"
-          subtitle="Resume unsubmitted Talent Demand drafts and in-progress requisitions"
+          title="Draft Requisitions"
+          subtitle="Find, reopen, and submit saved Talent Demand drafts and in-progress requisitions"
           actions={
+            canAccessDrafts === false ? null : (
             <>
               <Button
                 variant="outlined"
                 size="small"
                 startIcon={<RefreshOutlinedIcon />}
                 onClick={loadDrafts}
-                disabled={isLoading}
+                disabled={isLoading || canAccessDrafts !== true}
                 sx={{ textTransform: "none", fontWeight: 600 }}
               >
                 Refresh
@@ -311,12 +343,24 @@ function MyDraftsPage() {
                 New Talent Demand
               </Button>
             </>
+            )
           }
         />
 
+        {canAccessDrafts === null ? (
+          <LoadingState message="Checking access…" />
+        ) : canAccessDrafts === false ? (
+          <EnterpriseCard title="Access denied">
+            <Alert severity="warning" sx={{ borderRadius: 2 }}>
+              Enterprise Access Denied. You are not authorized to create a
+              Requisition. Draft Requisitions requires an active{" "}
+              REQUISITION_REQUESTOR work assignment.
+            </Alert>
+          </EnterpriseCard>
+        ) : (
         <EnterpriseCard
-          title="Work in progress"
-          subtitle="Draft documents and legacy requisitions not yet submitted for approval"
+          title="Draft requisitions"
+          subtitle="Saved drafts and legacy requisitions awaiting submission for approval"
         >
           <Stack
             direction={{ xs: "column", sm: "row" }}
@@ -327,7 +371,7 @@ function MyDraftsPage() {
             <SearchBar
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search drafts"
+              placeholder="Search draft requisitions"
               width={320}
             />
 
@@ -356,8 +400,8 @@ function MyDraftsPage() {
               icon={DescriptionOutlinedIcon}
               title="No work in progress yet"
               description="Save a Talent Demand draft or continue an unsubmitted requisition to see it here."
-              actionLabel="Create Talent Demand"
-              onAction={() => navigate("/requisitions")}
+              actionLabel="Draft Requisitions"
+              onAction={() => navigate("/requisitions/my-drafts")}
             />
           ) : filteredDrafts.length === 0 ? (
             <EmptyState
@@ -379,6 +423,7 @@ function MyDraftsPage() {
             />
           )}
         </EnterpriseCard>
+        )}
       </Box>
 
       <EnterpriseConfirmationDialog

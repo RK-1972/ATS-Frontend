@@ -12,6 +12,7 @@ import {
 
 import ConfigSection from "./ConfigSection";
 import ConfigDenseField from "./ConfigDenseField";
+import { clampNonNegativeNumber } from "@/utils/nonNegativeNumericValidation";
 
 function ApprovalChainDisplay({ chain }) {
 
@@ -125,11 +126,11 @@ function BudgetGovernanceConsole({ budget, onUpdate }) {
             onChange={(e) =>
               onUpdate(
                 "max_budget_variance_pct",
-                Number(e.target.value)
+                clampNonNegativeNumber(e.target.value, { allowBlank: false })
               )
             }
             slotProps={{
-              input: { sx: { width: 72, fontSize: 14 } }
+              input: { sx: { width: 72, fontSize: 14 }, inputProps: { min: 0, step: 1 } }
             }}
           />
         </ConfigDenseField>
@@ -145,11 +146,11 @@ function BudgetGovernanceConsole({ budget, onUpdate }) {
             onChange={(e) =>
               onUpdate(
                 "auto_reject_above_pct",
-                Number(e.target.value)
+                clampNonNegativeNumber(e.target.value, { allowBlank: false })
               )
             }
             slotProps={{
-              input: { sx: { width: 72, fontSize: 14 } }
+              input: { sx: { width: 72, fontSize: 14 }, inputProps: { min: 0, step: 1 } }
             }}
           />
         </ConfigDenseField>
@@ -165,11 +166,11 @@ function BudgetGovernanceConsole({ budget, onUpdate }) {
             onChange={(e) =>
               onUpdate(
                 "default_headcount_buffer_pct",
-                Number(e.target.value)
+                clampNonNegativeNumber(e.target.value, { allowBlank: false })
               )
             }
             slotProps={{
-              input: { sx: { width: 72, fontSize: 14 } }
+              input: { sx: { width: 72, fontSize: 14 }, inputProps: { min: 0, step: 1 } }
             }}
           />
         </ConfigDenseField>

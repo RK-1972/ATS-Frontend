@@ -1,5 +1,9 @@
 import { formatCurrency } from "./formatCurrency";
 import { formatApprovedDate } from "./offerLetterUtils";
+import {
+  collectNonNegativeNumberErrors,
+  collectStrictlyPositiveNumberErrors
+} from "./nonNegativeNumericValidation";
 
 export const PAY_FREQUENCY_OPTIONS = [
   "One Time",
@@ -43,24 +47,53 @@ export function validateCommercialOfferFields(form) {
   }
 
   const variablePay = Number(form.variable_pay);
-  if (!Number.isFinite(variablePay) || variablePay < 0) {
-    errors.variable_pay = "Variable pay cannot be negative.";
+  const variablePayErrors = collectNonNegativeNumberErrors("variable_pay", form.variable_pay, {
+    label: "Variable pay",
+    allowBlank: true
+  });
+  if (variablePayErrors.length) {
+    errors.variable_pay = variablePayErrors[0];
     isValid = false;
   } else if (variablePay > 0 && !form.variable_pay_frequency) {
     errors.variable_pay_frequency = "Select a variable pay frequency.";
     isValid = false;
   }
 
-  const joiningBonus = Number(form.joining_bonus);
-  if (!Number.isFinite(joiningBonus) || joiningBonus < 0) {
-    errors.joining_bonus = "Joining bonus cannot be negative.";
+  const joiningBonusErrors = collectNonNegativeNumberErrors(
+    "joining_bonus",
+    form.joining_bonus,
+    { label: "Joining bonus", allowBlank: true }
+  );
+  if (joiningBonusErrors.length) {
+    errors.joining_bonus = joiningBonusErrors[0];
     isValid = false;
-  } else if (joiningBonus > 0 && !form.joining_bonus_frequency) {
+  } else if (Number(form.joining_bonus) > 0 && !form.joining_bonus_frequency) {
     errors.joining_bonus_frequency = "Select a joining bonus frequency.";
     isValid = false;
   }
 
   return { isValid, errors };
+}
+
+export function validateOfferCtcAmount(rawValue, label = "Offered CTC") {
+  const errors = collectStrictlyPositiveNumberErrors("offered_ctc", rawValue, { label });
+  return errors[0] || "";
+}
+
+export function validateNonNegativeOfferAmount(rawValue, label) {
+  const errors = collectNonNegativeNumberErrors("amount", rawValue, {
+    label,
+    allowBlank: true
+  });
+  return errors[0] || "";
+}
+
+export function validateOptionalOfferCtcAmount(rawValue, label = "Counter CTC") {
+  if (rawValue === "" || rawValue === null || rawValue === undefined) {
+    return "";
+  }
+
+  return validateOfferCtcAmount(rawValue, label);
 }
 
 export function formatPayFrequency(value) {

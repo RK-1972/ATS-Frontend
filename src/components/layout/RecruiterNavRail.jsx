@@ -20,12 +20,14 @@ import RateReviewOutlinedIcon from "@mui/icons-material/RateReviewOutlined";
 import WorkOutlineOutlinedIcon from "@mui/icons-material/WorkOutlineOutlined";
 import PersonAddAlt1OutlinedIcon from "@mui/icons-material/PersonAddAlt1Outlined";
 import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
+import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import InboxOutlinedIcon from "@mui/icons-material/InboxOutlined";
 import LocalOfferOutlinedIcon from "@mui/icons-material/LocalOfferOutlined";
 
 import AuthorizationService from "@/services/authorizationService";
 
 const WORKSPACE_HOME_PATH = "/workspace";
+const MY_DRAFT_REQUISITIONS_PATH = "/requisitions/my-drafts";
 const RECRUITER_ASSIGNMENT_PATH = "/requisitions/assign-recruiters";
 const MY_ASSIGNED_REQUISITIONS_PATH = "/recruiter/my-requisitions";
 const OFFER_WORKSPACE_PATH = "/offers";
@@ -76,6 +78,7 @@ function RecruiterNavRail({ loggedInUser }) {
   const theme = useTheme();
   const reducedMotion = useReducedMotion();
   const [canAssignRecruiters, setCanAssignRecruiters] = useState(false);
+  const [canRaiseRequisition, setCanRaiseRequisition] = useState(false);
 
   let workspace = {};
 
@@ -109,10 +112,38 @@ function RecruiterNavRail({ loggedInUser }) {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    AuthorizationService.canRaiseRequisition()
+      .then((allowed) => {
+        if (!cancelled) {
+          setCanRaiseRequisition(Boolean(allowed));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCanRaiseRequisition(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const navItems = [
     WORKSPACE_HOME_ITEM,
 
     ...(showRecruitment ? RECRUITER_NAV_ITEMS : []),
+
+    ...(showRecruitment && canRaiseRequisition
+      ? [{
+          label: "Draft Requisitions",
+          path: MY_DRAFT_REQUISITIONS_PATH,
+          icon: DescriptionOutlinedIcon
+        }]
+      : []),
 
     ...(canAssignRecruiters
       ? [{

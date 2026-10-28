@@ -119,12 +119,20 @@ function RuleSimulatorPanel({
             size="small"
             fullWidth
             value={input.offered_salary_lpa}
-            onChange={(e) =>
+            onChange={(e) => {
+              const raw = e.target.value;
+              if (raw === "") {
+                onUpdateInput("offered_salary_lpa", "");
+                return;
+              }
+              const parsed = Number(raw);
               onUpdateInput(
                 "offered_salary_lpa",
-                Number(e.target.value)
-              )
-            }
+                Number.isFinite(parsed) && parsed >= 0 ? parsed : 0
+              );
+            }}
+            slotProps={{ htmlInput: { min: 0, step: 0.01 } }}
+            helperText="Simulation input only; must not be negative."
           />
 
           <FormControl size="small" fullWidth>

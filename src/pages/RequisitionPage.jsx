@@ -38,6 +38,7 @@ import { dispatchApprovalNotificationsUpdated } from "@/utils/enterpriseNotifica
 import useEnterpriseStore from "@/store/enterpriseStore";
 import RequisitionSkillMultiSelect from "../components/requisitions/RequisitionSkillMultiSelect";
 import { collectExperienceRangeErrors } from "../utils/experienceRangeValidation";
+import { collectOpeningsCountErrors } from "../utils/nonNegativeNumericValidation";
 
 function resolveEnterpriseNavRail(user) {
   let workspace = {};
@@ -204,6 +205,7 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
 
   const [authorizationDialogOpen, setAuthorizationDialogOpen] = useState(false);
   const [isCheckingAuthorization, setIsCheckingAuthorization] = useState(false);
+  const [canRaiseRequisition, setCanRaiseRequisition] = useState(false);
   const [draftId, setDraftId] = useState(null);
   const [draftCode, setDraftCode] = useState(null);
   const [draftStatus, setDraftStatus] = useState(null);
@@ -335,8 +337,53 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
   useEffect(() => {
     let cancelled = false;
 
+    AuthorizationService.canRaiseRequisition()
+      .then((allowed) => {
+        if (!cancelled) {
+          setCanRaiseRequisition(Boolean(allowed));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCanRaiseRequisition(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const clearUnlockedApprovedPositionSelection = () => {
+      if (positionLocked || isEditMode || suppliedDraftId || navApprovedPositionId) {
+        return;
+      }
+      setFormData((prev) => {
+        if (!String(prev.approved_position_id || "").trim()) {
+          return prev;
+        }
+        return { ...prev, approved_position_id: "" };
+      });
+    };
+
     const loadApprovedPositions = async () => {
+      let allowed = false;
+
       try {
+        allowed = await AuthorizationService.canRaiseRequisition();
+        if (cancelled) {
+          return;
+        }
+
+        if (!allowed) {
+          setApprovedPositions([]);
+          clearUnlockedApprovedPositionSelection();
+          return;
+        }
+
         const response = await ApprovedPositionService.listApprovedPositions();
         if (!cancelled) {
           setApprovedPositions(
@@ -346,6 +393,11 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
       } catch (_error) {
         if (!cancelled) {
           setApprovedPositions([]);
+          if (!allowed) {
+            clearUnlockedApprovedPositionSelection();
+          } else if (_error.response?.status === 403) {
+            clearUnlockedApprovedPositionSelection();
+          }
         }
       }
     };
@@ -355,7 +407,12 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [
+    isEditMode,
+    navApprovedPositionId,
+    positionLocked,
+    suppliedDraftId
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -776,6 +833,43 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
     return draft;
   };
 
+  const syncDraftResumeUrl = (savedDraft) => {
+    const nextDraftId = savedDraft?.draft_id ?? draftId;
+    if (!nextDraftId) {
+      return;
+    }
+
+    const params = new URLSearchParams(location.search);
+    params.set("draftId", String(nextDraftId));
+    const approvedId = String(formData.approved_position_id || "").trim();
+    if (approvedId) {
+      params.set("approvedPositionId", approvedId);
+    }
+    params.delete("requisitionCode");
+
+    const nextSearch = params.toString();
+    const currentDraftParam = searchParams.get("draftId");
+    if (currentDraftParam === String(nextDraftId) && location.search === `?${nextSearch}`) {
+      return;
+    }
+
+    navigate(
+      {
+        pathname: "/requisitions",
+        search: nextSearch ? `?${nextSearch}` : ""
+      },
+      {
+        replace: true,
+        state: {
+          ...location.state,
+          draftId: nextDraftId,
+          approvedPositionId:
+            approvedId || location.state?.approvedPositionId || null
+        }
+      }
+    );
+  };
+
   const buildExistingRequisitionPayload = () => ({
     ...buildDraftPayloadFromForm(formData),
     route_id: formData.route_id || null,
@@ -794,6 +888,15 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
     if (experienceErrors.length > 0) {
       setToast({
         message: experienceErrors.join(" "),
+        severity: "error"
+      });
+      return;
+    }
+
+    const openingsErrors = collectOpeningsCountErrors(formData.openings_count);
+    if (openingsErrors.length > 0) {
+      setToast({
+        message: openingsErrors[0],
         severity: "error"
       });
       return;
@@ -886,6 +989,31 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
       return;
     }
 
+    if (!String(formData.approved_position_id || "").trim()) {
+      setToast({
+        message:
+          "Select an approved position from Workforce Planning before saving a Talent Demand draft.",
+        severity: "error"
+      });
+      return;
+    }
+
+    if (!draftId) {
+      setIsCheckingAuthorization(true);
+      try {
+        const allowed = await AuthorizationService.canRaiseRequisition();
+        if (!allowed) {
+          setAuthorizationDialogOpen(true);
+          return;
+        }
+      } catch (_error) {
+        setAuthorizationDialogOpen(true);
+        return;
+      } finally {
+        setIsCheckingAuthorization(false);
+      }
+    }
+
     const experienceErrors = collectExperienceRangeErrors(
       formData.experience_min,
       formData.experience_max
@@ -898,15 +1026,25 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
       return;
     }
 
+    const openingsErrors = collectOpeningsCountErrors(formData.openings_count);
+    if (openingsErrors.length > 0) {
+      setToast({
+        message: openingsErrors[0],
+        severity: "error"
+      });
+      return;
+    }
+
     setIsSavingDraft(true);
     const wasExisting = Boolean(draftId);
 
     try {
-      await persistDraftFromForm();
+      const savedDraft = await persistDraftFromForm();
+      syncDraftResumeUrl(savedDraft);
       setToast({
         message: wasExisting
           ? "Draft updated successfully."
-          : "Draft saved successfully.",
+          : "Draft saved successfully. Resume it anytime from Draft Requisitions.",
         severity: "success"
       });
     } catch (error) {
@@ -956,6 +1094,13 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
     }
 
     if (!assertExperienceFieldsValid()) {
+      return;
+    }
+
+    const openingsErrors = collectOpeningsCountErrors(formData.openings_count);
+    if (openingsErrors.length > 0) {
+      setSubmitErrorMessage(openingsErrors[0]);
+      setSubmitErrorOpen(true);
       return;
     }
 
@@ -1044,14 +1189,16 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
         title="Talent Demand Request"
         subtitle="Create, review, and manage workforce demand requests"
         actions={
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={() => navigate("/requisitions/my-drafts")}
-            sx={{ textTransform: "none", fontWeight: 600 }}
-          >
-            My Drafts
-          </Button>
+          canRaiseRequisition ? (
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => navigate("/requisitions/my-drafts")}
+              sx={{ textTransform: "none", fontWeight: 600 }}
+            >
+              Draft Requisitions
+            </Button>
+          ) : null
         }
       />
 
@@ -1308,6 +1455,8 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
                 style={styles.input}
                 value={formData.openings_count}
                 onChange={handleChange}
+                min={1}
+                step={1}
                 disabled={isApprovedRequisition}
                 title={
                   isApprovedRequisition
@@ -1780,16 +1929,18 @@ function RequisitionPage({ draftId: draftIdProp } = {}) {
         </DialogContent>
 
         <DialogActions sx={{ px: 3, pb: 2, pt: 0, gap: 1 }}>
-          <Button
-            variant="outlined"
-            onClick={() => {
-              setSubmitSuccessOpen(false);
-              navigate("/requisitions/my-drafts");
-            }}
-            sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
-          >
-            View My Drafts
-          </Button>
+          {canRaiseRequisition ? (
+            <Button
+              variant="outlined"
+              onClick={() => {
+                setSubmitSuccessOpen(false);
+                navigate("/requisitions/my-drafts");
+              }}
+              sx={{ textTransform: "none", fontWeight: 600, borderRadius: 2 }}
+            >
+              View Draft Requisitions
+            </Button>
+          ) : null}
           <Button
             variant="contained"
             onClick={() => {

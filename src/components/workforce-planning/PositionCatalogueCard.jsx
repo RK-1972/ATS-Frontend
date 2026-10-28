@@ -14,7 +14,7 @@ import { MdAddCircleOutline } from "react-icons/md";
 import { formatCurrency } from "@/utils/formatCurrency";
 import WorkforceStatusChip from "./WorkforceStatusChip";
 
-function PositionCatalogueCard({ position, onCreateRequisition }) {
+function PositionCatalogueCard({ position, onCreateRequisition, canRaiseRequisition = false }) {
   const isResume =
     position.resume_mode === "requisition" ||
     position.resume_mode === "draft" ||
@@ -22,7 +22,8 @@ function PositionCatalogueCard({ position, onCreateRequisition }) {
 
   const canCreateReq =
     position.remaining_budget > 0 &&
-    position.status !== "Fully Utilized";
+    position.status !== "Fully Utilized" &&
+    (canRaiseRequisition || isResume);
 
   const utilizationPct =
     position.budget_approved > 0
@@ -32,7 +33,9 @@ function PositionCatalogueCard({ position, onCreateRequisition }) {
       : 0;
 
   const disabledReason = !canCreateReq
-    ? position.status === "Fully Utilized"
+    ? !canRaiseRequisition && !isResume
+      ? "You are not authorized to create requisitions"
+      : position.status === "Fully Utilized"
       ? "Budget fully utilized"
       : "No remaining approved budget"
     : position.status === "Expiring Soon"

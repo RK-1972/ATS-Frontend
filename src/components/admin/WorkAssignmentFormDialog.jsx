@@ -120,8 +120,11 @@ function validateForm(form) {
   if (!orderRaw) {
     errors.display_order = "Display Order is required.";
     isValid = false;
-  } else if (!/^-?\d+$/.test(orderRaw) || !Number.isFinite(Number(orderRaw))) {
-    errors.display_order = "Display Order must be a number.";
+  } else if (!/^\d+$/.test(orderRaw) || !Number.isFinite(Number(orderRaw))) {
+    errors.display_order = "Display Order must be a whole number of at least 0.";
+    isValid = false;
+  } else if (Number(orderRaw) < 0) {
+    errors.display_order = "Display Order must be a whole number of at least 0.";
     isValid = false;
   }
 
@@ -427,7 +430,7 @@ function WorkAssignmentFormDialog({
               error={Boolean(errors.display_order)}
               helperText={errors.display_order}
               disabled={isSaving}
-              inputProps={{ step: 1 }}
+              inputProps={{ step: 1, min: 0 }}
             />
           </Grid>
 

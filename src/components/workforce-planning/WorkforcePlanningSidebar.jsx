@@ -18,7 +18,8 @@ import {
   MdInsights,
   MdInventory,
   MdRequestQuote,
-  MdWarningAmber
+  MdWarningAmber,
+  MdOutlineEditNote
 } from "react-icons/md";
 
 import AuthorizationService from "../../services/authorizationService";
@@ -53,6 +54,13 @@ const WORKFORCE_PLANNING_SECTIONS = [
     label: "Approved Positions",
     path: "/workforce-planning/catalogue",
     icon: MdInventory
+  },
+  {
+    key: "draft-requisitions",
+    label: "Draft Requisitions",
+    path: "/requisitions/my-drafts",
+    icon: MdOutlineEditNote,
+    requiresRequisitionRequestor: true
   },
   {
     key: "exceptions",
@@ -130,6 +138,10 @@ function WorkforcePlanningSidebar() {
       return (
         canRaiseRequisition || Boolean(workspace.showRequestWorkspace)
       );
+    }
+
+    if (section.requiresRequisitionRequestor) {
+      return canRaiseRequisition;
     }
 
     return true;

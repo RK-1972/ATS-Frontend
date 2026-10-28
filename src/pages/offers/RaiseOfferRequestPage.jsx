@@ -30,8 +30,10 @@ import useEnterpriseStore from "@/store/enterpriseStore";
 import {
   PAY_FREQUENCY_OPTIONS,
   todayIsoDate,
-  validateCommercialOfferFields
+  validateCommercialOfferFields,
+  validateOfferCtcAmount
 } from "@/utils/offerCommercialUtils";
+import { sanitizeNonNegativeInputString } from "@/utils/nonNegativeNumericValidation";
 
 const frequencyToggleSx = {
   flexWrap: "wrap",
@@ -179,12 +181,9 @@ function validateForm(form) {
     isValid = false;
   }
 
-  const ctc = Number(form.offered_ctc);
-  if (!String(form.offered_ctc ?? "").trim()) {
-    errors.offered_ctc = "Offered CTC is required.";
-    isValid = false;
-  } else if (!Number.isFinite(ctc) || ctc <= 0) {
-    errors.offered_ctc = "Offered CTC must be greater than 0.";
+  const ctcErrors = validateOfferCtcAmount(form.offered_ctc);
+  if (ctcErrors) {
+    errors.offered_ctc = ctcErrors;
     isValid = false;
   }
 
@@ -298,8 +297,23 @@ function RaiseOfferRequestPage() {
   }, [form.candidate]);
 
   const handleFieldChange = (field, value) => {
+    let nextValue = value;
+
+    if (field === "offered_ctc") {
+      const parsed = Number(value);
+      if (value !== "" && Number.isFinite(parsed) && parsed < 0) {
+        setErrors((prev) => ({
+          ...prev,
+          offered_ctc: "Offered CTC must be greater than 0."
+        }));
+        return;
+      }
+    } else if (field === "variable_pay" || field === "joining_bonus") {
+      nextValue = sanitizeNonNegativeInputString(value, { allowBlank: true });
+    }
+
     setForm((prev) => {
-      const next = { ...prev, [field]: value };
+      const next = { ...prev, [field]: nextValue };
 
       if (field === "variable_pay" && Number(value || 0) <= 0) {
         next.variable_pay_frequency = "";

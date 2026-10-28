@@ -26,6 +26,7 @@ import {
 import ConfigSection from "./ConfigSection";
 import ConfigDenseField from "./ConfigDenseField";
 import ConfigMetricSlab from "./ConfigMetricSlab";
+import { clampNonNegativeNumber } from "@/utils/nonNegativeNumericValidation";
 
 const AI_ICONS = {
   resume_matching: MdAutoAwesome,
@@ -171,7 +172,7 @@ function AiGovernanceConsole({
               onChange={(e) =>
                 onUpdateGovernance(
                   "confidence_threshold",
-                  Number(e.target.value)
+                  Math.min(1, Math.max(0, Number(e.target.value) || 0))
                 )
               }
               slotProps={{
@@ -228,11 +229,11 @@ function AiGovernanceConsole({
               onChange={(e) =>
                 onUpdateGovernance(
                   "monthly_token_limit",
-                  Number(e.target.value)
+                  clampNonNegativeNumber(e.target.value, { allowBlank: false })
                 )
               }
               slotProps={{
-                input: { sx: { width: 100, fontSize: 14 } }
+                input: { sx: { width: 100, fontSize: 14 }, inputProps: { min: 0, step: 1 } }
               }}
             />
           </ConfigDenseField>
@@ -275,11 +276,11 @@ function AiGovernanceConsole({
               onChange={(e) =>
                 onUpdateGovernance(
                   "monthly_cost_cap_usd",
-                  Number(e.target.value)
+                  clampNonNegativeNumber(e.target.value, { allowBlank: false })
                 )
               }
               slotProps={{
-                input: { sx: { width: 88, fontSize: 14 } }
+                input: { sx: { width: 88, fontSize: 14 }, inputProps: { min: 0, step: 1 } }
               }}
             />
           </ConfigDenseField>
@@ -345,11 +346,14 @@ function AiGovernanceConsole({
               onChange={(e) =>
                 onUpdateGovernance(
                   "data_retention_days",
-                  Number(e.target.value)
+                  Math.max(0, Math.trunc(Number(e.target.value) || 0))
                 )
               }
               slotProps={{
-                input: { sx: { width: 72, fontSize: 14 } }
+                input: {
+                  sx: { width: 72, fontSize: 14 },
+                  inputProps: { min: 0, step: 1 }
+                }
               }}
             />
           </ConfigDenseField>

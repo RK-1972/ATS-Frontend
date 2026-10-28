@@ -27,6 +27,7 @@ import AssignmentIndOutlinedIcon from "@mui/icons-material/AssignmentIndOutlined
 import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
 import PersonAddAlt1OutlinedIcon from "@mui/icons-material/PersonAddAlt1Outlined";
 import AssignmentTurnedInOutlinedIcon from "@mui/icons-material/AssignmentTurnedInOutlined";
+import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import LocalOfferOutlinedIcon from "@mui/icons-material/LocalOfferOutlined";
 
 import useEnterpriseStore from "@/store/enterpriseStore";
@@ -96,6 +97,12 @@ const ADMIN_NAV_ITEMS = [
     label: "Workforce Planning",
     path: "/workforce-planning",
     icon: GroupsOutlinedIcon
+  },
+  {
+    label: "Draft Requisitions",
+    path: "/requisitions/my-drafts",
+    icon: DescriptionOutlinedIcon,
+    requiresRequisitionRequestor: true
   },
   {
     label: "Requisitions",
@@ -170,6 +177,7 @@ function AdminNavRail() {
   const reducedMotion = useReducedMotion();
   const platformConfig = useEnterpriseStore((state) => state.platformConfig);
   const [canAssignRecruiters, setCanAssignRecruiters] = useState(false);
+  const [canRaiseRequisition, setCanRaiseRequisition] = useState(false);
 
   const loggedInUser = JSON.parse(localStorage.getItem("user") || "null");
   const userRole = loggedInUser?.role_name || "";
@@ -203,6 +211,26 @@ function AdminNavRail() {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    AuthorizationService.canRaiseRequisition()
+      .then((allowed) => {
+        if (!cancelled) {
+          setCanRaiseRequisition(Boolean(allowed));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCanRaiseRequisition(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const filteredItems = ADMIN_NAV_ITEMS.filter((item) => {
     if (item.type === "section") {
       return true;
@@ -211,6 +239,10 @@ function AdminNavRail() {
     // Recruiter Assignment: Admin or active REQUISITION_ASSIGNER Work Assignment.
     if (item.path === RECRUITER_ASSIGNMENT_PATH) {
       return canAssignRecruiters;
+    }
+
+    if (item.requiresRequisitionRequestor) {
+      return canRaiseRequisition;
     }
 
     // Admin catalog: existing platform / role visibility only (login role_name).

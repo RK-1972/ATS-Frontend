@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useOutletContext, useNavigate } from "react-router-dom";
 
 import { Box, Button, Grid, Alert, Typography } from "@mui/material";
@@ -7,6 +7,7 @@ import ConfigPageHeader from "../../components/platform-config/ConfigPageHeader"
 import ConfigSurface from "../../components/platform-config/ConfigSurface";
 import PositionCatalogueCard from "../../components/workforce-planning/PositionCatalogueCard";
 import WorkforcePlanningSectionSearch from "../../components/workforce-planning/WorkforcePlanningSectionSearch";
+import AuthorizationService from "../../services/authorizationService";
 import { EmptyState } from "../../components/enterprise";
 import ApprovalOutlinedIcon from "@mui/icons-material/ApprovalOutlined";
 import {
@@ -26,6 +27,27 @@ function ApprovedPositionCataloguePage() {
   const navigate = useNavigate();
   const { data, createRequisition, setToastMessage } = useOutletContext();
   const [searchQuery, setSearchQuery] = useState("");
+  const [canRaiseRequisition, setCanRaiseRequisition] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    AuthorizationService.canRaiseRequisition()
+      .then((allowed) => {
+        if (!cancelled) {
+          setCanRaiseRequisition(Boolean(allowed));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCanRaiseRequisition(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const approvedPositions = data?.approved_positions;
 
@@ -43,6 +65,16 @@ function ApprovedPositionCataloguePage() {
     const positionId = position?.id || position;
     let requisitionCode = position?.open_requisition_code || null;
     let draftId = position?.open_draft_id || null;
+    const isResume = Boolean(requisitionCode || draftId);
+
+    if (!isResume && !canRaiseRequisition) {
+      if (typeof setToastMessage === "function") {
+        setToastMessage(
+          "Enterprise Access Denied. You are not authorized to create a Requisition."
+        );
+      }
+      return;
+    }
 
     if (!requisitionCode && !draftId) {
       try {
@@ -50,16 +82,26 @@ function ApprovedPositionCataloguePage() {
         requisitionCode = result?.requisitionId || null;
         draftId = result?.draftId || null;
       } catch (error) {
+        const accessDenied = error?.response?.status === 403;
         requisitionCode = extractExistingRequisitionCode(error);
 
-        if (!requisitionCode && typeof setToastMessage === "function") {
-          setToastMessage(
-            error?.response?.data?.message ||
-              error?.message ||
-              "Unable to start requisition from this approved position."
-          );
+        if (!requisitionCode) {
+          if (typeof setToastMessage === "function") {
+            setToastMessage(
+              error?.response?.data?.message ||
+                error?.message ||
+                "Unable to start requisition from this approved position."
+            );
+          }
+          if (accessDenied || !draftId) {
+            return;
+          }
         }
       }
+    }
+
+    if (!draftId && !requisitionCode) {
+      return;
     }
 
     const params = new URLSearchParams();
@@ -148,6 +190,7 @@ function ApprovedPositionCataloguePage() {
               <Grid key={position.id} size={{ xs: 12, sm: 6, lg: 4 }}>
                 <PositionCatalogueCard
                   position={position}
+                  canRaiseRequisition={canRaiseRequisition}
                   onCreateRequisition={handleCreateRequisition}
                 />
               </Grid>

@@ -21,6 +21,7 @@ import {
   formatFormulaBasis,
   formatFormulaValue
 } from "@/utils/compensationUtils";
+import { collectNonNegativeNumberErrors } from "@/utils/nonNegativeNumericValidation";
 
 function BoolCell({ value }) {
   return (
@@ -65,6 +66,36 @@ function CompensationStructureComponentsTable({
 
     setSavingId(component.structureComponentId);
     setRowError("");
+
+    const isPercent =
+      component.formulaType === "PERCENT_OF_CTC" ||
+      component.formulaType === "PERCENT_OF_BASIC";
+    const rawValue = isPercent ? draft.formulaValue : draft.fixedAmount;
+    const label = isPercent ? "Percentage" : "Fixed amount";
+    const errors = isPercent
+      ? collectNonNegativeNumberErrors("formulaValue", rawValue, {
+          label,
+          allowBlank: false
+        })
+      : collectNonNegativeNumberErrors("fixedAmount", rawValue, {
+          label,
+          allowBlank: false
+        });
+
+    if (isPercent && errors.length === 0) {
+      const pct = Number(rawValue);
+      if (pct > 100) {
+        setRowError("Percentage must be between 0 and 100.");
+        setSavingId("");
+        return;
+      }
+    }
+
+    if (errors.length) {
+      setRowError(errors[0]);
+      setSavingId("");
+      return;
+    }
 
     try {
       await onSaveComponent?.(component, draft);

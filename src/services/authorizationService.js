@@ -70,18 +70,16 @@ function hasActiveWorkAssignment(assignments, assignmentCode) {
 }
 
 /**
- * Returns whether the logged-in user may raise requisitions.
- * Admins are always allowed; others require active REQUISITION_REQUESTOR assignment.
+ * Returns whether the logged-in user may raise requisitions and use
+ * Talent Demand draft APIs (list, open, edit, submit).
+ * Requires active REQUISITION_REQUESTOR assignment — matches backend
+ * assertCanCreateRequisition / requireRequisitionRequestor (no Admin bypass).
  */
 async function canRaiseRequisition() {
   const user = getLoggedInUser();
 
   if (!user) {
     return false;
-  }
-
-  if (user.role_name === "Admin") {
-    return true;
   }
 
   const employeeCode = user.employee_code;
