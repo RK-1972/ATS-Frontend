@@ -18,6 +18,7 @@ function MyOfferRequestsPage() {
     negotiateOffer,
     reviseOffer,
     withdrawOffer,
+    adminReleaseOfferToTalentPool,
     correctPendingApproval,
     amendApprovedOffer,
     submitOfferClarification,
@@ -88,6 +89,12 @@ function MyOfferRequestsPage() {
       loggedInUser={loggedInUser}
       onWithdraw={(offerId, reason) =>
         run(() => withdrawOffer(offerId, reason), "Offer withdrawn.")
+      }
+      onAdminReleaseToTalentPool={(offerId, reason) =>
+        run(
+          () => adminReleaseOfferToTalentPool(offerId, reason),
+          "Candidate released to the Talent Pool."
+        )
       }
     />
     <Snackbar

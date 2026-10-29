@@ -16,6 +16,7 @@ import CandidatePortalPlaceholderPage from "./pages/candidate/CandidatePortalPla
 import CandidateRegisterPage from "./pages/candidate/CandidateRegisterPage";
 import CandidateLoginPage from "./pages/candidate/CandidateLoginPage";
 import CandidatePortalWorkspacePage from "./pages/candidate/CandidatePortalWorkspacePage";
+import CandidatePortalReleasedOffersPage from "./pages/candidate/CandidatePortalReleasedOffersPage";
 import CandidateCompleteProfilePage from "./pages/candidate/CandidateCompleteProfilePage";
 import CandidateProfilePage from "./pages/candidate/CandidateProfilePage";
 import CandidateProfileStatusPage from "./pages/candidate/CandidateProfileStatusPage";
@@ -31,6 +32,7 @@ import UserManagementPage from "./pages/UserManagementPage";
 import ApplicationAuditWorkspaceRoute from "./pages/application-audit/ApplicationAuditWorkspaceRoute";
 import ResponsibilityClearancePage from "./pages/ResponsibilityClearancePage";
 import EmployeeWorkAssignmentPage from "./pages/EmployeeWorkAssignmentPage";
+import ReleaseOfferPage from "./pages/ReleaseOfferPage";
 import WorkAssignmentMasterPage from "./pages/WorkAssignmentMasterPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import TALeadProtectedRoute from "./components/TALeadProtectedRoute";
@@ -318,6 +320,15 @@ function App() {
 />
 
 <Route
+  path="/candidate/offers"
+  element={
+    <CandidateProtectedRoute>
+      <CandidatePortalReleasedOffersPage />
+    </CandidateProtectedRoute>
+  }
+/>
+
+<Route
   path="/candidate/profile/complete"
   element={
     <CandidateProtectedRoute>
@@ -509,6 +520,14 @@ function App() {
           element={
             <ProtectedRoute>
               <EmployeeWorkAssignmentPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/release-offer"
+          element={
+            <ProtectedRoute>
+              <ReleaseOfferPage />
             </ProtectedRoute>
           }
         />

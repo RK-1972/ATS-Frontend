@@ -63,6 +63,23 @@ export function canWithdrawOfferStatus(status) {
   return Boolean(normalized) && !WITHDRAWN_TERMINAL_STATUSES.has(normalized);
 }
 
+export const ADMIN_TALENT_POOL_RELEASE_TERMINAL_STATUSES = new Set([
+  "Declined",
+  "Withdrawn"
+]);
+
+export function isAdminRole(user = {}) {
+  return String(user.role_name || user.roleName || "").trim() === "Admin";
+}
+
+export function canAdminReleaseOfferToTalentPool(offer = {}) {
+  const status = resolveOfferStatus(offer);
+  if (offer.adminTalentPoolReleased) {
+    return false;
+  }
+  return ADMIN_TALENT_POOL_RELEASE_TERMINAL_STATUSES.has(String(status));
+}
+
 export const OFFER_PENDING_APPROVAL_SEARCH_FIELDS = [
   "offerId",
   "candidateName",

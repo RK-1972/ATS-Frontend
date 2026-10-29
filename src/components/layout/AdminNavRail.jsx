@@ -28,6 +28,7 @@ import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
 import PersonAddAlt1OutlinedIcon from "@mui/icons-material/PersonAddAlt1Outlined";
 import AssignmentTurnedInOutlinedIcon from "@mui/icons-material/AssignmentTurnedInOutlined";
 import LocalOfferOutlinedIcon from "@mui/icons-material/LocalOfferOutlined";
+import SendOutlinedIcon from "@mui/icons-material/SendOutlined";
 
 import useEnterpriseStore from "@/store/enterpriseStore";
 import { isNavPathVisible } from "@/enterprise/moduleVisibility";
@@ -36,6 +37,7 @@ import AuthorizationService from "@/services/authorizationService";
 const WORKSPACE_HOME_PATH = "/workspace";
 const RECRUITER_ASSIGNMENT_PATH = "/requisitions/assign-recruiters";
 const OFFER_WORKSPACE_PATH = "/offers";
+const RELEASE_OFFER_PATH = "/release-offer";
 const REQUISITION_QUEUES_PATH = "/requisition-queues";
 
 const WORKSPACE_HOME_ITEM = {
@@ -122,6 +124,12 @@ const ADMIN_NAV_ITEMS = [
     path: OFFER_WORKSPACE_PATH,
     icon: LocalOfferOutlinedIcon,
     requiresOfferWorkspace: true
+  },
+  {
+    label: "Release Offer",
+    path: RELEASE_OFFER_PATH,
+    icon: SendOutlinedIcon,
+    requiresReleaseOfferWorkspace: true
   },
   {
     type: "section",
@@ -262,6 +270,10 @@ function AdminNavRail() {
 
     if (item.path === OFFER_WORKSPACE_PATH || item.requiresOfferWorkspace) {
       return Boolean(workspace.showOfferWorkspace);
+    }
+
+    if (item.path === RELEASE_OFFER_PATH || item.requiresReleaseOfferWorkspace) {
+      return Boolean(workspace.showReleaseOfferWorkspace);
     }
 
     if (item.path === "/users") {

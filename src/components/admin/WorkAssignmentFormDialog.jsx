@@ -35,6 +35,7 @@ const WORKSPACE_FLAG_OPTIONS = [
   { value: "showInterviewWorkspace", label: "showInterviewWorkspace" },
   { value: "showRequestWorkspace", label: "showRequestWorkspace" },
   { value: "showOfferWorkspace", label: "showOfferWorkspace" },
+  { value: "showReleaseOfferWorkspace", label: "showReleaseOfferWorkspace" },
   { value: "showTaLeadWorkspace", label: "showTaLeadWorkspace" }
 ];
 
@@ -45,6 +46,7 @@ const WORKSPACE_ICON_OPTIONS = [
   { value: "FactCheckOutlined", label: "FactCheckOutlined" },
   { value: "DescriptionOutlined", label: "DescriptionOutlined" },
   { value: "LocalOfferOutlined", label: "LocalOfferOutlined" },
+  { value: "SendOutlined", label: "SendOutlined" },
   { value: "SupervisorAccountOutlined", label: "SupervisorAccountOutlined" }
 ];
 

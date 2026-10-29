@@ -14,6 +14,7 @@ import {
 import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
 import PersonOutlineOutlinedIcon from "@mui/icons-material/PersonOutlineOutlined";
 import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
+import LocalOfferOutlinedIcon from "@mui/icons-material/LocalOfferOutlined";
 import FactCheckOutlinedIcon from "@mui/icons-material/FactCheckOutlined";
 import UploadFileOutlinedIcon from "@mui/icons-material/UploadFileOutlined";
 import WorkOutlineOutlinedIcon from "@mui/icons-material/WorkOutlineOutlined";
@@ -267,6 +268,16 @@ function CandidatePortalWorkspacePage() {
                 actionLabel="View Applications"
                 onAction={() => navigate("/candidate/applications")}
                 icon={AssignmentOutlinedIcon}
+              />
+            </Grid>
+
+            <Grid size={{ xs: 12, md: 6 }}>
+              <WorkspaceCard
+                title="My Offers"
+                description="View released offer summaries for your active requisitions."
+                actionLabel="View Offers"
+                onAction={() => navigate("/candidate/offers")}
+                icon={LocalOfferOutlinedIcon}
               />
             </Grid>
 

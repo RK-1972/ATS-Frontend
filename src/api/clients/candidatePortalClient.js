@@ -78,6 +78,12 @@ const candidatePortalClient = {
     return candidateAPI
       .post(`/candidate-portal/profile/intake/${intakeId}/parse`)
       .then((response) => response.data);
+  },
+
+  listReleasedOffers() {
+    return candidateAPI
+      .get("/candidate-portal/offers")
+      .then((response) => response.data);
   }
 };
 

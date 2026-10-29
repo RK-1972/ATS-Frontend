@@ -1,42 +1,41 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import Header from "../components/Header";
-import AdminNavRail from "../components/layout/AdminNavRail";
-import API from "../api/axios";
-import { refreshWorkspaceSession } from "../utils/sessionWorkspaceRefresh";
 import {
   Alert,
+  Avatar,
   Box,
-  Button,
-  Card,
-  CardContent,
-  CircularProgress,
-  Divider,
+  Chip,
   List,
   ListItemButton,
   Snackbar,
   Stack,
-  TextField,
+  Switch,
   Typography
 } from "@mui/material";
-import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
-import { filterActiveEmployeeRecords } from "../utils/activeEmployeeFilters";
 
-function InfoField({ label, value }) {
-  return (
-    <Box sx={{ minWidth: 0 }}>
-      <Typography
-        variant="caption"
-        color="text.secondary"
-        sx={{ display: "block", lineHeight: 1.2 }}
-      >
-        {label}
-      </Typography>
-      <Typography variant="body2" fontWeight={600} noWrap>
-        {value || "—"}
-      </Typography>
-    </Box>
-  );
+import API from "../api/axios";
+import AdminNavRail from "../components/layout/AdminNavRail";
+import Header from "../components/Header";
+import ConfigPageHeader from "@/components/platform-config/ConfigPageHeader";
+import {
+  EmptyState,
+  EnterpriseDataGrid,
+  EnterpriseSurface,
+  LoadingState,
+  SearchBar
+} from "@/components/enterprise";
+import { filterActiveEmployeeRecords } from "../utils/activeEmployeeFilters";
+import { refreshWorkspaceSession } from "../utils/sessionWorkspaceRefresh";
+
+function employeeInitials(name = "") {
+  const parts = String(name).trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) {
+    return "?";
+  }
+  if (parts.length === 1) {
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+  return `${parts[0][0] || ""}${parts[1][0] || ""}`.toUpperCase();
 }
 
 async function maybeRefreshSelfWorkspace(employeeCode) {
@@ -53,17 +52,15 @@ async function maybeRefreshSelfWorkspace(employeeCode) {
 function EmployeeWorkAssignmentPage() {
   const [employees, setEmployees] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [employeeSearchQuery, setEmployeeSearchQuery] = useState("");
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(true);
   const [loadError, setLoadError] = useState("");
 
   const [masterAssignments, setMasterAssignments] = useState([]);
   const [assignedRows, setAssignedRows] = useState([]);
-  const [selectedAvailableId, setSelectedAvailableId] = useState(null);
-  const [selectedAssignedId, setSelectedAssignedId] = useState(null);
   const [isLoadingAssignments, setIsLoadingAssignments] = useState(false);
-  const [isAssigning, setIsAssigning] = useState(false);
-  const [isRemoving, setIsRemoving] = useState(false);
+  const [busyAssignmentId, setBusyAssignmentId] = useState(null);
+  const assignmentMutationInFlightRef = useRef(false);
   const [toast, setToast] = useState({ message: "", severity: "success" });
 
   useEffect(() => {
@@ -72,7 +69,6 @@ function EmployeeWorkAssignmentPage() {
       setLoadError("");
 
       try {
-        // Existing admin employee directory API (no /employees endpoint).
         const response = await API.get("/users");
         const rows = filterActiveEmployeeRecords(response.data?.data || []);
         setEmployees(rows);
@@ -118,8 +114,6 @@ function EmployeeWorkAssignmentPage() {
   const loadEmployeeAssignments = useCallback(async (employeeCode) => {
     if (!employeeCode) {
       setAssignedRows([]);
-      setSelectedAssignedId(null);
-      setSelectedAvailableId(null);
       return;
     }
 
@@ -131,8 +125,6 @@ function EmployeeWorkAssignmentPage() {
       );
       const rows = Array.isArray(response.data?.data) ? response.data.data : [];
       setAssignedRows(rows.filter((row) => row.is_active !== false));
-      setSelectedAssignedId(null);
-      setSelectedAvailableId(null);
     } catch (error) {
       setAssignedRows([]);
       setToast({
@@ -151,7 +143,7 @@ function EmployeeWorkAssignmentPage() {
   }, [selectedEmployee?.employee_code, loadEmployeeAssignments]);
 
   const filteredEmployees = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
+    const query = employeeSearchQuery.trim().toLowerCase();
 
     if (!query) {
       return employees;
@@ -166,153 +158,321 @@ function EmployeeWorkAssignmentPage() {
         name.includes(query) || code.includes(query) || role.includes(query)
       );
     });
-  }, [employees, searchQuery]);
+  }, [employees, employeeSearchQuery]);
 
-  const assignedWorkAssignmentIds = useMemo(() => {
-    return new Set(
-      assignedRows.map((row) => Number(row.work_assignment_id)).filter(Boolean)
-    );
+  const assignedByWorkAssignmentId = useMemo(() => {
+    const map = new Map();
+    assignedRows.forEach((row) => {
+      map.set(Number(row.work_assignment_id), row);
+    });
+    return map;
   }, [assignedRows]);
 
-  const availableAssignments = useMemo(() => {
-    return masterAssignments.filter(
-      (row) => !assignedWorkAssignmentIds.has(Number(row.work_assignment_id))
-    );
-  }, [masterAssignments, assignedWorkAssignmentIds]);
+  const assignmentGridRows = useMemo(() => {
+    return masterAssignments.map((master) => {
+      const workAssignmentId = Number(master.work_assignment_id);
+      const assigned = assignedByWorkAssignmentId.get(workAssignmentId);
 
-  const handleAssign = async () => {
-    const employeeCode = selectedEmployee?.employee_code;
-    const workAssignmentId = selectedAvailableId;
-
-    if (!employeeCode || !workAssignmentId) {
-      return;
-    }
-
-    if (assignedWorkAssignmentIds.has(Number(workAssignmentId))) {
-      setToast({
-        message: "Employee already has this work assignment.",
-        severity: "error"
-      });
-      return;
-    }
-
-    setIsAssigning(true);
-
-    try {
-      await API.post("/employee-work-assignments", {
-        employee_code: employeeCode,
+      return {
+        id: workAssignmentId,
         work_assignment_id: workAssignmentId,
-        effective_from: new Date().toISOString().slice(0, 10),
-        effective_to: null
-      });
+        assignment_name: master.assignment_name || master.assignment_code,
+        assignment_code: master.assignment_code,
+        category: master.category || master.business_module || "—",
+        enabled: Boolean(assigned),
+        employee_work_assignment_id:
+          assigned?.employee_work_assignment_id ?? null
+      };
+    });
+  }, [masterAssignments, assignedByWorkAssignmentId]);
 
-      setToast({
-        message: "Work assignment assigned successfully.",
-        severity: "success"
-      });
-      await loadEmployeeAssignments(employeeCode);
-      await maybeRefreshSelfWorkspace(employeeCode);
-    } catch (error) {
-      setToast({
-        message:
-          error.response?.data?.message || "Failed to assign work assignment.",
-        severity: "error"
-      });
-    } finally {
-      setIsAssigning(false);
-    }
-  };
+  const enabledCount = useMemo(
+    () => assignmentGridRows.filter((row) => row.enabled).length,
+    [assignmentGridRows]
+  );
 
-  const handleRemove = async () => {
-    if (!selectedAssignedId) {
-      return;
-    }
+  const disabledCount = useMemo(
+    () => assignmentGridRows.filter((row) => !row.enabled).length,
+    [assignmentGridRows]
+  );
 
-    setIsRemoving(true);
+  const runAssignmentMutation = useCallback(
+    async (busyKey, mutation) => {
+      if (assignmentMutationInFlightRef.current || !selectedEmployee?.employee_code) {
+        return false;
+      }
 
-    try {
-      await API.delete(
-        `/employee-work-assignments/${encodeURIComponent(selectedAssignedId)}`
-      );
+      assignmentMutationInFlightRef.current = true;
+      setBusyAssignmentId(busyKey);
 
-      setToast({
-        message: "Work assignment removed successfully.",
-        severity: "success"
-      });
-      await loadEmployeeAssignments(selectedEmployee?.employee_code);
-      await maybeRefreshSelfWorkspace(selectedEmployee?.employee_code);
-    } catch (error) {
-      setToast({
-        message:
-          error.response?.data?.message || "Failed to remove work assignment.",
-        severity: "error"
-      });
-    } finally {
-      setIsRemoving(false);
-    }
-  };
+      try {
+        await mutation();
+        return true;
+      } finally {
+        assignmentMutationInFlightRef.current = false;
+        setBusyAssignmentId(null);
+      }
+    },
+    [selectedEmployee?.employee_code]
+  );
+
+  const handleAssign = useCallback(
+    async (workAssignmentId) => {
+      const employeeCode = selectedEmployee?.employee_code;
+      const normalizedWorkAssignmentId = Number(workAssignmentId);
+
+      if (!employeeCode || !Number.isFinite(normalizedWorkAssignmentId)) {
+        return;
+      }
+
+      if (assignedByWorkAssignmentId.has(normalizedWorkAssignmentId)) {
+        setToast({
+          message: "Employee already has this work assignment.",
+          severity: "error"
+        });
+        return;
+      }
+
+      try {
+        await runAssignmentMutation(normalizedWorkAssignmentId, async () => {
+          await API.post("/employee-work-assignments", {
+            employee_code: employeeCode,
+            work_assignment_id: normalizedWorkAssignmentId,
+            effective_from: new Date().toISOString().slice(0, 10),
+            effective_to: null
+          });
+
+          setToast({
+            message: "Work assignment assigned successfully.",
+            severity: "success"
+          });
+          await loadEmployeeAssignments(employeeCode);
+          await maybeRefreshSelfWorkspace(employeeCode);
+        });
+      } catch (error) {
+        setToast({
+          message:
+            error.response?.data?.message || "Failed to assign work assignment.",
+          severity: "error"
+        });
+      }
+    },
+    [
+      assignedByWorkAssignmentId,
+      loadEmployeeAssignments,
+      runAssignmentMutation,
+      selectedEmployee?.employee_code
+    ]
+  );
+
+  const handleRemove = useCallback(
+    async (employeeWorkAssignmentId, workAssignmentIdForBusy = null) => {
+      const normalizedEmployeeWorkAssignmentId = String(
+        employeeWorkAssignmentId ?? ""
+      ).trim();
+      const busyKey = workAssignmentIdForBusy ?? normalizedEmployeeWorkAssignmentId;
+
+      if (!normalizedEmployeeWorkAssignmentId) {
+        return;
+      }
+
+      try {
+        await runAssignmentMutation(busyKey, async () => {
+          await API.delete(
+            `/employee-work-assignments/${encodeURIComponent(normalizedEmployeeWorkAssignmentId)}`
+          );
+
+          setToast({
+            message: "Work assignment removed successfully.",
+            severity: "success"
+          });
+          await loadEmployeeAssignments(selectedEmployee?.employee_code);
+          await maybeRefreshSelfWorkspace(selectedEmployee?.employee_code);
+        });
+      } catch (error) {
+        setToast({
+          message:
+            error.response?.data?.message || "Failed to remove work assignment.",
+          severity: "error"
+        });
+      }
+    },
+    [loadEmployeeAssignments, runAssignmentMutation, selectedEmployee?.employee_code]
+  );
+
+  const handleAccessToggle = useCallback(
+    async (row, nextEnabled) => {
+      if (!selectedEmployee?.employee_code || assignmentMutationInFlightRef.current) {
+        return;
+      }
+
+      if (nextEnabled === Boolean(row.enabled)) {
+        return;
+      }
+
+      if (nextEnabled) {
+        await handleAssign(row.work_assignment_id);
+        return;
+      }
+
+      await handleRemove(row.employee_work_assignment_id, row.work_assignment_id);
+    },
+    [handleAssign, handleRemove, selectedEmployee?.employee_code]
+  );
+
+  const assignmentColumns = useMemo(
+    () => [
+      {
+        field: "assignment_name",
+        headerName: "Work Assignment",
+        flex: 1.2,
+        minWidth: 180
+      },
+      {
+        field: "assignment_code",
+        headerName: "Code",
+        flex: 1,
+        minWidth: 160
+      },
+      {
+        field: "category",
+        headerName: "Category",
+        flex: 0.8,
+        minWidth: 120
+      },
+      {
+        field: "access",
+        headerName: "Access",
+        width: 120,
+        sortable: false,
+        filterable: false,
+        disableColumnMenu: true,
+        renderCell: (params) => {
+          const row = params.row;
+          const isBusy =
+            busyAssignmentId != null &&
+            (busyAssignmentId === row.work_assignment_id ||
+              (row.employee_work_assignment_id != null &&
+                busyAssignmentId === row.employee_work_assignment_id));
+          const switchDisabled = !selectedEmployee?.employee_code || isBusy;
+
+          return (
+            <Box
+              sx={{ display: "flex", alignItems: "center", gap: 0.75, height: "100%" }}
+              onClick={(event) => event.stopPropagation()}
+              onMouseDown={(event) => event.stopPropagation()}
+            >
+              <Switch
+                size="small"
+                checked={Boolean(row.enabled)}
+                disabled={switchDisabled}
+                onChange={(event) => {
+                  event.stopPropagation();
+                  void handleAccessToggle(row, event.target.checked);
+                }}
+                inputProps={{
+                  "aria-label": `${row.assignment_name} access`
+                }}
+              />
+              <Typography variant="caption" color="text.secondary">
+                {row.enabled ? "On" : "Off"}
+              </Typography>
+            </Box>
+          );
+        }
+      }
+    ],
+    [
+      busyAssignmentId,
+      handleAccessToggle,
+      selectedEmployee?.employee_code
+    ]
+  );
 
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "background.default", display: "flex", flexDirection: "column" }}>
+    <Box
+      sx={{
+        minHeight: "100vh",
+        bgcolor: "background.default",
+        display: "flex",
+        flexDirection: "column"
+      }}
+    >
       <Header />
 
       <Box sx={{ display: "flex", flex: 1, minHeight: 0 }}>
         <AdminNavRail />
 
-      <Box sx={{ flex: 1, minWidth: 0, maxWidth: 1400, mx: "auto", px: 2, py: 3, width: "100%" }}>
-        <Typography variant="h5" fontWeight={700} mb={0.5}>
-          Employee Work Assignments
-        </Typography>
-        <Typography variant="body2" color="text.secondary" mb={2}>
-          Assign Enterprise Work Assignments to employees for workspace access.
-        </Typography>
-
-        {loadError ? (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {loadError}
-          </Alert>
-        ) : null}
-
-        <Stack
-          direction={{ xs: "column", md: "row" }}
-          spacing={2}
-          alignItems="stretch"
+        <Box
+          component="main"
+          sx={{
+            flex: 1,
+            minWidth: 0,
+            maxWidth: 1480,
+            mx: "auto",
+            px: { xs: 2, sm: 2.5 },
+            py: { xs: 2, sm: 2.5 },
+            width: "100%"
+          }}
         >
-          <Card sx={{ flex: 1, minWidth: 0 }}>
-            <CardContent>
-              <Typography variant="subtitle1" fontWeight={700} mb={1.5}>
+          <ConfigPageHeader
+            title="Employee Work Assignments"
+            subtitle="Enable only the workspaces each employee needs."
+            breadcrumbs={[
+              { label: "Administration" },
+              { label: "Access Management" }
+            ]}
+            statusChip={
+              selectedEmployee ? (
+                <Chip
+                  label={`${assignmentGridRows.length} assignments available`}
+                  color="primary"
+                  variant="outlined"
+                  size="small"
+                  sx={{ fontWeight: 600 }}
+                />
+              ) : null
+            }
+          />
+
+          {loadError ? (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {loadError}
+            </Alert>
+          ) : null}
+
+          <Stack
+            direction={{ xs: "column", lg: "row" }}
+            spacing={2}
+            alignItems="stretch"
+          >
+            <EnterpriseSurface sx={{ width: { xs: "100%", lg: 320 }, flexShrink: 0 }}>
+              <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.5 }}>
                 Employees
               </Typography>
 
-              <TextField
-                fullWidth
-                size="small"
-                placeholder="Search employees"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <SearchOutlinedIcon
-                      fontSize="small"
-                      sx={{ mr: 1, color: "text.secondary" }}
-                    />
-                  )
-                }}
-                sx={{ mb: 1.5 }}
+              <SearchBar
+                value={employeeSearchQuery}
+                onChange={(event) => setEmployeeSearchQuery(event.target.value)}
+                placeholder="Search employee or code"
+                width="100%"
               />
 
               {isLoadingEmployees ? (
-                <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-                  <CircularProgress size={28} />
-                </Box>
+                <LoadingState message="Loading employees…" />
+              ) : filteredEmployees.length === 0 ? (
+                <EmptyState
+                  title="No employees found"
+                  description="Try a different search or verify user access."
+                />
               ) : (
-                <List dense sx={{ maxHeight: 560, overflow: "auto" }}>
+                <List dense sx={{ maxHeight: 520, overflow: "auto", mt: 1.5 }}>
                   {filteredEmployees.map((employee) => (
                     <ListItemButton
                       key={employee.user_id}
                       selected={employee.user_id === selectedUserId}
                       onClick={() => setSelectedUserId(employee.user_id)}
-                      sx={{ borderRadius: 2, mb: 0.5 }}
+                      sx={{ borderRadius: 2, mb: 0.5, py: 0.75 }}
                     >
                       <Box sx={{ minWidth: 0 }}>
                         <Typography variant="body2" fontWeight={600} noWrap>
@@ -326,160 +486,106 @@ function EmployeeWorkAssignmentPage() {
                   ))}
                 </List>
               )}
-            </CardContent>
-          </Card>
+            </EnterpriseSurface>
 
-          <Card sx={{ flex: 1.2, minWidth: 0 }}>
-            <CardContent>
-              <Typography variant="subtitle1" fontWeight={700} mb={1}>
-                Assignment Panel
-              </Typography>
-
+            <Box sx={{ flex: 1, minWidth: 0 }}>
               {selectedEmployee ? (
-                <Stack spacing={1} mb={2}>
-                  <InfoField label="Employee" value={selectedEmployee.full_name} />
-                  <InfoField
-                    label="Employee Code"
-                    value={selectedEmployee.employee_code}
-                  />
-                  <InfoField label="Role" value={selectedEmployee.role_name} />
-                </Stack>
+                <EnterpriseSurface
+                  sx={{
+                    mb: 1.5,
+                    py: 1.25,
+                    px: 1.5,
+                    bgcolor: "primary.main",
+                    color: "primary.contrastText",
+                    borderColor: "primary.dark"
+                  }}
+                >
+                  <Stack
+                    direction="row"
+                    spacing={1.5}
+                    alignItems="center"
+                    justifyContent="space-between"
+                  >
+                    <Stack direction="row" spacing={1.5} alignItems="center" minWidth={0}>
+                      <Avatar
+                        sx={{
+                          width: 36,
+                          height: 36,
+                          bgcolor: "primary.light",
+                          color: "primary.contrastText",
+                          fontSize: 14,
+                          fontWeight: 700
+                        }}
+                      >
+                        {employeeInitials(selectedEmployee.full_name)}
+                      </Avatar>
+                      <Box minWidth={0}>
+                        <Typography variant="body2" fontWeight={700} noWrap>
+                          {selectedEmployee.full_name}
+                        </Typography>
+                        <Typography variant="caption" sx={{ opacity: 0.9 }}>
+                          {selectedEmployee.employee_code} · {selectedEmployee.role_name}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                    <Chip
+                      size="small"
+                      label={`${enabledCount} enabled · ${disabledCount} disabled`}
+                      sx={{
+                        bgcolor: "rgba(255,255,255,0.16)",
+                        color: "inherit",
+                        fontWeight: 600
+                      }}
+                    />
+                  </Stack>
+                </EnterpriseSurface>
               ) : (
-                <Typography variant="body2" color="text.secondary" mb={2}>
+                <Alert severity="info" sx={{ mb: 1.5 }}>
                   Select an employee to manage work assignments.
-                </Typography>
+                </Alert>
               )}
 
-              <Divider sx={{ mb: 2 }} />
-
               <Stack
-                direction={{ xs: "column", sm: "row" }}
+                direction="row"
+                justifyContent="flex-end"
                 spacing={2}
-                alignItems="stretch"
+                sx={{ mb: 1 }}
               >
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography variant="subtitle2" fontWeight={700} mb={1}>
-                    Assigned Work Assignments
-                  </Typography>
-
-                  {isLoadingAssignments ? (
-                    <Box
-                      sx={{ display: "flex", justifyContent: "center", py: 3 }}
-                    >
-                      <CircularProgress size={24} />
-                    </Box>
-                  ) : assignedRows.length === 0 ? (
-                    <Typography variant="body2" color="text.secondary">
-                      No active assignments.
-                    </Typography>
-                  ) : (
-                    <List dense sx={{ maxHeight: 280, overflow: "auto" }}>
-                      {assignedRows.map((row) => (
-                        <ListItemButton
-                          key={row.employee_work_assignment_id}
-                          selected={
-                            Number(selectedAssignedId) ===
-                            Number(row.employee_work_assignment_id)
-                          }
-                          onClick={() =>
-                            setSelectedAssignedId(
-                              row.employee_work_assignment_id
-                            )
-                          }
-                          sx={{ borderRadius: 2, mb: 0.5 }}
-                        >
-                          <Box sx={{ minWidth: 0 }}>
-                            <Typography variant="body2" fontWeight={600} noWrap>
-                              {row.assignment_name || row.assignment_code}
-                            </Typography>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              {row.assignment_code}
-                              {row.business_module
-                                ? ` · ${row.business_module}`
-                                : ""}
-                            </Typography>
-                          </Box>
-                        </ListItemButton>
-                      ))}
-                    </List>
-                  )}
-
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    size="small"
-                    sx={{ mt: 1.5, textTransform: "none", fontWeight: 600 }}
-                    disabled={!selectedAssignedId || isRemoving}
-                    onClick={handleRemove}
-                  >
-                    {isRemoving ? "Removing…" : "Remove"}
-                  </Button>
-                </Box>
-
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography variant="subtitle2" fontWeight={700} mb={1}>
-                    Available Work Assignments
-                  </Typography>
-
-                  {availableAssignments.length === 0 ? (
-                    <Typography variant="body2" color="text.secondary">
-                      No available assignments to assign.
-                    </Typography>
-                  ) : (
-                    <List dense sx={{ maxHeight: 280, overflow: "auto" }}>
-                      {availableAssignments.map((row) => (
-                        <ListItemButton
-                          key={row.work_assignment_id}
-                          selected={
-                            Number(selectedAvailableId) ===
-                            Number(row.work_assignment_id)
-                          }
-                          onClick={() =>
-                            setSelectedAvailableId(row.work_assignment_id)
-                          }
-                          sx={{ borderRadius: 2, mb: 0.5 }}
-                        >
-                          <Box sx={{ minWidth: 0 }}>
-                            <Typography variant="body2" fontWeight={600} noWrap>
-                              {row.assignment_name}
-                            </Typography>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              {row.assignment_code}
-                              {row.business_module
-                                ? ` · ${row.business_module}`
-                                : ""}
-                            </Typography>
-                          </Box>
-                        </ListItemButton>
-                      ))}
-                    </List>
-                  )}
-
-                  <Button
-                    variant="contained"
-                    size="small"
-                    sx={{ mt: 1.5, textTransform: "none", fontWeight: 600 }}
-                    disabled={
-                      !selectedEmployee?.employee_code ||
-                      !selectedAvailableId ||
-                      isAssigning
-                    }
-                    onClick={handleAssign}
-                  >
-                    {isAssigning ? "Assigning…" : "Assign"}
-                  </Button>
-                </Box>
+                <Typography variant="caption" color="text.secondary">
+                  Enabled: {enabledCount}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Disabled: {disabledCount}
+                </Typography>
               </Stack>
-            </CardContent>
-          </Card>
-        </Stack>
-      </Box>
+
+              {!selectedEmployee ? null : assignmentGridRows.length === 0 && !isLoadingAssignments ? (
+                <EmptyState
+                  title="No work assignments available"
+                  description="Active work assignment master records are required before access can be granted."
+                />
+              ) : (
+                <EnterpriseDataGrid
+                  rows={assignmentGridRows}
+                  columns={assignmentColumns}
+                  loading={isLoadingAssignments}
+                  height={Math.min(560, Math.max(320, assignmentGridRows.length * 36 + 56))}
+                  disableRowSelectionOnClick
+                  initialState={{
+                    pagination: { paginationModel: { pageSize: 25 } }
+                  }}
+                  pageSizeOptions={[10, 25, 50]}
+                />
+              )}
+
+              <Alert severity="info" variant="outlined" sx={{ mt: 2 }}>
+                Switches reflect persisted employee access. Turning a switch on assigns
+                immediately; turning it off removes that assignment using the existing
+                workflow.
+              </Alert>
+            </Box>
+          </Stack>
+        </Box>
       </Box>
 
       <Snackbar

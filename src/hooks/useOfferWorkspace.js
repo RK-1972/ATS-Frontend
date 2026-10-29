@@ -25,6 +25,9 @@ function useOfferWorkspace() {
   const negotiateOffer = useEnterpriseStore((state) => state.negotiateOffer);
   const reviseOffer = useEnterpriseStore((state) => state.reviseOffer);
   const withdrawOffer = useEnterpriseStore((state) => state.withdrawOffer);
+  const adminReleaseOfferToTalentPool = useEnterpriseStore(
+    (state) => state.adminReleaseOfferToTalentPool
+  );
   const correctPendingApproval = useEnterpriseStore((state) => state.correctPendingApproval);
   const amendApprovedOffer = useEnterpriseStore((state) => state.amendApprovedOffer);
   const submitOfferClarification = useEnterpriseStore((state) => state.submitOfferClarification);
@@ -92,6 +95,7 @@ function useOfferWorkspace() {
     negotiateOffer,
     reviseOffer,
     withdrawOffer,
+    adminReleaseOfferToTalentPool,
     correctPendingApproval,
     amendApprovedOffer,
     submitOfferClarification,

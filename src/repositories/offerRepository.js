@@ -218,6 +218,20 @@ async function submitOfferClarification(offers, offerId, comments) {
   };
 }
 
+async function adminReleaseOfferToTalentPool(offers, offerId, reason = "") {
+  if (!isLiveMode()) {
+    return { offers, toastMessage: "Candidate released to the Talent Pool." };
+  }
+
+  const result = await offerClient.adminReleaseOfferToTalentPool(offerId, reason);
+  const bundle = await getAll();
+
+  return {
+    offers: bundle,
+    toastMessage: result.message || result.toastMessage || "Candidate released to the Talent Pool."
+  };
+}
+
 function getDefaultSelectedOfferId(offersBundle) {
   const pending = (offersBundle?.offers || []).find(
     (offer) => offer.offerStatus === "Pending Approval"
@@ -240,6 +254,7 @@ const offerRepository = {
   correctPendingApproval,
   amendApprovedOffer,
   submitOfferClarification,
+  adminReleaseOfferToTalentPool,
   generateOfferLetter
 };
 

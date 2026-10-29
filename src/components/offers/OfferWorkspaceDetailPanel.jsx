@@ -17,10 +17,13 @@ import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import HandshakeOutlinedIcon from "@mui/icons-material/HandshakeOutlined";
 import SendOutlinedIcon from "@mui/icons-material/SendOutlined";
 import UndoOutlinedIcon from "@mui/icons-material/UndoOutlined";
+import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
 
 import EnterpriseConfirmationDialog from "@/components/enterprise/EnterpriseConfirmationDialog";
 import {
+  canAdminReleaseOfferToTalentPool,
   canWithdrawOfferStatus,
+  isAdminRole,
   isPendingApprovalStatus,
   resolveOfferStatus
 } from "@/utils/offerApprovalUtils";
@@ -66,6 +69,7 @@ function OfferWorkspaceDetailPanel({
   onNegotiate,
   onRevise,
   onWithdraw,
+  onAdminReleaseToTalentPool,
   onCorrectPendingApproval,
   onAmendApproved,
   onSubmitClarification,
@@ -77,6 +81,8 @@ function OfferWorkspaceDetailPanel({
   const [correctOpen, setCorrectOpen] = useState(false);
   const [amendOpen, setAmendOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [adminReleaseOpen, setAdminReleaseOpen] = useState(false);
+  const [adminReleaseReason, setAdminReleaseReason] = useState("");
   const [withdrawReason, setWithdrawReason] = useState("");
   const [proposedCtc, setProposedCtc] = useState("");
   const [counterCtc, setCounterCtc] = useState("");
@@ -194,6 +200,10 @@ function OfferWorkspaceDetailPanel({
     Boolean(onWithdraw)
     && canWithdrawOfferStatus(status)
     && (!isPendingApprovalStatus(status) || canWritePendingApprovalOffer(offer, user));
+  const canAdminRelease =
+    Boolean(onAdminReleaseToTalentPool)
+    && isAdminRole(user)
+    && canAdminReleaseOfferToTalentPool(offer);
 
   const openCorrectDialog = () => {
     setCorrectForm({
@@ -375,7 +385,7 @@ function OfferWorkspaceDetailPanel({
         </Box>
       ) : null}
 
-      {(canRelease || canRevise || canCorrectPending || canAmendApproved || canNegotiate || canAccept || canWithdraw) ? (
+      {(canRelease || canRevise || canCorrectPending || canAmendApproved || canNegotiate || canAccept || canWithdraw || canAdminRelease) ? (
         <Box
           sx={{
             display: "flex",
@@ -476,8 +486,57 @@ function OfferWorkspaceDetailPanel({
               {isPendingApprovalStatus(status) ? "Discard Request" : "Withdraw Offer"}
             </Button>
           ) : null}
+          {canAdminRelease ? (
+            <Button
+              variant="outlined"
+              color="secondary"
+              size="small"
+              startIcon={<GroupsOutlinedIcon />}
+              disabled={busy}
+              onClick={() => {
+                setAdminReleaseReason("");
+                setAdminReleaseOpen(true);
+              }}
+            >
+              Release to Talent Pool
+            </Button>
+          ) : null}
         </Box>
       ) : null}
+
+      <EnterpriseConfirmationDialog
+        open={adminReleaseOpen}
+        title="Release candidate to Talent Pool?"
+        message="The candidate will become available for mapping to other requisitions. Offer, interview, and approval history on this requisition stay unchanged and duplicate-offer protection remains in effect."
+        confirmLabel="Release to Talent Pool"
+        confirmColor="secondary"
+        loading={busy}
+        onClose={() => {
+          if (!busy) {
+            setAdminReleaseOpen(false);
+          }
+        }}
+        onConfirm={async () => {
+          if (!String(adminReleaseReason || "").trim()) {
+            return;
+          }
+          await onAdminReleaseToTalentPool?.(offer.offerId, adminReleaseReason);
+          setAdminReleaseOpen(false);
+          setAdminReleaseReason("");
+        }}
+      >
+        <TextField
+          label="Release reason"
+          value={adminReleaseReason}
+          onChange={(event) => setAdminReleaseReason(event.target.value)}
+          fullWidth
+          multiline
+          minRows={2}
+          sx={{ mt: 2 }}
+          required
+          disabled={busy}
+        />
+      </EnterpriseConfirmationDialog>
 
       <EnterpriseConfirmationDialog
         open={withdrawOpen}

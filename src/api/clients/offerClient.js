@@ -111,6 +111,38 @@ const offerClient = {
         toastMessage: "Clarification submitted. Workflow resumed."
       })
     );
+  },
+
+  adminReleaseOfferToTalentPool(offerId, reason = "") {
+    return httpPost(
+      `${ENDPOINTS.offers}/${offerId}/admin-release-to-talent-pool`,
+      { reason },
+      () => ({
+        success: true,
+        message: "Candidate released to the Talent Pool.",
+        toastMessage: "Candidate released to the Talent Pool."
+      })
+    );
+  },
+
+  searchPortalReleaseOffers(search = "") {
+    const query = encodeURIComponent(String(search || "").trim());
+    return httpGet(
+      `${ENDPOINTS.offers}/portal-release/search?q=${query}`,
+      () => ({ success: true, data: [] })
+    );
+  },
+
+  portalReleaseOffer(offerId, payload = {}) {
+    return httpPost(
+      `${ENDPOINTS.offers}/${offerId}/portal-release`,
+      payload,
+      () => ({
+        success: true,
+        message: "Offer released to the candidate portal.",
+        toastMessage: "Offer released to the candidate portal."
+      })
+    );
   }
 };
 

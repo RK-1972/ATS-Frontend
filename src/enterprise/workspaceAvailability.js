@@ -3,6 +3,7 @@ import WorkOutlineOutlinedIcon from "@mui/icons-material/WorkOutlineOutlined";
 import FactCheckOutlinedIcon from "@mui/icons-material/FactCheckOutlined";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import LocalOfferOutlinedIcon from "@mui/icons-material/LocalOfferOutlined";
+import SendOutlinedIcon from "@mui/icons-material/SendOutlined";
 import AdminPanelSettingsOutlinedIcon from "@mui/icons-material/AdminPanelSettingsOutlined";
 import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
 import SupervisorAccountOutlinedIcon from "@mui/icons-material/SupervisorAccountOutlined";
@@ -99,6 +100,15 @@ const WORKSPACE_CATALOG = [
     description: "What offers need action today?",
     path: "/offers",
     icon: LocalOfferOutlinedIcon,
+    module: "offers"
+  },
+  {
+    id: "release-offer",
+    flag: "showReleaseOfferWorkspace",
+    title: "Release Offer",
+    description: "Release generated offers to candidate portal accounts.",
+    path: "/release-offer",
+    icon: SendOutlinedIcon,
     module: "offers"
   }
 ];

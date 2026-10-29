@@ -1696,6 +1696,21 @@ const useEnterpriseStore = create((set, get) => ({
     });
   },
 
+  adminReleaseOfferToTalentPool(offerId, reason = "") {
+    return Promise.resolve(
+      offerRepository.adminReleaseOfferToTalentPool(get().offers, offerId, reason)
+    ).then((result) => {
+      set({
+        offers: result.offers,
+        offerUi: {
+          ...get().offerUi,
+          toastMessage: result.toastMessage
+        }
+      });
+      return result;
+    });
+  },
+
   negotiateOffer(offerId, payload = {}) {
     return Promise.resolve(
       offerRepository.negotiateOffer(get().offers, offerId, payload)

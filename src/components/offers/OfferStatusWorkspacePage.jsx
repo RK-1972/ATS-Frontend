@@ -23,6 +23,7 @@ function OfferStatusWorkspacePage({
   onNegotiate,
   onRevise,
   onWithdraw,
+  onAdminReleaseToTalentPool,
   onCorrectPendingApproval,
   onAmendApproved,
   onSubmitClarification,
@@ -105,6 +106,7 @@ function OfferStatusWorkspacePage({
               onNegotiate={onNegotiate}
               onRevise={onRevise}
               onWithdraw={onWithdraw}
+              onAdminReleaseToTalentPool={onAdminReleaseToTalentPool}
               onCorrectPendingApproval={onCorrectPendingApproval}
               onAmendApproved={onAmendApproved}
               onSubmitClarification={onSubmitClarification}
