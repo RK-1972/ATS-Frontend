@@ -67,6 +67,54 @@ function stageChipColor(stageName = "") {
   return "primary";
 }
 
+const CCT_GRID_CELL_BOX_SX = {
+  minWidth: 0,
+  width: "100%",
+  overflow: "hidden"
+};
+
+const CCT_GRID_PRIMARY_TEXT_SX = {
+  fontWeight: 600,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+  lineHeight: 1.35
+};
+
+const CCT_GRID_SECONDARY_TEXT_SX = {
+  display: "block",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+  lineHeight: 1.35
+};
+
+const CCT_GRID_SINGLE_LINE_SX = {
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+  lineHeight: 1.35,
+  width: "100%"
+};
+
+function CandidateRequisitionCell({ primary, secondary, primaryTitle, secondaryTitle }) {
+  return (
+    <Box sx={CCT_GRID_CELL_BOX_SX}>
+      <Typography variant="body2" sx={CCT_GRID_PRIMARY_TEXT_SX} title={primaryTitle ?? primary}>
+        {primary || "—"}
+      </Typography>
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        sx={CCT_GRID_SECONDARY_TEXT_SX}
+        title={secondaryTitle ?? secondary}
+      >
+        {secondary || "—"}
+      </Typography>
+    </Box>
+  );
+}
+
 function SummaryMetricCard({ label, value, helper }) {
   return (
     <EnterpriseSurface sx={{ p: 2, height: "100%" }}>
@@ -190,79 +238,117 @@ function CandidateControlTowerPage() {
       {
         field: "candidate_name",
         headerName: "Candidate",
-        flex: 1.1,
-        minWidth: 180,
+        flex: 1.35,
+        minWidth: 220,
         renderCell: (params) => (
-          <Box>
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-              {params.row.candidate_name || "—"}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {params.row.candidate_code || params.row.candidate_id}
-            </Typography>
-          </Box>
+          <CandidateRequisitionCell
+            primary={params.row.candidate_name}
+            secondary={params.row.candidate_code || params.row.candidate_id}
+            primaryTitle={params.row.candidate_name}
+            secondaryTitle={String(params.row.candidate_code || params.row.candidate_id || "")}
+          />
         )
       },
       {
         field: "owner_name",
         headerName: "Owner",
         flex: 0.9,
-        minWidth: 140
+        minWidth: 160,
+        renderCell: (params) => (
+          <Typography
+            variant="body2"
+            sx={CCT_GRID_SINGLE_LINE_SX}
+            title={params.row.owner_name || ""}
+          >
+            {params.row.owner_name || "—"}
+          </Typography>
+        )
       },
       {
         field: "requisition_code",
         headerName: "Requisition",
-        flex: 1,
-        minWidth: 160,
+        flex: 1.25,
+        minWidth: 200,
         renderCell: (params) => (
-          <Box>
-            <Typography variant="body2">{params.row.requisition_code || "—"}</Typography>
-            <Typography variant="caption" color="text.secondary">
-              {params.row.position_title || "—"}
-            </Typography>
-          </Box>
+          <CandidateRequisitionCell
+            primary={params.row.requisition_code}
+            secondary={params.row.position_title}
+            primaryTitle={params.row.requisition_code}
+            secondaryTitle={params.row.position_title}
+          />
         )
       },
       {
         field: "stage_name",
         headerName: "Pipeline Stage",
-        width: 150,
+        minWidth: 148,
+        width: 148,
         renderCell: (params) => (
           <Chip
             size="small"
             label={params.row.stage_name || "Applied"}
             color={stageChipColor(params.row.stage_name)}
             variant="outlined"
-            sx={{ maxWidth: "100%" }}
+            sx={{
+              maxWidth: "100%",
+              "& .MuiChip-label": {
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap"
+              }
+            }}
           />
         )
       },
       {
         field: "interview_status",
         headerName: "Interview",
-        width: 130
+        minWidth: 132,
+        width: 132,
+        renderCell: (params) => (
+          <Typography
+            variant="body2"
+            sx={CCT_GRID_SINGLE_LINE_SX}
+            title={params.row.interview_status || ""}
+          >
+            {params.row.interview_status || "—"}
+          </Typography>
+        )
       },
       {
         field: "offer_status",
         headerName: "Offer",
-        width: 130
+        minWidth: 132,
+        width: 132,
+        renderCell: (params) => (
+          <Typography
+            variant="body2"
+            sx={CCT_GRID_SINGLE_LINE_SX}
+            title={params.row.offer_status || ""}
+          >
+            {params.row.offer_status || "—"}
+          </Typography>
+        )
       },
       {
         field: "last_activity_at",
         headerName: "Last Activity",
-        width: 130,
+        minWidth: 128,
+        width: 128,
         valueFormatter: (value) => formatDateTime(value)
       },
       {
         field: "time_in_stage_days",
         headerName: "Time in Stage",
-        width: 120,
+        minWidth: 118,
+        width: 118,
         valueFormatter: (value) =>
           Number.isFinite(Number(value)) ? `${value} days` : "—"
       },
       {
         field: "actions",
         headerName: "",
+        minWidth: 56,
         width: 56,
         sortable: false,
         filterable: false,
@@ -373,11 +459,12 @@ function CandidateControlTowerPage() {
             <Stack spacing={2}>
               <SearchBar
                 value={searchQuery}
-                onChange={setSearchQuery}
-                placeholder="Search by name, candidate ID, email…"
-                onSubmit={() => {
+                onChange={(event) => {
+                  setSearchQuery(event.target.value);
                   setPaginationModel((current) => ({ ...current, page: 0 }));
                 }}
+                placeholder="Search by name, candidate ID, email…"
+                width="100%"
               />
               <Grid container spacing={1.5}>
                 <Grid size={{ xs: 12, sm: 6, md: 4, lg: 2 }}>
@@ -482,6 +569,7 @@ function CandidateControlTowerPage() {
               columns={columns}
               loading={isLoadingGrid}
               height={520}
+              rowHeight={56}
               getRowId={(row) => row.mapping_id}
               paginationMode="server"
               rowCount={totalRows}
@@ -489,6 +577,26 @@ function CandidateControlTowerPage() {
               onPaginationModelChange={setPaginationModel}
               pagination
               onRowClick={(params) => setSelectedRow(params.row)}
+              sx={{
+                overflowX: "auto",
+                maxWidth: "100%",
+                "& .MuiDataGrid-main": {
+                  minWidth: { xs: 680, sm: 960, md: 1180 }
+                },
+                "& .MuiDataGrid-columnHeader": {
+                  alignItems: "center"
+                },
+                "& .MuiDataGrid-cell": {
+                  display: "flex",
+                  alignItems: "flex-start",
+                  py: 1,
+                  lineHeight: 1.35
+                },
+                "& .MuiDataGrid-cellContent": {
+                  minWidth: 0,
+                  width: "100%"
+                }
+              }}
             />
           )}
         </Box>
