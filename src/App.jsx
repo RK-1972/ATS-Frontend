@@ -33,6 +33,7 @@ import ApplicationAuditWorkspaceRoute from "./pages/application-audit/Applicatio
 import ResponsibilityClearancePage from "./pages/ResponsibilityClearancePage";
 import EmployeeWorkAssignmentPage from "./pages/EmployeeWorkAssignmentPage";
 import ReleaseOfferPage from "./pages/ReleaseOfferPage";
+import CandidateControlTowerWorkspaceRoute from "./pages/candidate-control-tower/CandidateControlTowerWorkspaceRoute";
 import WorkAssignmentMasterPage from "./pages/WorkAssignmentMasterPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import TALeadProtectedRoute from "./components/TALeadProtectedRoute";
@@ -528,6 +529,14 @@ function App() {
           element={
             <ProtectedRoute>
               <ReleaseOfferPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/candidate-control-tower"
+          element={
+            <ProtectedRoute>
+              <CandidateControlTowerWorkspaceRoute />
             </ProtectedRoute>
           }
         />

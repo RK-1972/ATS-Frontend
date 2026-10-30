@@ -21,7 +21,8 @@ export const ENDPOINTS = {
   notifications: `${V1}/notifications`,
   audit: `${V1}/audit`,
   reports: `${V1}/reports`,
-  taLead: `${V1}/ta-lead`
+  taLead: `${V1}/ta-lead`,
+  candidateControlTower: `${V1}/candidate-control-tower`
 };
 
 export function masterEntityEndpoint(entityType) {

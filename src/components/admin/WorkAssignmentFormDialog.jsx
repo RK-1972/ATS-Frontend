@@ -36,6 +36,7 @@ const WORKSPACE_FLAG_OPTIONS = [
   { value: "showRequestWorkspace", label: "showRequestWorkspace" },
   { value: "showOfferWorkspace", label: "showOfferWorkspace" },
   { value: "showReleaseOfferWorkspace", label: "showReleaseOfferWorkspace" },
+  { value: "showCandidateControlTowerWorkspace", label: "showCandidateControlTowerWorkspace" },
   { value: "showTaLeadWorkspace", label: "showTaLeadWorkspace" }
 ];
 

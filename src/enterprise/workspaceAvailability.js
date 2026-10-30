@@ -9,6 +9,7 @@ import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
 import SupervisorAccountOutlinedIcon from "@mui/icons-material/SupervisorAccountOutlined";
 import ManageAccountsOutlinedIcon from "@mui/icons-material/ManageAccountsOutlined";
 import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
+import RadarOutlinedIcon from "@mui/icons-material/RadarOutlined";
 
 const WORKSPACE_CATALOG = [
   {
@@ -110,6 +111,15 @@ const WORKSPACE_CATALOG = [
     path: "/release-offer",
     icon: SendOutlinedIcon,
     module: "offers"
+  },
+  {
+    id: "candidate-control-tower",
+    flag: "showCandidateControlTowerWorkspace",
+    title: "Candidate Control Tower",
+    description: "Centralized candidate pipeline visibility within your authorized scope.",
+    path: "/candidate-control-tower",
+    icon: RadarOutlinedIcon,
+    module: "recruitment"
   }
 ];
 
