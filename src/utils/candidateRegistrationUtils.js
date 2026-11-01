@@ -22,9 +22,10 @@ export function normalizeNumericExperience(value) {
 
 export function buildDraftUpdatePayload(
   editableCandidate = {},
-  candidateContainer = "PIPELINE"
+  candidateContainer = "PIPELINE",
+  options = {}
 ) {
-  return {
+  const payload = {
     first_name: editableCandidate.first_name,
     last_name: editableCandidate.last_name,
     email_id: editableCandidate.email || editableCandidate.email_id,
@@ -40,6 +41,12 @@ export function buildDraftUpdatePayload(
     primary_skill: editableCandidate.skills || editableCandidate.primary_skill,
     candidate_container: candidateContainer || "PIPELINE"
   };
+
+  if (options.ownerEmployeeCode) {
+    payload.owner_employee_code = options.ownerEmployeeCode;
+  }
+
+  return payload;
 }
 
 export function validateRegisterCandidate(editableCandidate) {

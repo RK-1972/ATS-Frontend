@@ -46,6 +46,7 @@ import candidateRepository from "../../repositories/candidateRepository";
 import useEnterpriseStore from "@/store/enterpriseStore";
 import { formatRequisitionSkillDisplay } from "@/utils/requisitionSkillUtils";
 import SuggestedMatchesPanel from "../../components/requisitions/SuggestedMatchesPanel";
+import RequisitionTalentSourcingPanel from "../../components/talent-intelligence/RequisitionTalentSourcingPanel";
 import { ENTERPRISE_MOBILE_PRIMARY_BUTTON_SX } from "../../components/enterprise/enterpriseWorkspaceTokens";
 
 const PIPELINE_STAGE_ICONS = {
@@ -683,6 +684,8 @@ function RecruiterRequisitionDetailsPage() {
             requisitionCode={requisition.req_code || reqCode}
             onCandidateMapped={() => loadDetails()}
           />
+
+          <RequisitionTalentSourcingPanel requisitionCode={requisition.req_code || reqCode} />
 
           <EnterpriseCard
             title="Assigned Candidates"

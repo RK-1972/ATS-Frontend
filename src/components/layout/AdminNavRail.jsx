@@ -30,6 +30,7 @@ import AssignmentTurnedInOutlinedIcon from "@mui/icons-material/AssignmentTurned
 import LocalOfferOutlinedIcon from "@mui/icons-material/LocalOfferOutlined";
 import SendOutlinedIcon from "@mui/icons-material/SendOutlined";
 import RadarOutlinedIcon from "@mui/icons-material/RadarOutlined";
+import PersonSearchOutlinedIcon from "@mui/icons-material/PersonSearchOutlined";
 
 import useEnterpriseStore from "@/store/enterpriseStore";
 import { isNavPathVisible } from "@/enterprise/moduleVisibility";
@@ -40,6 +41,7 @@ const RECRUITER_ASSIGNMENT_PATH = "/requisitions/assign-recruiters";
 const OFFER_WORKSPACE_PATH = "/offers";
 const RELEASE_OFFER_PATH = "/release-offer";
 const CANDIDATE_CONTROL_TOWER_PATH = "/candidate-control-tower";
+const TALENT_INTELLIGENCE_PATH = "/talent-intelligence";
 const REQUISITION_QUEUES_PATH = "/requisition-queues";
 
 const WORKSPACE_HOME_ITEM = {
@@ -117,6 +119,12 @@ const ADMIN_NAV_ITEMS = [
     path: CANDIDATE_CONTROL_TOWER_PATH,
     icon: RadarOutlinedIcon,
     requiresCandidateControlTowerWorkspace: true
+  },
+  {
+    label: "Talent Intelligence",
+    path: TALENT_INTELLIGENCE_PATH,
+    icon: PersonSearchOutlinedIcon,
+    requiresTalentIntelligenceWorkspace: true
   },
   {
     label: "Employee Work Assignments",
@@ -289,6 +297,13 @@ function AdminNavRail() {
       item.requiresCandidateControlTowerWorkspace
     ) {
       return Boolean(workspace.showCandidateControlTowerWorkspace);
+    }
+
+    if (
+      item.path === TALENT_INTELLIGENCE_PATH ||
+      item.requiresTalentIntelligenceWorkspace
+    ) {
+      return Boolean(workspace.showTalentIntelligenceWorkspace);
     }
 
     if (item.path === "/users") {

@@ -10,7 +10,11 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControl,
   FormControlLabel,
+  InputLabel,
+  MenuItem,
+  Select,
   Stack,
   Typography
 } from "@mui/material";
@@ -26,7 +30,11 @@ function RegisterCandidateDestinationDialog({
   selectedContainer = "PIPELINE",
   onSelectContainer,
   onConfirm,
-  isSubmitting = false
+  isSubmitting = false,
+  allowRecruiterAssignment = false,
+  recruiters = [],
+  selectedOwnerEmployeeCode = "",
+  onSelectOwnerEmployeeCode
 }) {
   const [panAcknowledged, setPanAcknowledged] = useState(false);
 
@@ -138,6 +146,27 @@ function RegisterCandidateDestinationDialog({
             );
           })}
         </Stack>
+        {allowRecruiterAssignment && selectedContainer === "PIPELINE" ? (
+          <FormControl fullWidth size="small" sx={{ mt: 0.5 }}>
+            <InputLabel id="register-pipeline-owner-label">Assign recruiter owner</InputLabel>
+            <Select
+              labelId="register-pipeline-owner-label"
+              label="Assign recruiter owner"
+              value={selectedOwnerEmployeeCode || ""}
+              onChange={(event) => onSelectOwnerEmployeeCode?.(event.target.value)}
+            >
+              {recruiters.map((recruiter) => (
+                <MenuItem
+                  key={recruiter.employee_code || recruiter.user_id}
+                  value={recruiter.employee_code}
+                >
+                  {[recruiter.first_name, recruiter.last_name].filter(Boolean).join(" ") ||
+                    recruiter.employee_code}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        ) : null}
         <Alert severity="warning" sx={{ mt: 1.5, borderRadius: 2 }}>
           {PAN_IMMUTABILITY_NOTICE}
         </Alert>
@@ -158,7 +187,14 @@ function RegisterCandidateDestinationDialog({
         </Button>
         <Button
           variant="contained"
-          disabled={!hasSelection || !panAcknowledged || isSubmitting}
+          disabled={
+            !hasSelection ||
+            !panAcknowledged ||
+            isSubmitting ||
+            (allowRecruiterAssignment &&
+              selectedContainer === "PIPELINE" &&
+              !selectedOwnerEmployeeCode)
+          }
           onClick={onConfirm}
           sx={{ textTransform: "none", fontWeight: 600 }}
         >

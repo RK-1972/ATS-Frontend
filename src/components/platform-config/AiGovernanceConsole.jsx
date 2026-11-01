@@ -31,6 +31,7 @@ import { clampNonNegativeNumber } from "@/utils/nonNegativeNumericValidation";
 const AI_ICONS = {
   resume_matching: MdAutoAwesome,
   ai_candidate_review: MdAutoAwesome,
+  talent_intelligence: MdAutoAwesome,
   candidate_ranking: MdSort,
   interview_questions: MdQuiz,
   offer_risk: MdTrendingDown

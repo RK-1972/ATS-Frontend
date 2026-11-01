@@ -34,6 +34,7 @@ import ResponsibilityClearancePage from "./pages/ResponsibilityClearancePage";
 import EmployeeWorkAssignmentPage from "./pages/EmployeeWorkAssignmentPage";
 import ReleaseOfferPage from "./pages/ReleaseOfferPage";
 import CandidateControlTowerWorkspaceRoute from "./pages/candidate-control-tower/CandidateControlTowerWorkspaceRoute";
+import TalentIntelligenceWorkspaceRoute from "./pages/talent-intelligence/TalentIntelligenceWorkspaceRoute";
 import WorkAssignmentMasterPage from "./pages/WorkAssignmentMasterPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import TALeadProtectedRoute from "./components/TALeadProtectedRoute";
@@ -537,6 +538,14 @@ function App() {
           element={
             <ProtectedRoute>
               <CandidateControlTowerWorkspaceRoute />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/talent-intelligence"
+          element={
+            <ProtectedRoute>
+              <TalentIntelligenceWorkspaceRoute />
             </ProtectedRoute>
           }
         />

@@ -10,6 +10,7 @@ import SupervisorAccountOutlinedIcon from "@mui/icons-material/SupervisorAccount
 import ManageAccountsOutlinedIcon from "@mui/icons-material/ManageAccountsOutlined";
 import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
 import RadarOutlinedIcon from "@mui/icons-material/RadarOutlined";
+import PersonSearchOutlinedIcon from "@mui/icons-material/PersonSearchOutlined";
 
 const WORKSPACE_CATALOG = [
   {
@@ -119,6 +120,15 @@ const WORKSPACE_CATALOG = [
     description: "Centralized candidate pipeline visibility within your authorized scope.",
     path: "/candidate-control-tower",
     icon: RadarOutlinedIcon,
+    module: "recruitment"
+  },
+  {
+    id: "talent-intelligence",
+    flag: "showTalentIntelligenceWorkspace",
+    title: "Talent Intelligence",
+    description: "Discover internal candidates for open requisitions with transparent skill matching.",
+    path: "/talent-intelligence",
+    icon: PersonSearchOutlinedIcon,
     module: "recruitment"
   }
 ];

@@ -84,6 +84,8 @@ import {
 } from "@/utils/candidateRegistrationUtils";
 import { PAN_IMMUTABILITY_NOTICE } from "@/utils/candidatePanUtils";
 import resolveResumeViewerUrl from "@/utils/resolveResumeViewerUrl";
+import recruitmentClient from "@/api/clients/recruitmentClient";
+import OtiExternalIntakeContextPanel from "@/components/talent-intelligence/OtiExternalIntakeContextPanel";
 
 const RegistrationStepConnector = styled(StepConnector)(({ theme }) => ({
   [`&.${stepConnectorClasses.alternativeLabel}`]: {
@@ -1760,9 +1762,27 @@ function CandidateIntakePage() {
   const [reviewLoadingCandidateId, setReviewLoadingCandidateId] = useState(null);
   const [reviewAccessMessage, setReviewAccessMessage] = useState("");
   const [leftRailMode, setLeftRailMode] = useState("single");
+  const [otiReviewContext, setOtiReviewContext] = useState(null);
+  const [otiBootstrapLoading, setOtiBootstrapLoading] = useState(false);
+  const [pipelineOwnerEmployeeCode, setPipelineOwnerEmployeeCode] = useState("");
+  const [recruiterOptions, setRecruiterOptions] = useState([]);
   const { createCandidateIntake, processResume, parseResume } = useCandidateIntake();
   const theme = useTheme();
   const isDesktopIntakeRail = useMediaQuery(theme.breakpoints.up("lg"));
+
+  const otiExternalLeadId = searchParams.get("oti_external_lead");
+  const otiRunId = searchParams.get("run_id");
+  const otiRequisitionCode = searchParams.get("requisition_code");
+
+  const loggedInUser = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem("user") || "null");
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const isAdminUser = loggedInUser?.role_name === "Admin";
 
   const loadDashboard = async () => {
     setDashboardLoading(true);
@@ -1797,6 +1817,37 @@ function CandidateIntakePage() {
   }, []);
 
   useEffect(() => {
+    if (!isAdminUser) {
+      return;
+    }
+
+    let cancelled = false;
+
+    recruitmentClient
+      .listFormRecruiters()
+      .then((response) => {
+        if (cancelled) {
+          return;
+        }
+        const rows = response?.data || [];
+        setRecruiterOptions(Array.isArray(rows) ? rows : []);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setRecruiterOptions([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAdminUser]);
+
+  useEffect(() => {
+    if (!parsedCandidate) {
+      return;
+    }
+
     setEditableCandidate(buildEditableCandidate(parsedCandidate));
   }, [parsedCandidate]);
 
@@ -1867,10 +1918,12 @@ function CandidateIntakePage() {
     setDraftCandidateId(null);
     setDuplicateCandidate(null);
     setReviewSession(null);
+    setOtiReviewContext(null);
     setReviewAccessMessage("");
     setRegisterCandidateMessage("");
     setRegisterDialogOpen(false);
     setCandidateContainer("PIPELINE");
+    setPipelineOwnerEmployeeCode("");
     setIntakeSessionKey((currentKey) => currentKey + 1);
   };
 
@@ -1878,6 +1931,148 @@ function CandidateIntakePage() {
     resetIntakeSession();
     setSearchParams({});
   }, [setSearchParams]);
+
+  const bootstrapOtiExternalReview = useCallback(async () => {
+    const leadId = Number(otiExternalLeadId);
+
+    if (!Number.isInteger(leadId) || leadId <= 0) {
+      return;
+    }
+
+    setOtiBootstrapLoading(true);
+    setReviewAccessMessage("");
+
+    try {
+      const response = await recruitmentClient.prepareOtiExternalLeadIntakeReview(leadId, {
+        run_id: otiRunId,
+        requisition_code: otiRequisitionCode
+      });
+
+      if (response?.success === false) {
+        throw new Error(response?.message || "Unable to prepare OTI candidate review.");
+      }
+
+      const data = response?.data || response;
+      const draftId = Number(data.draft_candidate_id);
+      const otiContext = data.oti_context || null;
+      const parsedFromApi = data.parsed_candidate || null;
+
+      setOtiReviewContext(otiContext);
+      setIntakeId(data.intake_id);
+      setIntakeStatus("COMPLETED");
+      setParsingStatus(data.parsing_status || "COMPLETED");
+      setParsedCandidate(parsedFromApi);
+      setExtractedText(data.extracted_text || "");
+      setDuplicateCandidate(null);
+      setRegisteredCandidateSummary(null);
+      setRegisterCandidateMessage("");
+      setRegisterDialogOpen(false);
+      setCandidateContainer("PIPELINE");
+      setPipelineOwnerEmployeeCode(loggedInUser?.employee_code || "");
+
+      if (parsedFromApi) {
+        setEditableCandidate(buildEditableCandidate(parsedFromApi));
+      }
+
+      if (data.outcome === "DUPLICATE") {
+        setDraftCandidateId(null);
+        setDuplicateCandidate(data.duplicate_candidate || null);
+        setReviewSession({
+          candidateId: null,
+          intakeId: Number(data.intake_id),
+          resumePath: String(data.resume_path || "").trim(),
+          candidateCode: "",
+          candidateName: otiContext?.display_name || "External candidate",
+          sourceId: "",
+          otiExternalLeadId: leadId
+        });
+        return;
+      }
+
+      if (!Number.isInteger(draftId) || draftId <= 0) {
+        throw new Error("Draft candidate was not created from the external resume.");
+      }
+
+      const candidateResponse = await API.get(`/candidate/${draftId}`);
+      const candidate = candidateResponse?.data?.data;
+
+      if (candidateResponse?.data?.success === false || !candidate) {
+        throw new Error(
+          candidateResponse?.data?.message || "Unable to load draft candidate for review."
+        );
+      }
+
+      setDraftCandidateId(draftId);
+      if (!parsedFromApi) {
+        setEditableCandidate(buildEditableCandidateFromMaster(candidate));
+      } else {
+        setEditableCandidate(buildEditableCandidate(parsedFromApi));
+      }
+      setReviewSession({
+        candidateId: draftId,
+        intakeId: Number(data.intake_id),
+        resumePath: String(data.resume_path || candidate.resume_path || "").trim(),
+        candidateCode: candidate.candidate_code || "",
+        candidateName:
+          otiContext?.display_name ||
+          [candidate.first_name, candidate.last_name].filter(Boolean).join(" ") ||
+          "External candidate",
+        sourceId: "",
+        otiExternalLeadId: leadId
+      });
+      setSearchParams({
+        oti_external_lead: String(leadId),
+        ...(otiRunId ? { run_id: String(otiRunId) } : {}),
+        ...(otiRequisitionCode ? { requisition_code: String(otiRequisitionCode) } : {}),
+        review: String(draftId),
+        intake: String(data.intake_id)
+      });
+
+      setIntakeSessionKey((currentKey) => currentKey + 1);
+
+      window.requestAnimationFrame(() => {
+        workbenchRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start"
+        });
+      });
+    } catch (error) {
+      setReviewAccessMessage(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Unable to open OTI external candidate review."
+      );
+      setSearchParams({});
+    } finally {
+      setOtiBootstrapLoading(false);
+    }
+  }, [
+    loggedInUser?.employee_code,
+    otiExternalLeadId,
+    otiRequisitionCode,
+    otiRunId,
+    setSearchParams
+  ]);
+
+  useEffect(() => {
+    if (!otiExternalLeadId || otiBootstrapLoading) {
+      return;
+    }
+
+    if (
+      otiReviewContext &&
+      Number(otiReviewContext.external_lead_id) === Number(otiExternalLeadId)
+    ) {
+      return;
+    }
+
+    bootstrapOtiExternalReview();
+  }, [
+    bootstrapOtiExternalReview,
+    otiBootstrapLoading,
+    otiExternalLeadId,
+    otiReviewContext
+  ]);
 
   const handleBulkBatchComplete = useCallback(async () => {
     clearReviewSession();
@@ -1996,6 +2191,7 @@ function CandidateIntakePage() {
     const reviewIntakeId = Number(searchParams.get("intake"));
 
     if (
+      otiExternalLeadId ||
       dashboardLoading ||
       reviewLoadingCandidateId === reviewCandidateId ||
       !Number.isInteger(reviewCandidateId) ||
@@ -2033,7 +2229,8 @@ function CandidateIntakePage() {
     reviewSession?.candidateId,
     reviewSession?.intakeId,
     searchParams,
-    setSearchParams
+    setSearchParams,
+    otiExternalLeadId
   ]);
 
   const handleResumeFileSelect = (file) => {
@@ -2121,9 +2318,15 @@ function CandidateIntakePage() {
     try {
       const loggedInUser = JSON.parse(localStorage.getItem("user") || "null");
 
+      const ownerForPipeline =
+        isAdminUser && candidateContainer === "PIPELINE"
+          ? pipelineOwnerEmployeeCode || loggedInUser?.employee_code
+          : undefined;
+
       const payload = buildDraftUpdatePayload(
         editableCandidate,
-        candidateContainer || "PIPELINE"
+        candidateContainer || "PIPELINE",
+        ownerForPipeline ? { ownerEmployeeCode: ownerForPipeline } : {}
       );
 
       // Build FormData here so candidate_container is included (repository FORM_FIELDS
@@ -2174,6 +2377,26 @@ function CandidateIntakePage() {
       setRegisterCandidateMessage("");
       setRegisterDialogOpen(false);
       setRegisterSuccessOpen(true);
+
+      if (otiExternalLeadId) {
+        try {
+          await recruitmentClient.completeOtiExternalLeadRegistration(
+            Number(otiExternalLeadId),
+            {
+              candidate_id: draftCandidateId,
+              run_id: otiRunId,
+              requisition_code: otiRequisitionCode
+            }
+          );
+        } catch (completeError) {
+          setRegisterCandidateMessage(
+            completeError?.response?.data?.message ||
+              completeError?.message ||
+              "Candidate registered, but external lead import status could not be updated."
+          );
+        }
+      }
+
       clearReviewSession();
       loadDashboard();
     } catch (error) {
@@ -2211,7 +2434,17 @@ function CandidateIntakePage() {
     loadDashboard();
   };
 
-  const renderIntakeWorkflowRail = () => (
+  const renderIntakeWorkflowRail = () => {
+    if (otiReviewContext) {
+      return (
+        <Alert severity="info" sx={{ borderRadius: 2 }}>
+          Reviewing an Optalynx Talent Intelligence external candidate using the standard
+          registration workflow. Resume parsing and registration rules match Candidate Intake.
+        </Alert>
+      );
+    }
+
+    return (
     <Stack spacing={0} sx={{ minHeight: 0, width: "100%", minWidth: 0 }}>
       <Box sx={{ px: 1.5, pt: 1.5, pb: 0.5 }}>
         <ToggleButtonGroup
@@ -2249,7 +2482,8 @@ function CandidateIntakePage() {
         />
       )}
     </Stack>
-  );
+    );
+  };
 
   return (
     <>
@@ -2262,6 +2496,13 @@ function CandidateIntakePage() {
           activeReviewCandidateId={reviewSession?.candidateId ?? null}
         />
       </Box>
+      {otiBootstrapLoading ? (
+        <Box sx={{ px: { xs: 1.5, sm: 2 }, pb: 1 }}>
+          <Alert severity="info" sx={{ borderRadius: 2 }}>
+            Preparing Talent Intelligence external candidate for standard intake review…
+          </Alert>
+        </Box>
+      ) : null}
       {reviewAccessMessage ? (
         <Box sx={{ px: { xs: 1.5, sm: 2 }, pb: 1 }}>
           <Alert
@@ -2330,10 +2571,15 @@ function CandidateIntakePage() {
         }
         leftRail={isDesktopIntakeRail ? renderIntakeWorkflowRail() : null}
         rightPanel={
-          <CandidateIntakeIntelligencePanel
-            key={intakeSessionKey}
-            editableCandidate={editableCandidate}
-          />
+          <Stack spacing={2} sx={{ width: "100%" }}>
+            {otiReviewContext ? (
+              <OtiExternalIntakeContextPanel context={otiReviewContext} />
+            ) : null}
+            <CandidateIntakeIntelligencePanel
+              key={intakeSessionKey}
+              editableCandidate={editableCandidate}
+            />
+          </Stack>
         }
         main={
           <Stack spacing={1.5} sx={{ width: "100%", minWidth: 0 }}>
@@ -2355,6 +2601,7 @@ function CandidateIntakePage() {
               canShowRegisterCandidate={Boolean(draftCandidateId)}
               onRegisterCandidate={() => {
                 setCandidateContainer("PIPELINE");
+                setPipelineOwnerEmployeeCode(loggedInUser?.employee_code || "");
                 setRegisterDialogOpen(true);
               }}
               registerCandidateMessage={registerCandidateMessage}
@@ -2369,6 +2616,10 @@ function CandidateIntakePage() {
         selectedContainer={candidateContainer}
         onSelectContainer={setCandidateContainer}
         onConfirm={handleRegisterCandidate}
+        allowRecruiterAssignment={isAdminUser}
+        recruiters={recruiterOptions}
+        selectedOwnerEmployeeCode={pipelineOwnerEmployeeCode}
+        onSelectOwnerEmployeeCode={setPipelineOwnerEmployeeCode}
       />
       <Dialog
         open={registerSuccessOpen}

@@ -4,6 +4,26 @@ import platformConfigMock from "@/data/mock/platformConfig.mock";
 import { syncOfferAboveBudgetRule } from "@/enterprise/selectors";
 import { cloneData } from "@/utils/cloneData";
 
+const TALENT_INTELLIGENCE_AI_FEATURE = platformConfigMock.ai_features.find(
+  (item) => item.key === "talent_intelligence"
+);
+
+function hasTalentIntelligenceFeature(config) {
+  return (config?.ai_features || []).some((item) => item.key === "talent_intelligence");
+}
+
+/** Older published configs may omit talent_intelligence; append catalog entry without changing other features. */
+function ensureTalentIntelligenceAiFeature(config) {
+  if (!TALENT_INTELLIGENCE_AI_FEATURE || hasTalentIntelligenceFeature(config)) {
+    return config;
+  }
+
+  return {
+    ...config,
+    ai_features: [...(config.ai_features || []), cloneData(TALENT_INTELLIGENCE_AI_FEATURE)]
+  };
+}
+
 function buildEmptyShell() {
   const shell = cloneData(platformConfigMock);
   shell.meta = {
@@ -52,7 +72,25 @@ function normalizeBundle(response) {
 async function getAll(currentData) {
   if (isLiveMode() || !currentData) {
     const response = await platformConfigClient.getAll();
-    return normalizeBundle(response);
+    let bundle = normalizeBundle(response);
+
+    if (!hasTalentIntelligenceFeature(bundle.config)) {
+      const configWithFeature = ensureTalentIntelligenceAiFeature(bundle.config);
+
+      if (isLiveMode()) {
+        const synced = await platformConfigClient.replaceDraft(configWithFeature);
+        bundle = normalizeBundle(synced);
+      } else {
+        bundle = {
+          ...bundle,
+          config: configWithFeature,
+          isDirty:
+            JSON.stringify(configWithFeature) !== JSON.stringify(bundle.baseline)
+        };
+      }
+    }
+
+    return bundle;
   }
 
   return {
@@ -242,10 +280,13 @@ async function toggleNotificationChannel(config, key) {
 }
 
 function toggleAiFeatureLocal(config, key) {
+  const prepared =
+    key === "talent_intelligence" ? ensureTalentIntelligenceAiFeature(config) : config;
+
   return {
     config: {
-      ...config,
-      ai_features: config.ai_features.map((item) =>
+      ...prepared,
+      ai_features: prepared.ai_features.map((item) =>
         item.key === key
           ? { ...item, enabled: !item.enabled }
           : item
@@ -257,6 +298,10 @@ function toggleAiFeatureLocal(config, key) {
 async function toggleAiFeature(config, key) {
   if (!isLiveMode()) {
     return toggleAiFeatureLocal(config, key);
+  }
+
+  if (key === "talent_intelligence" && !hasTalentIntelligenceFeature(config)) {
+    await platformConfigClient.replaceDraft(ensureTalentIntelligenceAiFeature(config));
   }
 
   const response = await platformConfigClient.applyDraft({ action: "toggleAiFeature", key });
