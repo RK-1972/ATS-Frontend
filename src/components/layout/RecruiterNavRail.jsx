@@ -22,13 +22,23 @@ import PersonAddAlt1OutlinedIcon from "@mui/icons-material/PersonAddAlt1Outlined
 import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
 import InboxOutlinedIcon from "@mui/icons-material/InboxOutlined";
 import LocalOfferOutlinedIcon from "@mui/icons-material/LocalOfferOutlined";
+import PersonSearchOutlinedIcon from "@mui/icons-material/PersonSearchOutlined";
 
 import AuthorizationService from "@/services/authorizationService";
+import recruitmentClient from "@/api/clients/recruitmentClient";
+import {
+  canShowTalentIntelligenceNav,
+  hasTalentIntelligenceWorkAssignment,
+  isRecruiterRoleUser,
+  readLoggedInUser,
+  refreshOtiWorkspaceNavEligibility
+} from "@/enterprise/workspaceAvailability";
 
 const WORKSPACE_HOME_PATH = "/workspace";
 const RECRUITER_ASSIGNMENT_PATH = "/requisitions/assign-recruiters";
 const MY_ASSIGNED_REQUISITIONS_PATH = "/recruiter/my-requisitions";
 const OFFER_WORKSPACE_PATH = "/offers";
+const TALENT_INTELLIGENCE_PATH = "/talent-intelligence";
 
 const WORKSPACE_HOME_ITEM = {
   label: "Workspace Home",
@@ -77,6 +87,7 @@ function RecruiterNavRail({ loggedInUser }) {
   const reducedMotion = useReducedMotion();
   const [canAssignRecruiters, setCanAssignRecruiters] = useState(false);
   const [canRaiseRequisition, setCanRaiseRequisition] = useState(false);
+  const [otiNavEligible, setOtiNavEligible] = useState(null);
 
   let workspace = {};
 
@@ -89,6 +100,33 @@ function RecruiterNavRail({ loggedInUser }) {
   const showRecruitment = Boolean(workspace.showRecruitmentWorkspace);
   const showInterview = Boolean(workspace.showInterviewWorkspace);
   const showOffer = Boolean(workspace.showOfferWorkspace);
+  const showTalentIntelligence = canShowTalentIntelligenceNav({
+    serverNavEligible: otiNavEligible
+  });
+
+  useEffect(() => {
+    const user = readLoggedInUser();
+    if (hasTalentIntelligenceWorkAssignment(workspace)) {
+      return;
+    }
+    if (!isRecruiterRoleUser(user)) {
+      return;
+    }
+
+    let cancelled = false;
+
+    refreshOtiWorkspaceNavEligibility(() =>
+      recruitmentClient.getTalentIntelligenceNavEligibility()
+    ).then((eligible) => {
+      if (!cancelled) {
+        setOtiNavEligible(eligible);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -156,6 +194,14 @@ function RecruiterNavRail({ loggedInUser }) {
           label: "Offer Workspace",
           path: OFFER_WORKSPACE_PATH,
           icon: LocalOfferOutlinedIcon
+        }]
+      : []),
+
+    ...(showTalentIntelligence
+      ? [{
+          label: "Talent Intelligence",
+          path: TALENT_INTELLIGENCE_PATH,
+          icon: PersonSearchOutlinedIcon
         }]
       : [])
 

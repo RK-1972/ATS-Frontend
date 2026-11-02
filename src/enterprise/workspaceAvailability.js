@@ -133,9 +133,73 @@ const WORKSPACE_CATALOG = [
   }
 ];
 
+const OTI_WORKSPACE_NAV_ELIGIBLE_KEY = "oti_workspace_nav_eligible";
+
+export function readOtiWorkspaceNavEligible() {
+  // Nav visibility must not read sessionStorage; eligibility is confirmed via live server refresh only.
+  return null;
+}
+
+export function writeOtiWorkspaceNavEligible(eligible) {
+  try {
+    sessionStorage.setItem(OTI_WORKSPACE_NAV_ELIGIBLE_KEY, eligible ? "1" : "0");
+  } catch {
+    // ignore
+  }
+}
+
+export function hasTalentIntelligenceWorkAssignment(workspaceFlags = readWorkspaceFlags()) {
+  return Boolean(workspaceFlags?.showTalentIntelligenceWorkspace);
+}
+
+export function isRecruiterRoleUser(user = readLoggedInUser()) {
+  return String(user?.role_name || "").trim() === "Recruiter";
+}
+
+export function canShowTalentIntelligenceNav({
+  user = readLoggedInUser(),
+  workspaceFlags = readWorkspaceFlags(),
+  serverNavEligible = null
+} = {}) {
+  if (user?.role_name === "Admin") {
+    return true;
+  }
+
+  if (hasTalentIntelligenceWorkAssignment(workspaceFlags)) {
+    return true;
+  }
+
+  if (isRecruiterRoleUser(user) && serverNavEligible === true) {
+    return true;
+  }
+
+  return false;
+}
+
+export async function refreshOtiWorkspaceNavEligibility(fetchNavEligibility) {
+  if (typeof fetchNavEligibility !== "function") {
+    writeOtiWorkspaceNavEligible(false);
+    return false;
+  }
+
+  try {
+    const response = await fetchNavEligibility();
+    const eligible = Boolean(response?.data?.eligible);
+    writeOtiWorkspaceNavEligible(eligible);
+    return eligible;
+  } catch {
+    writeOtiWorkspaceNavEligible(false);
+    return false;
+  }
+}
+
 function isWorkspaceEntryEnabled(entry, user, workspaceFlags) {
   if (entry.visibleForAdmin) {
     return user?.role_name === "Admin";
+  }
+
+  if (entry.id === "talent-intelligence") {
+    return canShowTalentIntelligenceNav({ user, workspaceFlags });
   }
 
   return Boolean(workspaceFlags?.[entry.flag]);
@@ -177,4 +241,4 @@ export function shouldShowWorkspaceSwitcher(options) {
   return hasMultipleWorkspaces(options);
 }
 
-export { WORKSPACE_CATALOG, isWorkspaceEntryEnabled };
+export { WORKSPACE_CATALOG, isWorkspaceEntryEnabled, OTI_WORKSPACE_NAV_ELIGIBLE_KEY };

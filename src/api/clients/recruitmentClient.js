@@ -415,6 +415,16 @@ const recruitmentClient = {
     );
   },
 
+  getTalentIntelligenceNavEligibility() {
+    return httpGet(
+      `${ENDPOINTS.recruitment}/talent-intelligence/workspace/nav-eligibility`,
+      () => ({
+        success: true,
+        data: { eligible: false }
+      })
+    );
+  },
+
   getTalentIntelligenceAvailability(query = {}) {
     const params = new URLSearchParams();
     if (query.requisition_code) {

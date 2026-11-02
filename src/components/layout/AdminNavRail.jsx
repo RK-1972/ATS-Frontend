@@ -34,8 +34,17 @@ import PersonSearchOutlinedIcon from "@mui/icons-material/PersonSearchOutlined";
 
 import useEnterpriseStore from "@/store/enterpriseStore";
 import { isNavPathVisible } from "@/enterprise/moduleVisibility";
-import { shouldShowWorkspaceSwitcher } from "@/enterprise/workspaceAvailability";
+import {
+  canShowTalentIntelligenceNav,
+  hasTalentIntelligenceWorkAssignment,
+  isRecruiterRoleUser,
+  readLoggedInUser,
+  readOtiWorkspaceNavEligible,
+  refreshOtiWorkspaceNavEligibility,
+  shouldShowWorkspaceSwitcher
+} from "@/enterprise/workspaceAvailability";
 import AuthorizationService from "@/services/authorizationService";
+import recruitmentClient from "@/api/clients/recruitmentClient";
 const WORKSPACE_HOME_PATH = "/workspace";
 const RECRUITER_ASSIGNMENT_PATH = "/requisitions/assign-recruiters";
 const OFFER_WORKSPACE_PATH = "/offers";
@@ -195,6 +204,7 @@ function AdminNavRail() {
   const platformConfig = useEnterpriseStore((state) => state.platformConfig);
   const [canAssignRecruiters, setCanAssignRecruiters] = useState(false);
   const [canRaiseRequisition, setCanRaiseRequisition] = useState(false);
+  const [otiNavEligible, setOtiNavEligible] = useState(() => readOtiWorkspaceNavEligible());
 
   const loggedInUser = JSON.parse(localStorage.getItem("user") || "null");
   const userRole = loggedInUser?.role_name || "";
@@ -207,6 +217,32 @@ function AdminNavRail() {
   }
 
   const isAdmin = userRole === "Admin";
+  const showTalentIntelligenceNav = canShowTalentIntelligenceNav({
+    serverNavEligible: otiNavEligible
+  });
+
+  useEffect(() => {
+    if (isAdmin || hasTalentIntelligenceWorkAssignment(workspace)) {
+      return;
+    }
+    if (!isRecruiterRoleUser(loggedInUser)) {
+      return;
+    }
+
+    let cancelled = false;
+
+    refreshOtiWorkspaceNavEligibility(() =>
+      recruitmentClient.getTalentIntelligenceNavEligibility()
+    ).then((eligible) => {
+      if (!cancelled) {
+        setOtiNavEligible(eligible);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAdmin, loggedInUser, workspace]);
 
   useEffect(() => {
     let cancelled = false;
@@ -303,7 +339,7 @@ function AdminNavRail() {
       item.path === TALENT_INTELLIGENCE_PATH ||
       item.requiresTalentIntelligenceWorkspace
     ) {
-      return Boolean(workspace.showTalentIntelligenceWorkspace);
+      return showTalentIntelligenceNav;
     }
 
     if (item.path === "/users") {

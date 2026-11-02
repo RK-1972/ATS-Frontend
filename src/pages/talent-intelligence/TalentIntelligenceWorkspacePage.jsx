@@ -15,7 +15,7 @@ import ConfigPageHeader from "@/components/platform-config/ConfigPageHeader";
 import { EmptyState, LoadingState, SearchBar } from "@/components/enterprise";
 import recruitmentClient from "@/api/clients/recruitmentClient";
 import OtiEnterpriseSourcingExperience from "../../components/talent-intelligence/OtiEnterpriseSourcingExperience";
-import { readWorkspaceFlags, readLoggedInUser } from "@/enterprise/workspaceAvailability";
+import { readWorkspaceFlags, readLoggedInUser, canShowTalentIntelligenceNav } from "@/enterprise/workspaceAvailability";
 
 function TalentIntelligenceWorkspacePage() {
   const workspace = readWorkspaceFlags();
@@ -65,11 +65,12 @@ function TalentIntelligenceWorkspacePage() {
     );
   }, [requisitions, search]);
 
-  if (!isAdmin && !workspace.showTalentIntelligenceWorkspace) {
+  if (!isAdmin && !canShowTalentIntelligenceNav({ user, workspaceFlags: workspace })) {
     return (
       <Box sx={{ p: 3 }}>
         <Alert severity="warning">
-          Talent Intelligence requires the TALENT_INTELLIGENCE work assignment.
+          Talent Intelligence is available when you have at least one assigned requisition or the
+          TALENT_INTELLIGENCE work assignment.
         </Alert>
       </Box>
     );
