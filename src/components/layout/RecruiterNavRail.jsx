@@ -5,7 +5,6 @@ import { useNavigate, useLocation } from "react-router-dom";
 import {
   Box,
   IconButton,
-  Tooltip,
   Divider
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
@@ -26,6 +25,8 @@ import PersonSearchOutlinedIcon from "@mui/icons-material/PersonSearchOutlined";
 
 import AuthorizationService from "@/services/authorizationService";
 import recruitmentClient from "@/api/clients/recruitmentClient";
+import useNavRailShowAllLabels from "@/components/layout/useNavRailShowAllLabels";
+import NavRailInlineLabel from "@/components/layout/NavRailInlineLabel";
 import {
   canShowTalentIntelligenceNav,
   hasTalentIntelligenceWorkAssignment,
@@ -85,6 +86,7 @@ function RecruiterNavRail({ loggedInUser }) {
   const location = useLocation();
   const theme = useTheme();
   const reducedMotion = useReducedMotion();
+  const { showLabels, navHoverProps } = useNavRailShowAllLabels();
   const [canAssignRecruiters, setCanAssignRecruiters] = useState(false);
   const [canRaiseRequisition, setCanRaiseRequisition] = useState(false);
   const [otiNavEligible, setOtiNavEligible] = useState(null);
@@ -242,6 +244,7 @@ function RecruiterNavRail({ loggedInUser }) {
     <Box
       component="nav"
       aria-label="Recruiter navigation"
+      {...navHoverProps}
       sx={{
         width: theme.tokens.layout.navRailWidth,
         flexShrink: 0,
@@ -273,9 +276,13 @@ function RecruiterNavRail({ loggedInUser }) {
               />
             )}
 
-            <Tooltip
-              title={item.label}
-              placement="right"
+            <Box
+              sx={{
+                width: "100%",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center"
+              }}
             >
 
               <IconButton
@@ -335,7 +342,16 @@ function RecruiterNavRail({ loggedInUser }) {
 
               </IconButton>
 
-            </Tooltip>
+              <NavRailInlineLabel
+                label={item.label}
+                showLabels={showLabels}
+                active={active}
+                disabled={!item.path}
+                onActivate={() => handleNavigate(item.path)}
+                size="large"
+              />
+
+            </Box>
 
           </React.Fragment>
 

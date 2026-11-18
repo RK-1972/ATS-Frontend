@@ -4,7 +4,6 @@ import { useNavigate, useLocation } from "react-router-dom";
 import {
   Box,
   IconButton,
-  Tooltip,
   Divider
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
@@ -45,6 +44,8 @@ import {
 } from "@/enterprise/workspaceAvailability";
 import AuthorizationService from "@/services/authorizationService";
 import recruitmentClient from "@/api/clients/recruitmentClient";
+import useNavRailShowAllLabels from "@/components/layout/useNavRailShowAllLabels";
+import NavRailInlineLabel from "@/components/layout/NavRailInlineLabel";
 const WORKSPACE_HOME_PATH = "/workspace";
 const RECRUITER_ASSIGNMENT_PATH = "/requisitions/assign-recruiters";
 const OFFER_WORKSPACE_PATH = "/offers";
@@ -201,6 +202,7 @@ function AdminNavRail() {
   const location = useLocation();
   const theme = useTheme();
   const reducedMotion = useReducedMotion();
+  const { showLabels, navHoverProps } = useNavRailShowAllLabels();
   const platformConfig = useEnterpriseStore((state) => state.platformConfig);
   const [canAssignRecruiters, setCanAssignRecruiters] = useState(false);
   const [canRaiseRequisition, setCanRaiseRequisition] = useState(false);
@@ -413,6 +415,7 @@ function AdminNavRail() {
     <Box
       component="nav"
       aria-label="Admin navigation"
+      {...navHoverProps}
       sx={{
         width: 80,
         flexShrink: 0,
@@ -444,25 +447,23 @@ function AdminNavRail() {
               }}
             >
               <Divider flexItem sx={{ width: 48, mx: "auto" }} />
-              <Tooltip title={item.label} placement="right">
-                <Box
-                  aria-label={item.label}
-                  sx={{
-                    px: 0.5,
-                    typography: "caption",
-                    color: "text.secondary",
-                    fontWeight: 700,
-                    fontSize: 9,
-                    letterSpacing: 0.4,
-                    textTransform: "uppercase",
-                    textAlign: "center",
-                    lineHeight: 1.2,
-                    maxWidth: 72
-                  }}
-                >
-                  {item.label}
-                </Box>
-              </Tooltip>
+              <Box
+                aria-label={item.label}
+                sx={{
+                  px: 0.5,
+                  typography: "caption",
+                  color: "text.secondary",
+                  fontWeight: 700,
+                  fontSize: 9,
+                  letterSpacing: 0.4,
+                  textTransform: "uppercase",
+                  textAlign: "center",
+                  lineHeight: 1.2,
+                  maxWidth: 72
+                }}
+              >
+                {item.label}
+              </Box>
             </Box>
           );
         }
@@ -482,9 +483,13 @@ function AdminNavRail() {
               />
             )}
 
-            <Tooltip
-              title={item.label}
-              placement="right"
+            <Box
+              sx={{
+                width: "100%",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center"
+              }}
             >
 
               <IconButton
@@ -539,7 +544,15 @@ function AdminNavRail() {
 
               </IconButton>
 
-            </Tooltip>
+              <NavRailInlineLabel
+                label={item.label}
+                showLabels={showLabels}
+                active={active}
+                onActivate={() => handleNavigate(item.path)}
+                size="large"
+              />
+
+            </Box>
 
           </Box>
 

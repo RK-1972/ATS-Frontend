@@ -1,8 +1,10 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Box, IconButton, Tooltip, Divider } from "@mui/material";
+import { Box, IconButton, Divider } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import HomeWorkOutlinedIcon from "@mui/icons-material/HomeWorkOutlined";
 import SupervisorAccountOutlinedIcon from "@mui/icons-material/SupervisorAccountOutlined";
+import useNavRailShowAllLabels from "@/components/layout/useNavRailShowAllLabels";
+import NavRailInlineLabel from "@/components/layout/NavRailInlineLabel";
 
 const NAV_ITEMS = [
   {
@@ -21,11 +23,13 @@ function HmNavRail() {
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
+  const { showLabels, navHoverProps } = useNavRailShowAllLabels();
 
   return (
     <Box
       component="nav"
       aria-label="Hiring Manager navigation"
+      {...navHoverProps}
       sx={{
         width: 56,
         flexShrink: 0,
@@ -44,21 +48,34 @@ function HmNavRail() {
         const isActive = location.pathname.startsWith(item.path);
 
         return (
-          <Box key={item.path} sx={{ width: "100%", display: "grid", placeItems: "center" }}>
+          <Box
+            key={item.path}
+            sx={{
+              width: "100%",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center"
+            }}
+          >
             {index === 1 ? <Divider flexItem sx={{ width: 32, mb: 0.5 }} /> : null}
-            <Tooltip title={item.label} placement="right">
-              <IconButton
-                size="small"
-                aria-label={item.label}
-                onClick={() => navigate(item.path)}
-                sx={{
-                  color: isActive ? "primary.main" : "text.secondary",
-                  bgcolor: isActive ? `${theme.palette.primary.main}14` : "transparent"
-                }}
-              >
-                <Icon fontSize="small" />
-              </IconButton>
-            </Tooltip>
+            <IconButton
+              size="small"
+              aria-label={item.label}
+              onClick={() => navigate(item.path)}
+              sx={{
+                color: isActive ? "primary.main" : "text.secondary",
+                bgcolor: isActive ? `${theme.palette.primary.main}14` : "transparent"
+              }}
+            >
+              <Icon fontSize="small" />
+            </IconButton>
+            <NavRailInlineLabel
+              label={item.label}
+              showLabels={showLabels}
+              active={isActive}
+              onActivate={() => navigate(item.path)}
+              size="compact"
+            />
           </Box>
         );
       })}

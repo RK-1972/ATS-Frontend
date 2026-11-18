@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from "react-router-dom";
 import {
   Box,
   IconButton,
-  Tooltip,
   Divider
 } from "@mui/material";
 import { motion, useReducedMotion } from "framer-motion";
@@ -18,6 +17,8 @@ import FactCheckOutlinedIcon from "@mui/icons-material/FactCheckOutlined";
 
 import AuthorizationService from "@/services/authorizationService";
 import { shouldShowWorkspaceSwitcher } from "@/enterprise/workspaceAvailability";
+import useNavRailShowAllLabels from "@/components/layout/useNavRailShowAllLabels";
+import NavRailInlineLabel from "@/components/layout/NavRailInlineLabel";
 
 const WORKSPACE_HOME_PATH = "/workspace";
 const TA_LEAD_HOME_PATH = "/ta-lead";
@@ -30,6 +31,7 @@ function TALeadNavRail() {
   const navigate = useNavigate();
   const location = useLocation();
   const reducedMotion = useReducedMotion();
+  const { showLabels, navHoverProps } = useNavRailShowAllLabels();
   const [canAssignRecruiters, setCanAssignRecruiters] = useState(false);
 
   const workspace = (() => {
@@ -119,6 +121,7 @@ function TALeadNavRail() {
     <Box
       component="nav"
       aria-label="TA Lead navigation"
+      {...navHoverProps}
       sx={{
         width: 56,
         flexShrink: 0,
@@ -137,34 +140,47 @@ function TALeadNavRail() {
         const Icon = item.icon;
 
         return (
-          <Box key={item.path} sx={{ width: "100%", display: "flex", justifyContent: "center" }}>
+          <Box
+            key={item.path}
+            sx={{
+              width: "100%",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center"
+            }}
+          >
             {index > 0 && item.path === WORKFORCE_PLANNING_PATH && showWorkspaceSwitcher ? (
               <Divider sx={{ width: "70%", my: 0.5 }} />
             ) : null}
-            <Tooltip title={item.label} placement="right">
-              <IconButton
-                size="small"
-                onClick={() => navigate(item.path)}
-                aria-label={item.label}
-                aria-current={active ? "page" : undefined}
-                sx={{
-                  color: active ? "primary.main" : "text.secondary",
-                  bgcolor: active ? "action.selected" : "transparent",
-                  borderRadius: 2,
-                  width: 40,
-                  height: 40
-                }}
+            <IconButton
+              size="small"
+              onClick={() => navigate(item.path)}
+              aria-label={item.label}
+              aria-current={active ? "page" : undefined}
+              sx={{
+                color: active ? "primary.main" : "text.secondary",
+                bgcolor: active ? "action.selected" : "transparent",
+                borderRadius: 2,
+                width: 40,
+                height: 40
+              }}
+            >
+              <motion.div
+                whileHover={reducedMotion ? undefined : { scale: 1.04 }}
+                whileTap={reducedMotion ? undefined : { scale: 0.96 }}
+                transition={framerTransition(reducedMotion)}
+                style={{ display: "flex", transform: translateTokenPx(0) }}
               >
-                <motion.div
-                  whileHover={reducedMotion ? undefined : { scale: 1.04 }}
-                  whileTap={reducedMotion ? undefined : { scale: 0.96 }}
-                  transition={framerTransition(reducedMotion)}
-                  style={{ display: "flex", transform: translateTokenPx(0) }}
-                >
-                  <Icon fontSize="small" />
-                </motion.div>
-              </IconButton>
-            </Tooltip>
+                <Icon fontSize="small" />
+              </motion.div>
+            </IconButton>
+            <NavRailInlineLabel
+              label={item.label}
+              showLabels={showLabels}
+              active={active}
+              onActivate={() => navigate(item.path)}
+              size="compact"
+            />
           </Box>
         );
       })}
