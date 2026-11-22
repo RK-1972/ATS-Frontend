@@ -9,12 +9,14 @@ import {
   Chip,
   IconButton,
   Stack,
-  Tooltip
+  Tooltip,
+  Checkbox
 } from "@mui/material";
 
 import { MdEdit, MdHistory, MdHub } from "react-icons/md";
 
 import ConfigSurface from "../../platform-config/ConfigSurface";
+import { isMasterDataBulkPublishEligible } from "@/enterprise/masterDataBulkPublish";
 
 const VERSION_COLORS = {
   Published: "success",
@@ -36,6 +38,11 @@ function formatDate(isoString) {
 
 function SkillsMasterDataGrid({
   records,
+  selectedIds = [],
+  allEligibleSelected = false,
+  someEligibleSelected = false,
+  onToggleSelect,
+  onToggleSelectAllEligible,
   onEdit,
   onOpenTab
 }) {
@@ -45,6 +52,25 @@ function SkillsMasterDataGrid({
         <Table size="small">
           <TableHead>
             <TableRow sx={{ bgcolor: "action.hover" }}>
+              <TableCell padding="checkbox" sx={{ py: 0.75 }}>
+                <Tooltip
+                  title="Select all draft skills in the current filtered list (search and status filter). Does not select drafts outside this view or the full module."
+                  placement="top"
+                  arrow
+                >
+                  <Checkbox
+                    size="small"
+                    checked={allEligibleSelected}
+                    indeterminate={someEligibleSelected}
+                    onChange={(event) => onToggleSelectAllEligible?.(event.target.checked)}
+                    onClick={(event) => event.stopPropagation()}
+                    inputProps={{
+                      "aria-label":
+                        "Select all draft skills in the current filtered list"
+                    }}
+                  />
+                </Tooltip>
+              </TableCell>
               <TableCell sx={{ fontWeight: 700, py: 0.75, fontSize: 11 }}>Name</TableCell>
               <TableCell sx={{ fontWeight: 700, py: 0.75, fontSize: 11 }}>Code</TableCell>
               <TableCell sx={{ fontWeight: 700, py: 0.75, fontSize: 11 }}>Skill Category</TableCell>
@@ -61,20 +87,37 @@ function SkillsMasterDataGrid({
           <TableBody>
             {!records.length ? (
               <TableRow>
-                <TableCell colSpan={8} sx={{ py: 4, textAlign: "center" }}>
+                <TableCell colSpan={9} sx={{ py: 4, textAlign: "center" }}>
                   <Typography variant="body2" color="text.secondary">
                     No skills match the current filters.
                   </Typography>
                 </TableCell>
               </TableRow>
             ) : (
-              records.map((record) => (
+              records.map((record) => {
+                const eligible = isMasterDataBulkPublishEligible(record);
+                const checked = selectedIds.includes(record.id);
+
+                return (
                 <TableRow
                   key={record.id}
                   hover
                   sx={{ cursor: "pointer" }}
                   onClick={() => onEdit(record.id)}
                 >
+                  <TableCell
+                    padding="checkbox"
+                    sx={{ py: 0.75 }}
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    <Checkbox
+                      size="small"
+                      checked={checked}
+                      disabled={!eligible}
+                      onChange={(event) => onToggleSelect?.(record.id, event.target.checked)}
+                      inputProps={{ "aria-label": `Select ${record.name}` }}
+                    />
+                  </TableCell>
                   <TableCell sx={{ py: 0.75 }}>
                     <Typography variant="body2" fontWeight={600} sx={{ fontSize: 13 }}>
                       {record.name}
@@ -182,7 +225,8 @@ function SkillsMasterDataGrid({
                     </Stack>
                   </TableCell>
                 </TableRow>
-              ))
+              );
+              })
             )}
           </TableBody>
         </Table>

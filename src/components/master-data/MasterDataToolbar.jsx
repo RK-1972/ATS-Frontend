@@ -7,7 +7,8 @@ import {
   MenuItem,
   Select,
   FormControl,
-  InputLabel
+  InputLabel,
+  Typography
 } from "@mui/material";
 
 import {
@@ -16,7 +17,8 @@ import {
   MdFileDownload,
   MdFileUpload,
   MdFilterList,
-  MdSearch
+  MdSearch,
+  MdPublish
 } from "react-icons/md";
 
 function MasterDataToolbar({
@@ -28,7 +30,10 @@ function MasterDataToolbar({
   onExport,
   onImport,
   onNew,
-  onBulkUpload
+  onBulkUpload,
+  selectedDraftCount = 0,
+  filterEligibleDraftCount = 0,
+  onBulkPublish
 
 }) {
 
@@ -95,8 +100,34 @@ function MasterDataToolbar({
         spacing={0.75}
         flexWrap="wrap"
         useFlexGap
-        sx={{ flexShrink: 0 }}
+        sx={{ flexShrink: 0, alignItems: "center" }}
       >
+
+        {selectedDraftCount > 0 ? (
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ fontWeight: 600, mr: 0.5, maxWidth: 220 }}
+          >
+            {selectedDraftCount} selected
+            {filterEligibleDraftCount > 0
+              ? ` · of ${filterEligibleDraftCount} draft${filterEligibleDraftCount === 1 ? "" : "s"} in filtered list`
+              : " · filtered list"}
+          </Typography>
+        ) : null}
+
+        {selectedDraftCount > 0 ? (
+          <Button
+            size="small"
+            variant="contained"
+            color="secondary"
+            startIcon={<MdPublish size={18} />}
+            onClick={onBulkPublish}
+            sx={{ fontWeight: 600 }}
+          >
+            Publish Selected ({selectedDraftCount})
+          </Button>
+        ) : null}
 
         <Button
           size="small"

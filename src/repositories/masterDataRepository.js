@@ -266,6 +266,62 @@ async function publishRecord(masterData, params) {
 
 }
 
+async function bulkPublishRecords(masterData, { entityType, recordIds, reason = "" }) {
+  if (!isLiveMode()) {
+    let nextMasterData = masterData;
+    const succeeded = [];
+    const failed = [];
+
+    for (const recordId of recordIds) {
+      const current = nextMasterData.records[entityType]?.find((item) => item.id === recordId);
+
+      if (!current) {
+        failed.push({ id: recordId, message: "Record not found" });
+        continue;
+      }
+
+      if (current.versionStatus !== "Draft") {
+        failed.push({
+          id: recordId,
+          message: `Cannot publish record in ${current.versionStatus} state`
+        });
+        continue;
+      }
+
+      const result = publishRecordLocal(nextMasterData, {
+        entityType,
+        recordId,
+        reason: reason || "Bulk publish"
+      });
+
+      if (!result) {
+        failed.push({ id: recordId, message: "Publish failed" });
+        continue;
+      }
+
+      nextMasterData = result.masterData;
+      succeeded.push({ id: recordId, record: result.record });
+    }
+
+    return {
+      masterData: nextMasterData,
+      succeeded,
+      failed,
+      entityType
+    };
+  }
+
+  const response = await masterDataClient.bulkPublish(entityType, recordIds, { reason });
+  const refreshed = normalizeMasterDataBundle(response.masterData);
+
+  return {
+    masterData: refreshed,
+    succeeded: response.succeeded || [],
+    failed: response.failed || [],
+    entityType
+  };
+}
+
 function archiveRecordLocal(masterData, { entityType, recordId, reason = "" }) {
 
   const nextMasterData = {
@@ -563,6 +619,7 @@ const masterDataRepository = {
   delete: archiveRecord,
   saveRecord,
   publishRecord,
+  bulkPublishRecords,
   archiveRecord,
   rollbackRecord,
   previewImport,

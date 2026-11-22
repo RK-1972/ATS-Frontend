@@ -9,6 +9,8 @@ import SkillsMasterDataToolbar from "@/components/master-data/skills/SkillsMaste
 import SkillsMasterDataGrid from "@/components/master-data/skills/SkillsMasterDataGrid";
 import SkillsMasterDataDrawer from "@/components/master-data/skills/SkillsMasterDataDrawer";
 import SkillsImportExportDialog from "@/components/master-data/skills/SkillsImportExportDialog";
+import MasterDataBulkPublishDialog from "@/components/master-data/MasterDataBulkPublishDialog";
+import useMasterDataBulkPublishActions from "@/components/master-data/useMasterDataBulkPublishActions";
 import {
   SKILLS_ENTITY,
   buildSkillsExportCsv,
@@ -31,6 +33,7 @@ function SkillsMasterDataModule() {
     updateMasterDraft,
     saveMasterRecord,
     publishMasterRecord,
+    bulkPublishMasterRecords,
     archiveMasterRecord,
     rollbackMasterRecord,
     previewMasterImport,
@@ -110,6 +113,13 @@ function SkillsMasterDataModule() {
     commitMasterImport(rows, reason);
   }, [commitMasterImport]);
 
+  const bulkPublish = useMasterDataBulkPublishActions({
+    filteredRecords,
+    entityResetKey: SKILLS_ENTITY,
+    entityLabel: selectedEntityLabel,
+    bulkPublishMasterRecords
+  });
+
   return (
     <>
       <ConfigPageHeader
@@ -175,12 +185,30 @@ function SkillsMasterDataModule() {
         onImport={() => setImportDialogOpen(true)}
         onBulkUpload={() => setImportDialogOpen(true)}
         onNew={handleNewSkill}
+        selectedDraftCount={bulkPublish.selectedEligibleCount}
+        filterEligibleDraftCount={bulkPublish.eligibleIds.length}
+        onBulkPublish={bulkPublish.openBulkPublishDialog}
       />
 
       <SkillsMasterDataGrid
         records={filteredRecords}
+        selectedIds={bulkPublish.selectedIds}
+        allEligibleSelected={bulkPublish.allEligibleSelected}
+        someEligibleSelected={bulkPublish.someEligibleSelected}
+        onToggleSelect={bulkPublish.toggleSelect}
+        onToggleSelectAllEligible={bulkPublish.toggleSelectAllEligible}
         onEdit={(recordId) => openMasterRecordDrawer(recordId, "edit")}
         onOpenTab={(recordId, tab) => openMasterRecordDrawer(recordId, tab)}
+      />
+
+      <MasterDataBulkPublishDialog
+        open={bulkPublish.dialogOpen}
+        phase={bulkPublish.dialogPhase}
+        selectedCount={bulkPublish.selectedEligibleCount}
+        entityLabel={selectedEntityLabel}
+        failed={bulkPublish.lastFailed}
+        onClose={bulkPublish.closeBulkPublishDialog}
+        onConfirm={bulkPublish.confirmBulkPublish}
       />
 
       <SkillsMasterDataDrawer

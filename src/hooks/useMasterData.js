@@ -30,6 +30,9 @@ function useMasterData() {
   const publishMasterRecord = useEnterpriseStore(
     (state) => state.publishMasterRecord
   );
+  const bulkPublishMasterRecords = useEnterpriseStore(
+    (state) => state.bulkPublishMasterRecords
+  );
   const archiveMasterRecord = useEnterpriseStore(
     (state) => state.archiveMasterRecord
   );
@@ -241,6 +244,7 @@ function useMasterData() {
     updateMasterDraft,
     saveMasterRecord,
     publishMasterRecord,
+    bulkPublishMasterRecords,
     archiveMasterRecord,
     rollbackMasterRecord,
     previewMasterImport,

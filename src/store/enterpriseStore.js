@@ -21,6 +21,7 @@ import {
 import generatedDocumentRepository from "../repositories/generatedDocumentRepository";
 import { buildPendingApprovalQueue } from "../utils/offerApprovalUtils";
 import { filterActiveEmployeeRecords } from "../utils/activeEmployeeFilters";
+import { buildBulkPublishSummary } from "../enterprise/masterDataBulkPublish";
 
 const platformConfigInitial = platformConfigRepository.getInitialState();
 const businessRulesInitial = businessRulesRepository.getInitialState();
@@ -2155,6 +2156,58 @@ const useEnterpriseStore = create((set, get) => ({
         newValue: "Published",
         metadata: { reason, version: result.nextVersion }
       });
+
+    });
+
+  },
+
+  bulkPublishMasterRecords(recordIds, reason = "") {
+
+    const entityType = get().masterDataUi.selectedEntityType;
+
+    return Promise.resolve(
+      masterDataRepository.bulkPublishRecords(get().masterData, {
+        entityType,
+        recordIds,
+        reason: reason || "Bulk publish"
+      })
+    ).then((result) => {
+
+      if (!result) {
+        return null;
+      }
+
+      const summaryMessage = buildBulkPublishSummary(result);
+
+      set({
+        masterData: result.masterData,
+        masterDataUi: {
+          ...get().masterDataUi,
+          toastMessage: summaryMessage
+        }
+      });
+
+      (result.succeeded || []).forEach((entry) => {
+        const record = result.masterData.records[entityType]?.find(
+          (item) => item.id === entry.id
+        );
+
+        if (!record) {
+          return;
+        }
+
+        publishAudit(set, get, ENTERPRISE_EVENTS.MASTER_DATA_PUBLISHED, {
+          module: "Enterprise Master Data",
+          entity: entityType,
+          entityId: entry.id,
+          action: `${record.name} published (bulk)`,
+          previousValue: "Draft",
+          newValue: "Published",
+          metadata: { reason: reason || "Bulk publish", version: record.version }
+        });
+      });
+
+      return result;
 
     });
 

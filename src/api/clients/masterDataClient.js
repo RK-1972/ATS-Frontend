@@ -50,6 +50,18 @@ const masterDataClient = {
     );
   },
 
+  bulkPublish(entityType, ids, payload) {
+    return httpPost(
+      `${masterEntityEndpoint(entityType)}/bulk-publish`,
+      { ids, ...payload },
+      () => ({
+        succeeded: [],
+        failed: [],
+        masterData: masterDataMock
+      })
+    );
+  },
+
   archive(entityType, id, record) {
     return httpPost(
       `${masterEntityEndpoint(entityType)}/${id}/archive`,
