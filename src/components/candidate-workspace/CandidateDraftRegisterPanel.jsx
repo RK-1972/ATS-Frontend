@@ -8,7 +8,8 @@ import candidateClient from "@/api/clients/candidateClient";
 import {
   buildDraftUpdatePayload,
   candidateMasterToEditableCandidate,
-  validateRegisterCandidate
+  validateRegisterCandidate,
+  applyRegistrationDuplicateErrors
 } from "@/utils/candidateRegistrationUtils";
 
 function CandidateDraftRegisterPanel({
@@ -73,11 +74,16 @@ function CandidateDraftRegisterPanel({
       setRegisterDialogOpen(false);
       onRegistered?.(response?.data || response);
     } catch (error) {
-      setErrorMessage(
-        error.response?.data?.message ||
-          error.message ||
-          "Failed to register candidate."
-      );
+      const apiMessage = error.response?.data?.message;
+      const fieldErrors = applyRegistrationDuplicateErrors({}, error);
+
+      if (fieldErrors.email || fieldErrors.mobile) {
+        setErrorMessage(apiMessage || "Failed to register candidate.");
+      } else {
+        setErrorMessage(
+          apiMessage || error.message || "Failed to register candidate."
+        );
+      }
       setRegisterDialogOpen(false);
     } finally {
       setIsSubmitting(false);

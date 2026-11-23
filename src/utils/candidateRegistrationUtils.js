@@ -76,11 +76,33 @@ export function validateRegisterCandidate(editableCandidate) {
   }
 
   const panError = validatePanNumber(
-    editableCandidate?.pan_number || editableCandidate?.pan
+    editableCandidate?.pan_number || editableCandidate?.pan,
+    { required: false }
   );
 
   if (panError) {
     errors.pan_number = panError;
+  }
+
+  return errors;
+}
+
+export const DUPLICATE_REGISTERED_EMAIL_MESSAGE =
+  "This email address is already registered. Please use your existing candidate profile or contact the recruitment team for assistance.";
+
+export const DUPLICATE_REGISTERED_MOBILE_MESSAGE =
+  "This mobile number is already registered. Please use your existing candidate profile or contact the recruitment team for assistance.";
+
+export function applyRegistrationDuplicateErrors(errors, apiError) {
+  const code = apiError?.response?.data?.code;
+  const message = apiError?.response?.data?.message;
+
+  if (code === "DUPLICATE_REGISTERED_EMAIL" && message) {
+    return { ...errors, email: message };
+  }
+
+  if (code === "DUPLICATE_REGISTERED_MOBILE" && message) {
+    return { ...errors, mobile: message };
   }
 
   return errors;

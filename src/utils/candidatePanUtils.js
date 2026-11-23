@@ -8,11 +8,11 @@ export function normalizePan(value) {
   return pan || "";
 }
 
-export function validatePanNumber(value) {
+export function validatePanNumber(value, { required = false } = {}) {
   const pan = normalizePan(value);
 
   if (!pan) {
-    return "PAN number is required.";
+    return required ? "PAN number is required." : "";
   }
 
   if (!PAN_REGEX.test(pan)) {

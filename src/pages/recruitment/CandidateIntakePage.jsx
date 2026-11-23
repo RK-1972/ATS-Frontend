@@ -80,9 +80,13 @@ import useCandidateSources from "@/hooks/useCandidateSources";
 import API from "@/api/axios";
 import {
   buildDraftUpdatePayload,
-  validateRegisterCandidate
+  validateRegisterCandidate,
+  applyRegistrationDuplicateErrors
 } from "@/utils/candidateRegistrationUtils";
-import { PAN_IMMUTABILITY_NOTICE } from "@/utils/candidatePanUtils";
+import {
+  PAN_IMMUTABILITY_NOTICE,
+  validatePanNumber
+} from "@/utils/candidatePanUtils";
 import resolveResumeViewerUrl from "@/utils/resolveResumeViewerUrl";
 import recruitmentClient from "@/api/clients/recruitmentClient";
 import OtiExternalIntakeContextPanel from "@/components/talent-intelligence/OtiExternalIntakeContextPanel";
@@ -945,7 +949,11 @@ function buildValidationChecklist(editableCandidate = {}) {
     Boolean(String(editableCandidate.last_name || "").trim());
   const hasEmail = Boolean(String(editableCandidate.email || "").trim());
   const hasMobile = Boolean(String(editableCandidate.mobile || "").trim());
-  const hasPan = Boolean(String(editableCandidate.pan_number || "").trim());
+  const panValidationError = validatePanNumber(
+    editableCandidate.pan_number || editableCandidate.pan,
+    { required: false }
+  );
+  const hasPan = !panValidationError;
   const hasCompany = Boolean(
     String(editableCandidate.current_company || "").trim()
   );
@@ -971,7 +979,7 @@ function buildValidationChecklist(editableCandidate = {}) {
     },
     {
       key: "pan",
-      label: "PAN",
+      label: "PAN (optional)",
       ok: hasPan,
       Icon: BadgeOutlinedIcon
     },
@@ -2401,8 +2409,21 @@ function CandidateIntakePage() {
       loadDashboard();
     } catch (error) {
       setRegisterDialogOpen(false);
+      const apiMessage = error?.response?.data?.message;
+      const fieldErrors = applyRegistrationDuplicateErrors(
+        {},
+        error
+      );
+
+      if (Object.keys(fieldErrors).length > 0) {
+        setCreateValidationErrors((prev) => ({
+          ...prev,
+          ...fieldErrors
+        }));
+      }
+
       setRegisterCandidateMessage(
-        error?.message || "Failed to register candidate."
+        apiMessage || error?.message || "Failed to register candidate."
       );
     }
   };
