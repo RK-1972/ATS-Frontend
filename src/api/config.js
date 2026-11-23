@@ -11,6 +11,10 @@ function isLocalApiUrl(url) {
 }
 
 function resolveApiBaseUrl() {
+  if (import.meta.env.MODE === "onprem") {
+    return "";
+  }
+
   if (import.meta.env.PROD) {
     if (configuredApiBaseUrl && !isLocalApiUrl(configuredApiBaseUrl)) {
       return configuredApiBaseUrl;
@@ -22,8 +26,17 @@ function resolveApiBaseUrl() {
   return configuredApiBaseUrl || LOCAL_API_BASE_URL;
 }
 
-export const API_MODE =
-  import.meta.env.VITE_API_MODE || (import.meta.env.PROD ? "live" : "mock");
+function resolveApiMode() {
+  if (import.meta.env.MODE === "onprem") {
+    return "live";
+  }
+
+  return (
+    import.meta.env.VITE_API_MODE || (import.meta.env.PROD ? "live" : "mock")
+  );
+}
+
+export const API_MODE = resolveApiMode();
 
 export const API_BASE_URL = resolveApiBaseUrl();
 

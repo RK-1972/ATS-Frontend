@@ -194,6 +194,14 @@ const COMPACT_FIELD_PROPS = {
   margin: "none"
 };
 
+function resolveLoginWorldMapUrl() {
+  const base = import.meta.env.BASE_URL || "/";
+  const baseWithSlash = base.endsWith("/") ? base : `${base}/`;
+  return `${baseWithSlash}images/world-map.png`;
+}
+
+const LOGIN_WORLD_MAP_URL = resolveLoginWorldMapUrl();
+
 function LoginLeftPanel() {
   return (
     <Box
@@ -213,7 +221,7 @@ function LoginLeftPanel() {
         sx={{
           position: "absolute",
           inset: { xs: "8% 0 0", lg: "0  -8%" },
-          backgroundImage: "url('/images/world-map.png')",
+          backgroundImage: `url('${LOGIN_WORLD_MAP_URL}')`,
           backgroundRepeat: "no-repeat",
           backgroundPosition: "center center",
           backgroundSize: "contain",
