@@ -22,6 +22,7 @@ import generatedDocumentRepository from "../repositories/generatedDocumentReposi
 import { buildPendingApprovalQueue } from "../utils/offerApprovalUtils";
 import { filterActiveEmployeeRecords } from "../utils/activeEmployeeFilters";
 import { buildBulkPublishSummary } from "../enterprise/masterDataBulkPublish";
+import { createEmptyLegalEntityProfile } from "../enterprise/legalEntityProfileDefaults";
 
 const platformConfigInitial = platformConfigRepository.getInitialState();
 const businessRulesInitial = businessRulesRepository.getInitialState();
@@ -126,7 +127,9 @@ const useEnterpriseStore = create((set, get) => ({
     importDialogOpen: false,
     importPreview: null,
     draftRecord: null,
-    toastMessage: ""
+    legalEntityProfile: createEmptyLegalEntityProfile(),
+    toastMessage: "",
+    toastSeverity: "success"
   },
 
   recruiterUi: {
@@ -2008,6 +2011,7 @@ const useEnterpriseStore = create((set, get) => ({
         drawerOpen: false,
         drawerTab: "edit",
         draftRecord: null,
+        legalEntityProfile: createEmptyLegalEntityProfile(),
         importDialogOpen: false,
         importPreview: null
       }
@@ -2024,7 +2028,8 @@ const useEnterpriseStore = create((set, get) => ({
         selectedRecordId: recordId,
         drawerOpen: true,
         drawerTab: tab,
-        draftRecord: record ? { ...record } : null
+        draftRecord: record ? { ...record } : null,
+        legalEntityProfile: createEmptyLegalEntityProfile(recordId)
       }
     }));
   },
@@ -2035,7 +2040,8 @@ const useEnterpriseStore = create((set, get) => ({
         ...state.masterDataUi,
         drawerOpen: false,
         selectedRecordId: null,
-        draftRecord: null
+        draftRecord: null,
+        legalEntityProfile: createEmptyLegalEntityProfile()
       }
     }));
   },
@@ -2064,7 +2070,8 @@ const useEnterpriseStore = create((set, get) => ({
           ...(entityType === "skills"
             ? { skillCategoryCode: "", skillCategory: "" }
             : {})
-        }
+        },
+        legalEntityProfile: createEmptyLegalEntityProfile()
       }
     }));
   },
@@ -2080,19 +2087,41 @@ const useEnterpriseStore = create((set, get) => ({
     }));
   },
 
+  updateLegalEntityProfile(profile) {
+    set((state) => ({
+      masterDataUi: {
+        ...state.masterDataUi,
+        legalEntityProfile: profile
+      }
+    }));
+  },
+
   saveMasterRecord(reason = "") {
 
-    const { draftRecord, selectedEntityType } = get().masterDataUi;
+    const {
+      draftRecord,
+      selectedEntityType,
+      legalEntityProfile
+    } = get().masterDataUi;
 
     Promise.resolve(
       masterDataRepository.saveRecord(get().masterData, {
         draftRecord,
         selectedEntityType,
-        reason
+        reason,
+        legalEntityProfile:
+          selectedEntityType === "legal_entities" ? legalEntityProfile : null
       })
     ).then((result) => {
 
       if (!result) {
+        set({
+          masterDataUi: {
+            ...get().masterDataUi,
+            toastMessage: "Unable to save master record.",
+            toastSeverity: "error"
+          }
+        });
         return;
       }
 
@@ -2102,8 +2131,11 @@ const useEnterpriseStore = create((set, get) => ({
           ...get().masterDataUi,
           selectedRecordId: result.recordId,
           draftRecord: { ...result.savedRecord },
+          legalEntityProfile:
+            result.legalEntityProfile ?? get().masterDataUi.legalEntityProfile,
           toastMessage: result.toastMessage
-            || (result.isNew ? "Master record created." : "Master record saved.")
+            || (result.isNew ? "Master record created." : "Master record saved."),
+          toastSeverity: "success"
         }
       });
 
@@ -2119,6 +2151,22 @@ const useEnterpriseStore = create((set, get) => ({
         metadata: { reason, code: result.savedRecord.code }
       });
 
+    }).catch((error) => {
+      console.error(
+        "[enterpriseStore] saveMasterRecord failed:",
+        error?.response?.data || error.message
+      );
+
+      set({
+        masterDataUi: {
+          ...get().masterDataUi,
+          toastMessage:
+            error?.message
+            || error?.response?.data?.message
+            || "Master record save failed.",
+          toastSeverity: "error"
+        }
+      });
     });
 
   },

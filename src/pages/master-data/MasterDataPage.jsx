@@ -39,7 +39,10 @@ function MasterDataPage() {
     setSearchQuery,
     setStatusFilter,
     setDrawerTab,
-    setImportDialogOpen
+    setImportDialogOpen,
+    masterData,
+    legalEntityProfile,
+    updateLegalEntityProfile
   } = context;
 
   const bulkPublish = useMasterDataBulkPublishActions({
@@ -159,6 +162,9 @@ function MasterDataPage() {
         open={ui.drawerOpen}
         tab={ui.drawerTab}
         draftRecord={ui.draftRecord}
+        masterData={masterData}
+        legalEntityProfile={legalEntityProfile}
+        onLegalEntityProfileChange={updateLegalEntityProfile}
         auditEvents={recordAuditEvents}
         onClose={closeMasterRecordDrawer}
         onTabChange={setDrawerTab}

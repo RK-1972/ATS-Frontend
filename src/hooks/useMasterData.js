@@ -26,6 +26,9 @@ function useMasterData() {
     (state) => state.startNewMasterRecord
   );
   const updateMasterDraft = useEnterpriseStore((state) => state.updateMasterDraft);
+  const updateLegalEntityProfile = useEnterpriseStore(
+    (state) => state.updateLegalEntityProfile
+  );
   const saveMasterRecord = useEnterpriseStore((state) => state.saveMasterRecord);
   const publishMasterRecord = useEnterpriseStore(
     (state) => state.publishMasterRecord
@@ -242,6 +245,8 @@ function useMasterData() {
     closeMasterRecordDrawer,
     startNewMasterRecord,
     updateMasterDraft,
+    updateLegalEntityProfile,
+    legalEntityProfile: ui.legalEntityProfile,
     saveMasterRecord,
     publishMasterRecord,
     bulkPublishMasterRecords,
@@ -255,7 +260,8 @@ function useMasterData() {
     setStatusFilter,
     setDrawerTab,
     setImportDialogOpen,
-    setToastMessage
+    setToastMessage,
+    setMasterDataUi
   };
 
 }

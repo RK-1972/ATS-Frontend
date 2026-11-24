@@ -87,7 +87,13 @@ function MasterDataLayout() {
       <Snackbar
         open={Boolean(masterDataState.ui.toastMessage)}
         autoHideDuration={4000}
-        onClose={() => masterDataState.setToastMessage("")}
+        onClose={() => {
+          masterDataState.setToastMessage("");
+          masterDataState.setMasterDataUi((prev) => ({
+            ...prev,
+            toastSeverity: "success"
+          }));
+        }}
         anchorOrigin={{
           vertical: "bottom",
           horizontal: "left"
@@ -95,7 +101,7 @@ function MasterDataLayout() {
       >
 
         <Alert
-          severity="success"
+          severity={masterDataState.ui.toastSeverity || "success"}
           variant="filled"
           sx={{ width: "100%" }}
         >

@@ -18,6 +18,7 @@ import {
 import { MdClose } from "react-icons/md";
 
 import DependencyPanel from "./DependencyPanel";
+import LegalEntityProfileSections from "./LegalEntityProfileSections";
 import { DEFAULT_USED_BY } from "@/enterprise/masterDataConstants";
 import EnterpriseTabs from "@/components/enterprise/EnterpriseTabs";
 
@@ -50,6 +51,9 @@ function MasterDataDrawer({
   open,
   tab,
   draftRecord,
+  masterData,
+  legalEntityProfile,
+  onLegalEntityProfileChange,
   auditEvents,
   onClose,
   onTabChange,
@@ -60,6 +64,8 @@ function MasterDataDrawer({
   onRollback
 
 }) {
+
+  const isLegalEntity = draftRecord?.entityType === "legal_entities";
 
   const usedBy = draftRecord?.usedBy?.length
     ? draftRecord.usedBy
@@ -77,7 +83,9 @@ function MasterDataDrawer({
       open={open}
       onClose={onClose}
       PaperProps={{
-        sx: { width: { xs: "100%", sm: 420 } }
+        sx: {
+          width: { xs: "100%", sm: isLegalEntity ? 560 : 420 }
+        }
       }}
     >
 
@@ -153,11 +161,12 @@ function MasterDataDrawer({
               />
 
               <TextField
-                label="Name"
+                label={isLegalEntity ? "Registered Legal Name" : "Name"}
                 size="small"
                 value={draftRecord.name}
                 onChange={(event) => onUpdateDraft("name", event.target.value)}
                 fullWidth
+                required={isLegalEntity}
               />
 
               <TextField
@@ -227,6 +236,16 @@ function MasterDataDrawer({
                 )}
 
               </Stack>
+
+              {isLegalEntity && legalEntityProfile && (
+                <LegalEntityProfileSections
+                  recordId={draftRecord.id}
+                  masterRecord={draftRecord}
+                  masterData={masterData}
+                  profile={legalEntityProfile}
+                  onProfileChange={onLegalEntityProfileChange}
+                />
+              )}
 
             </Stack>
 

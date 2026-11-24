@@ -1,6 +1,7 @@
 import { isLiveMode } from "@/api/config";
 import { MASTER_DATA_DOMAINS } from "@/enterprise/masterDataConstants";
 import masterDataClient from "@/api/clients/masterDataClient";
+import legalEntityProfileClient from "@/api/clients/legalEntityProfileClient";
 import masterDataMock from "@/data/mock/masterData.mock";
 import { DEFAULT_USED_BY } from "@/enterprise/masterDataConstants";
 import { cloneData } from "@/utils/cloneData";
@@ -149,7 +150,12 @@ async function saveRecord(masterData, params) {
     return saveRecordLocal(masterData, params);
   }
 
-  const { draftRecord, selectedEntityType, reason = "" } = params;
+  const {
+    draftRecord,
+    selectedEntityType,
+    reason = "",
+    legalEntityProfile = null
+  } = params;
 
   if (!draftRecord || !selectedEntityType) {
     return null;
@@ -175,10 +181,21 @@ async function saveRecord(masterData, params) {
     payload.skillCategoryCode = draftRecord.skillCategoryCode;
   }
 
-  if (isNew) {
-    await masterDataClient.create(selectedEntityType, payload);
-  } else {
-    await masterDataClient.update(selectedEntityType, draftRecord.id, payload);
+  try {
+    if (isNew) {
+      await masterDataClient.create(selectedEntityType, payload);
+    } else {
+      await masterDataClient.update(selectedEntityType, draftRecord.id, payload);
+    }
+  } catch (error) {
+    const detail =
+      error?.response?.data?.message
+      || error?.message
+      || "Master record save failed.";
+    const saveError = new Error(detail);
+    saveError.step = "master_record";
+    saveError.cause = error;
+    throw saveError;
   }
 
   const refreshed = normalizeMasterDataBundle(await masterDataClient.getAll());
@@ -186,14 +203,52 @@ async function saveRecord(masterData, params) {
     (item) => item.id === draftRecord.id || item.code === draftRecord.code
   );
 
+  const recordId = savedRecord?.id;
+
+  if (!recordId) {
+    const saveError = new Error(
+      "Master record save could not be confirmed. Refresh the grid and try again."
+    );
+    saveError.step = "master_record_refresh";
+    throw saveError;
+  }
+
+  let persistedLegalEntityProfile = null;
+
+  if (selectedEntityType === "legal_entities" && legalEntityProfile) {
+    try {
+      persistedLegalEntityProfile = await legalEntityProfileClient.upsertProfile(
+        recordId,
+        legalEntityProfile
+      );
+    } catch (error) {
+      const detail =
+        error?.response?.data?.message
+        || error?.message
+        || "Legal entity profile save failed.";
+      const saveError = new Error(
+        `Master record was saved, but the legal entity profile could not be saved: ${detail}`
+      );
+      saveError.step = "legal_entity_profile";
+      saveError.cause = error;
+      throw saveError;
+    }
+  }
+
   return {
     masterData: refreshed,
     savedRecord,
     previous,
     isNew,
-    recordId: savedRecord?.id,
+    recordId,
     entityType: selectedEntityType,
-    toastMessage: isNew ? "Master record created." : "Master record saved."
+    legalEntityProfile: persistedLegalEntityProfile,
+    toastMessage:
+      selectedEntityType === "legal_entities" && legalEntityProfile
+        ? "Legal entity and profile saved."
+        : isNew
+          ? "Master record created."
+          : "Master record saved."
   };
 
 }

@@ -19,6 +19,13 @@ const offerClient = {
     return httpGet(`${ENDPOINTS.offers}/${offerId}`, () => ({ success: true, data: null }));
   },
 
+  listEligibleLegalEntities() {
+    return httpGet(`${ENDPOINTS.offers}/legal-entities/eligible`, () => ({
+      success: true,
+      data: []
+    }));
+  },
+
   createOffer(payload) {
     return httpPost(`${ENDPOINTS.offers}`, payload, () => ({
       success: true,

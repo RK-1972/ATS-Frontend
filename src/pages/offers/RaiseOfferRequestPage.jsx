@@ -164,9 +164,16 @@ function RevealPayoutFrequency({ show, children }) {
   );
 }
 
+function legalEntityOptionLabel(option) {
+  const name = option.registeredLegalName || option.name || "Legal Entity";
+  const code = option.code || "—";
+  return `${name} (${code})`;
+}
+
 function validateForm(form) {
   const errors = {
     candidate: "",
+    legalEntity: "",
     offered_ctc: "",
     expected_joining_date: "",
     variable_pay: "",
@@ -178,6 +185,11 @@ function validateForm(form) {
 
   if (!form.candidate) {
     errors.candidate = "Select a candidate mapping.";
+    isValid = false;
+  }
+
+  if (!form.legalEntity) {
+    errors.legalEntity = "Select the issuing Legal Entity.";
     isValid = false;
   }
 
@@ -212,6 +224,8 @@ function toCreatePayload(form) {
     variable_pay_frequency: variablePay > 0 ? form.variable_pay_frequency : null,
     joining_bonus: joiningBonus,
     joining_bonus_frequency: joiningBonus > 0 ? form.joining_bonus_frequency : null,
+    legal_entity_record_id:
+      form.legalEntity?.recordId || form.legalEntity?.id || null,
     comment: String(form.comment || "").trim()
   };
 }
@@ -227,11 +241,13 @@ function RaiseOfferRequestPage() {
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [candidates, setCandidates] = useState([]);
+  const [legalEntities, setLegalEntities] = useState([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [toast, setToast] = useState({ open: false, message: "", severity: "success" });
   const [formError, setFormError] = useState("");
   const [form, setForm] = useState({
     candidate: null,
+    legalEntity: null,
     offered_ctc: "",
     expected_joining_date: "",
     variable_pay: "0",
@@ -242,6 +258,7 @@ function RaiseOfferRequestPage() {
   });
   const [errors, setErrors] = useState({
     candidate: "",
+    legalEntity: "",
     offered_ctc: "",
     expected_joining_date: "",
     variable_pay: "",
@@ -262,18 +279,26 @@ function RaiseOfferRequestPage() {
   useEffect(() => {
     let cancelled = false;
 
-    async function loadCandidates() {
+    async function loadOptions() {
       setLoadingOptions(true);
       try {
-        const response = await recruitmentClient.getOfferRaiseEligibleMappings();
-        const rows = Array.isArray(response?.data) ? response.data : [];
+        const [mappingResponse, legalEntityResponse] = await Promise.all([
+          recruitmentClient.getOfferRaiseEligibleMappings(),
+          offerClient.listEligibleLegalEntities()
+        ]);
+        const rows = Array.isArray(mappingResponse?.data) ? mappingResponse.data : [];
+        const entities = Array.isArray(legalEntityResponse?.data)
+          ? legalEntityResponse.data
+          : [];
         if (!cancelled) {
           setCandidates(buildCandidateOptions(rows));
+          setLegalEntities(entities);
         }
       } catch (_error) {
         if (!cancelled) {
           setCandidates([]);
-          setFormError("Unable to load candidates for offer request.");
+          setLegalEntities([]);
+          setFormError("Unable to load offer request options.");
         }
       } finally {
         if (!cancelled) {
@@ -282,7 +307,7 @@ function RaiseOfferRequestPage() {
       }
     }
 
-    loadCandidates();
+    loadOptions();
     return () => {
       cancelled = true;
     };
@@ -386,6 +411,7 @@ function RaiseOfferRequestPage() {
 
       setForm({
         candidate: null,
+        legalEntity: null,
         offered_ctc: "",
         expected_joining_date: "",
         variable_pay: "0",
@@ -478,6 +504,34 @@ function RaiseOfferRequestPage() {
                     fullWidth
                     slotProps={{ input: { readOnly: true } }}
                     helperText="Inherited from candidate mapping"
+                  />
+                </Grid>
+              </FormSection>
+
+              <FormSection title="Issuing Legal Entity">
+                <Grid size={{ xs: 12, md: 8 }}>
+                  <Autocomplete
+                    options={legalEntities}
+                    value={form.legalEntity}
+                    onChange={(_event, value) => handleFieldChange("legalEntity", value)}
+                    getOptionLabel={(option) => legalEntityOptionLabel(option)}
+                    isOptionEqualToValue={(option, value) =>
+                      String(option.recordId || option.id) ===
+                      String(value?.recordId || value?.id)
+                    }
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Legal Entity"
+                        required
+                        fullWidth
+                        error={Boolean(errors.legalEntity)}
+                        helperText={
+                          errors.legalEntity ||
+                          "Published and Active entities only."
+                        }
+                      />
+                    )}
                   />
                 </Grid>
               </FormSection>
